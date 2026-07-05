@@ -77,7 +77,8 @@ export function renderDashboard() {
 let FEED=[], FILTER=null;
 const VERDICT={hit:["✅ 命中","v-hit"],["hit-weak"]:["✅ 命中(弱)","v-hit-weak"],
   partial:["🟡 部分命中","v-partial"],miss:["❌ 落空","v-miss"],
-  marketing:["📣 营销造势","v-marketing"],risk:["⚠️ 风险事件","v-risk"]};
+  marketing:["📣 营销造势","v-marketing"],risk:["⚠️ 风险事件","v-risk"],
+  pending:["⏳ 待验证","v-partial"]};
 
 async function load(){
   const [a,f]=await Promise.all([
@@ -89,7 +90,7 @@ async function load(){
 }
 function renderStats(a,f){
   const hits=a.predictions.filter(p=>p.verdict.startsWith('hit')).length;
-  const scored=a.predictions.filter(p=>!['marketing','risk'].includes(p.verdict)).length;
+  const scored=a.predictions.filter(p=>!['marketing','risk','pending'].includes(p.verdict)).length;
   document.getElementById('stats').innerHTML=
     stat(f.count,'监控条目')+stat(a.predictions.length,'档案条目')+
     stat(hits+'/'+scored,'可评分预判命中')+

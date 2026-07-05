@@ -74,6 +74,24 @@ export const PREDICTIONS = [
     note: "⚠ 多源一致,未完成三票核验",
   },
   {
+    date: "2025-11-06",
+    channel: "X (Twitter)",
+    prediction: "『短期缺芯片,长期缺能源,永远缺存储』——芯片与能源短缺是周期性的,存储短缺是永久性的",
+    outcome: "命中(幅度罕见):此后一年内闪迪 SanDisk(SNDK)从约 35 美元最高涨至 1439 美元(约 50 倍,并纳入纳斯达克100);三星/海力士/美光 HBM 产能被预订至 2027-28 年",
+    verdict: "hit",
+    action: "同期将存储列入 TRON AI 基金重点赛道;借『50倍存储』战绩在中文互联网强化『预言家』人设(注意幸存者叙事风险)",
+    note: "⚠ 原话时间(2025-11-06)与 SNDK 涨幅经中文财经媒体多源转述,未见英文一手推文存档,采信前建议核对其 X 原帖",
+  },
+  {
+    date: "2026-05-16",
+    channel: "X / 演讲(多家媒体 2026-05-17~22 转述)",
+    prediction: "『虚拟 AI 普及红利已彻底结束,未来三年核心机会只在物理 AI』——具身智能(人形机器人)、无人机、空间计算、太空探索四大核心赛道",
+    outcome: "待验证(预测窗口 2026-2029):可跟踪人形机器人出货量(Unitree 2025 年出货约 5500 台居全球第一)、特斯拉 Optimus 量产进度等硬指标",
+    verdict: "pending",
+    action: "TRON AI 基金从 1 亿美元扩至 10 亿美元,覆盖八大赛道(具身智能/无人机/空间计算/机器人/工业自动化/能源/存储/光通信);此前个人花 2.8 亿美元完成太空飞行为『太空经济』站台",
+    note: "⚠ 中文媒体多源一致但均为转述;基金扩容数字待 TRON DAO 官方公告核验",
+  },
+  {
     date: "2026-03",
     channel: "X / BeInCrypto 报道",
     prediction: "Tron Inc. 是『更便宜、更赚钱的中国版 Circle』:TRON 链年利润约 33 亿美元,市值仅 Circle 的 1/70",
@@ -92,14 +110,21 @@ export const STOCKS = [
   { ticker: "HOOD", name: "Robinhood", relation: 2, logic: "散户加密交易活跃度的周期 Beta", risk: "同上" },
   { ticker: "MSTR", name: "Strategy", relation: 2, logic: "Tron Inc. 模仿其财库模式;『币库股』板块估值联动", risk: "BTC 财库 vs 自家币财库,资产质量不同" },
   { ticker: "DJT", name: "Trump Media", relation: 1, logic: "同属特朗普加密概念;孙与特朗普家族互诉为负面情绪源", risk: "纯情绪/政治盘" },
+  { ticker: "SNDK", name: "SanDisk", relation: 3, logic: "其『永远缺存储』论(2025-11)的标志性验证标的:一年最高约50倍;NAND 供需与 AI 数据需求是主逻辑", risk: "涨幅已极大,高位波动剧烈;其言论是叙事放大器而非基本面来源" },
+  { ticker: "MU", name: "Micron", relation: 3, logic: "存储短缺论的 HBM/DRAM 主线标的,产能被预订至 2027-28 的直接受益者", risk: "存储周期反转与资本开支风险" },
+  { ticker: "WDC", name: "Western Digital", relation: 2, logic: "存储论延伸(HDD/数据中心存储);SanDisk 分拆母体", risk: "同上,弹性小于 SNDK/MU" },
+  { ticker: "NVDA", name: "NVIDIA", relation: 2, logic: "物理 AI 论的算力底座(机器人/具身智能训练与推理)", risk: "已充分定价,与孙的关联仅为主题呼应" },
+  { ticker: "TSLA", name: "Tesla", relation: 2, logic: "物理 AI 论的整机代表(Optimus 人形机器人量产叙事)", risk: "机器人业务兑现周期长,估值主要由其他业务驱动" },
 ];
 
 // 监控信源(RSS)。X 无免费 API:主通道用 Google News 聚合(可捕获媒体转述的 X 言论);
 // 设置 X_BEARER_TOKEN secret 后自动启用 X API 直连。
 export const SOURCES = [
-  { name: "GoogleNews-EN", url: "https://news.google.com/rss/search?q=%22Justin+Sun%22+crypto&hl=en-US&gl=US&ceid=US:en" },
+  // 注意:查询不加 crypto 之类的领域词,避免漏掉他谈存储/物理AI/能源等非加密主题的言论
+  { name: "GoogleNews-EN", url: "https://news.google.com/rss/search?q=%22Justin+Sun%22&hl=en-US&gl=US&ceid=US:en" },
   { name: "GoogleNews-ZH", url: "https://news.google.com/rss/search?q=%E5%AD%99%E5%AE%87%E6%99%A8&hl=zh-CN&gl=CN&ceid=CN:zh-Hans" },
   { name: "GoogleNews-TRON", url: "https://news.google.com/rss/search?q=%22Tron+Inc%22+OR+%22TRX+treasury%22&hl=en-US&gl=US&ceid=US:en" },
+  { name: "GoogleNews-科技主题", url: "https://news.google.com/rss/search?q=%E5%AD%99%E5%AE%87%E6%99%A8+(%E7%89%A9%E7%90%86AI+OR+%E5%AD%98%E5%82%A8+OR+%E6%9C%BA%E5%99%A8%E4%BA%BA+OR+%E8%83%BD%E6%BA%90)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans" },
   { name: "BingNews", url: "https://www.bing.com/news/search?q=%22Justin+Sun%22+OR+%E5%AD%99%E5%AE%87%E6%99%A8&format=rss" },
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
@@ -112,4 +137,7 @@ export const TAG_RULES = [
   { tag: "WLFI/特朗普", re: /WLFI|World Liberty|Trump|特朗普/i },
   { tag: "稳定币", re: /stablecoin|USDT|USDD|Tether|Circle|CRCL|稳定币/i },
   { tag: "营销", re: /dinner|lunch|auction|banana|donat|charity|午餐|晚宴|拍卖|慈善|香蕉/i },
+  { tag: "物理AI/机器人", re: /physical\s?AI|embodied|robot|humanoid|drone|optimus|unitree|物理\s?AI|具身|机器人|人形|无人机|空间计算|太空|space/i },
+  { tag: "存储/芯片", re: /storage|memory|HBM|NAND|flash|SanDisk|Micron|hynix|semiconductor|chip|存储|闪存|闪迪|芯片|半导体|美光/i },
+  { tag: "能源", re: /energy|nuclear|power\s?plant|uranium|电力|能源|核电|铀/i },
 ];
