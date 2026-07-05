@@ -1,4 +1,4 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK } from "./data.js";
 import { renderDashboard } from "./html.js";
 
 const KV_KEY = "feed-items";
@@ -17,7 +17,7 @@ export default {
         return json({ count: items.length, items });
       }
       case "/api/archive":
-        return json({ predictions: PREDICTIONS, stocks: STOCKS });
+        return json({ predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK });
       case "/api/refresh": {
         const result = await refreshFeed(env);
         return json(result);
@@ -143,11 +143,16 @@ function buildSummary(items, origin) {
       .slice(0, 5)
       .map((s) => `${s.name}(${s.ticker.split(".")[0]})`)
       .join(" / ");
+  const STAGE_CN = { early: "早期信号", mid: "中期主升", peak: "高峰区间", exit: "退潮" };
+  const stages = PLAYBOOK.map((p) => `• ${p.theme}:<b>${STAGE_CN[p.stage] || p.stage}</b> — ${p.stageNote}`);
   return [
     `🔭 <b>SunWatch 监控结论</b> ${new Date().toISOString().slice(0, 10)}`,
     ``,
     `📊 <b>预判档案</b>:共 ${PREDICTIONS.length} 条;可评分 ${scored.length} 条中命中 ${hits} 条(其余为营销造势/风险事件/待验证)`,
-    `核心结论:他的言论不是可靠信号,资本动作才是;当前主线 = 存储论(已验证)+ 物理AI论(验证中)+ WLFI 决裂(风险)`,
+    `核心结论:他的言论不是可靠信号,资本动作才是`,
+    ``,
+    `📈 <b>主题周期定位</b>:`,
+    ...stages,
     ``,
     `🆕 <b>最新动态</b>(库存 ${items.length} 条):`,
     ...(latest.length ? latest : ["• 暂无,等待下轮抓取"]),
@@ -157,7 +162,7 @@ function buildSummary(items, origin) {
     `港股:${byMarket("港股")}`,
     `A股:${byMarket("A股")}`,
     ``,
-    `👁 <b>跟踪点</b>:WLFI 互诉进展 / Tron Inc. 增发与派息 / TRON AI 基金 10 亿美元落地 / 存储涨价持续性`,
+    `👁 <b>跟踪点</b>:WLFI 互诉 / Tron Inc. 增发与派息 / MU 财报 HBM 指引与合约价月报 / Optimus 量产节点`,
     ``,
     `详见监控台:${origin} (非投资建议)`,
   ].join("\n");

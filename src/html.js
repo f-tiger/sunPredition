@@ -57,6 +57,10 @@ export function renderDashboard() {
 <div class="stats" id="stats"></div>
 <div><button onclick="refresh()">立即抓取最新信息</button> <span class="meta" id="refreshMsg"></span></div>
 
+<h2>主题周期定位与操盘框架</h2>
+<p class="meta">四阶段模型:早期信号 → 中期主升 → 高峰泡沫 → 退潮。阶段判定附依据;各阶段给出可观测信号与对应标的;操盘纪律含具体触发条件。非投资建议。</p>
+<div id="playbook"></div>
+
 <h2>跨市场标的映射:美股 / 港股 / A股(关联强度 ★)</h2>
 <p class="meta">除 TRON 外均为"预判主题 → 标的"映射,不代表其实际持仓;A股无直接加密标的。</p>
 <div id="stocks"></div>
@@ -87,7 +91,37 @@ async function load(){
     fetch('/api/feed').then(r=>r.json())
   ]);
   FEED=f.items||[];
-  renderStats(a,f); renderArchive(a.predictions); renderStocks(a.stocks); renderFilters(); renderFeed();
+  renderStats(a,f); renderArchive(a.predictions); renderStocks(a.stocks);
+  renderPlaybook(a.playbook||[]); renderFilters(); renderFeed();
+}
+const STAGE_META={early:['早期信号','v-hit'],mid:['中期主升','v-partial'],peak:['高峰泡沫','v-miss'],exit:['退潮','v-risk']};
+function renderPlaybook(pb){
+  const order=['early','mid','peak','exit'];
+  document.getElementById('playbook').innerHTML=pb.map(p=>{
+    const bar=order.map(s=>{
+      const on=s===p.stage;
+      return '<span style="flex:1;text-align:center;padding:4px 2px;border-radius:6px;font-size:12px;'+
+        (on?'background:var(--accent);color:#fff;font-weight:700':'border:1px solid var(--line);color:var(--muted)')+'">'+
+        STAGE_META[s][0]+'</span>';
+    }).join('');
+    const rows=order.map(s=>{
+      const st=p.stages[s]; if(!st)return'';
+      const td='padding:6px 8px 6px 0;border-top:1px solid var(--line);vertical-align:top';
+      return '<tr'+(s===p.stage?' style="background:color-mix(in srgb,var(--accent) 8%,transparent)"':'')+'>'+
+        '<td style="white-space:nowrap;'+td+'"><b class="'+STAGE_META[s][1]+'">'+STAGE_META[s][0]+'</b><div class="meta">'+esc(st.window)+'</div></td>'+
+        '<td style="'+td+'">'+esc(st.signals)+'</td><td style="'+td+'">'+esc(st.tickers)+'</td></tr>';
+    }).join('');
+    return '<div class="card">'+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:16px">'+esc(p.theme)+'</b>'+
+      '<span class="tag">'+esc(p.stageNote)+'</span></div>'+
+      '<div style="display:flex;gap:6px;margin:10px 0">'+bar+'</div>'+
+      '<div style="margin:6px 0"><b style="font-size:13px">阶段判定依据</b><ul style="margin:4px 0 8px 18px;padding:0">'+
+      p.basis.map(b=>'<li style="margin:2px 0">'+esc(b)+'</li>').join('')+'</ul></div>'+
+      '<div class="scroll"><table style="width:100%;border-collapse:collapse;font-size:13.5px">'+
+      '<tr style="color:var(--muted)"><th style="text-align:left;padding:4px 8px 4px 0">阶段</th><th style="text-align:left;padding:4px 8px 4px 0">可观测信号</th><th style="text-align:left;padding:4px 0">对应标的/动作</th></tr>'+rows+'</table></div>'+
+      '<div style="margin-top:8px;padding:8px 10px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:4px"><b style="font-size:13px">操盘纪律</b><div style="margin-top:2px">'+esc(p.tactics)+'</div></div>'+
+      '</div>';
+  }).join('');
 }
 function renderStats(a,f){
   const hits=a.predictions.filter(p=>p.verdict.startsWith('hit')).length;
