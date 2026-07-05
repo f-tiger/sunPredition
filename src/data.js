@@ -293,15 +293,17 @@ export const SOURCES = [
   { name: "GoogleNews-TRON", url: "https://news.google.com/rss/search?q=%22Tron+Inc%22+OR+%22TRX+treasury%22&hl=en-US&gl=US&ceid=US:en" },
   { name: "GoogleNews-科技主题", url: "https://news.google.com/rss/search?q=%E5%AD%99%E5%AE%87%E6%99%A8+(%E7%89%A9%E7%90%86AI+OR+%E5%AD%98%E5%82%A8+OR+%E6%9C%BA%E5%99%A8%E4%BA%BA+OR+%E8%83%BD%E6%BA%90)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans" },
   { name: "BingNews", url: "https://www.bing.com/news/search?q=%22Justin+Sun%22+OR+%E5%AD%99%E5%AE%87%E6%99%A8&format=rss" },
-  // 存储线退出触发信号专用:SKHY 上市动态 + NAND/DRAM 价格拐点
+  // 存储线退出触发信号专用:SKHY 上市动态 + NAND/DRAM 价格拐点 + 存储个股异动
   { name: "BingNews-存储信号", url: "https://www.bing.com/news/search?q=%22SK+hynix%22+ADR+OR+SKHY+OR+%22NAND+price%22+OR+%22DRAM+price%22&format=rss" },
+  { name: "BingNews-存储个股", url: "https://www.bing.com/news/search?q=SNDK+OR+%22Micron+stock%22+OR+SanDisk+stock&format=rss" },
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
 
 // 核心信号清单:进每日 TG 摘要,含触发价位/条件(2026-07-05 快照,更新代码即更新)
 export const CORE_SIGNALS = [
-  "【存储·退出】SKHY(海力士ADR)7/10前后挂牌:上市前同业拉升先卖1/4-1/3;上市周放量冲高继续派发至剩1/3底仓",
-  "【存储·清仓触发】任一:SKHY破发+MU/SNDK更低高点 / NAND·DRAM合约价环比转负 / MU九月末财报下修HBM指引;②③同现→清仓",
+  "【存储·派发日程】7/7-7/9 上市前:趁同业拉升卖出第一段 1/4-1/3(限价挂高不追跌)| 7/10 挂牌日:MU/SNDK/WDC 若放量冲高(单日+5%以上),执行第二段派发 | 7/13-7/17 上市周:无论涨跌降至 1/3 底仓 | 7 月下旬-9 月:底仓看三硬指标",
+  "【存储·底仓清仓触发(7/10后4-8周)】任一出现减下一档,两项同现清仓:① SKHY跌破发行价且MU/SNDK更低高点 ② NAND·DRAM合约价环比转负(TrendForce月报) ③ MU 9月下旬财报下修HBM指引",
+  "【存储·铁律】20周均线跌破无条件减半;单日+8%放量的抛物线日是卖点不是买点;卖出顺序:模组/二线→SNDK→MU",
   "【物理AI·入局】优必选120-130港元第一批(现价约157不追)、100-110第二批、破90止损;绿的谐波350-380第一批、300以下第二批",
   "【物理AI·宇树定价锚】开盘市值<600亿(PS<25x)可首批;>1000亿(PS40x+)只看不买;全行业温度计",
   "【物理AI·验证加仓】优必选中报确认万台收入 / Optimus实际交付 / 行业季度出货环比+50% → 加至5-8%",
@@ -310,8 +312,9 @@ export const CORE_SIGNALS = [
 
 // 重要信号规则:30分钟抓取中命中任一,立即额外推送 TG
 export const IMPORTANT_RULES = [
-  { label: "SKHY上市/破发", re: /SKHY|hynix[^。]{0,40}(list|IPO|debut|fall|drop|plunge|上市|挂牌|破发|暴跌)/i },
+  { label: "SKHY上市/破发", re: /SKHY|hynix[^。]{0,40}(list|IPO|debut|fall|drop|plunge|first day|上市|挂牌|破发|暴跌|首日)/i },
   { label: "存储价格拐点", re: /(NAND|DRAM|闪存|存储芯片|memory)[^。]{0,30}(price|价格)[^。]{0,20}(fall|drop|decline|cut|下跌|转跌|回落|跳水|见顶)/i },
+  { label: "存储个股异动", re: /(SNDK|SanDisk|闪迪|Micron|美光|memory stock)[^。]{0,40}(plunge|sink|tumble|sell-?off|crash|correction|大跌|暴跌|跳水|重挫|抛售)/i },
   { label: "MU指引", re: /(micron|美光)[^。]{0,40}(guidance|outlook|forecast|指引|展望|下修|miss)/i },
   { label: "宇树IPO", re: /(宇树|unitree)[^。]{0,40}(IPO|上市|挂牌|定价|发行|debut|list)/i },
   { label: "优必选订单/业绩", re: /(优必选|ubtech)[^。]{0,40}(订单|收入|交付|中报|业绩|order|deliver|earnings|revenue)/i },
