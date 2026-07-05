@@ -110,6 +110,7 @@ export const STOCKS = [
   { market: "美股", ticker: "SNDK", name: "SanDisk", relation: 3, theme: "存储", logic: "『永远缺存储』论(2025-11)的标志性验证标的:一年最高约50倍", risk: "涨幅已极大,高位波动剧烈;其言论是叙事放大器而非基本面来源" },
   { market: "美股", ticker: "MU", name: "Micron", relation: 3, theme: "存储", logic: "HBM/DRAM 主线,产能被预订至 2027-28 的直接受益者", risk: "存储周期反转与资本开支风险" },
   { market: "美股", ticker: "WDC", name: "Western Digital", relation: 2, theme: "存储", logic: "HDD/数据中心存储;SanDisk 分拆母体", risk: "弹性小于 SNDK/MU" },
+  { market: "美股", ticker: "SKHY", name: "SK海力士 ADR", relation: 3, theme: "存储", logic: "HBM 份额约 60% 的全球龙头,拟 2026-07-10 前后纳斯达克挂牌,募资约 290 亿美元(史上最大级别)", risk: "天量新股供给+周期高位上市 = 派发信号;上市初期波动极大,不宜打新式追高" },
   { market: "美股", ticker: "NVDA", name: "NVIDIA", relation: 2, theme: "物理AI", logic: "物理 AI 的算力底座(具身智能训练与推理)", risk: "已充分定价,与孙的关联仅为主题呼应" },
   { market: "美股", ticker: "TSLA", name: "Tesla", relation: 2, theme: "物理AI", logic: "Optimus 人形机器人量产叙事的整机代表", risk: "机器人业务兑现周期长" },
   { market: "美股", ticker: "RKLB", name: "Rocket Lab", relation: 2, theme: "太空", logic: "其『太空经济』赛道(个人2.8亿美元太空行站台)的可投美股代表", risk: "发射业务毛利低,商业化节奏不确定" },
@@ -155,14 +156,15 @@ export const PLAYBOOK = [
       "共识维度:『永远缺存储』从孙宇晨的逆向观点(2025-11)变成散户口号(2026)——逆向信号消失即高峰特征",
       "供给维度:HBM 产能售罄至 2027-28 属实,但三星/海力士/美光已大幅上调资本开支,新产能 2026H2-2027 投放,供给反转在路上",
       "结构维度:二线补涨(佰维、江波龙类模组股)与分析师目标价竞赛,是历史上存储周期顶部的典型形态",
+      "供给端套现维度(关键增量):SK 海力士(HBM 份额约 60%,年内涨超 300%)拟 7 月 10 日前后以 ADR 登陆纳斯达克(SKHY),发行 1779 万股新股募资约 290 亿美元——史上最大级别。产业链最强玩家选择在此刻卖出天量新股,是教科书级的『聪明钱在顶部派发』信号(可类比 2011-05 嘉能可 IPO 之于大宗商品顶、2021-04 Coinbase 上市之于 BTC 阶段顶)",
     ],
     stages: {
       early: { window: "2024H2-2025Q3(已过)", signals: "NAND/DRAM 合约价见底回升、大厂减产、HBM 订单能见度提升", tickers: "MU、兆易创新(当时的正确入场点)" },
       mid: { window: "2025Q4-2026H1(已走完大半)", signals: "HBM 售罄至 2027-28、SNDK 入 NDX、模组厂利润暴增、涨价扩散到利基存储", tickers: "SNDK、MU、江波龙" },
-      peak: { window: "当前", signals: "股价对利好钝化、散户共识化、资本开支大幅上调、二线鸡犬升天", tickers: "仅持仓者移动止盈,不开新仓追高" },
-      exit: { window: "触发即离场", signals: "NAND/DRAM 合约价环比转跌、渠道库存天数回升、MU 财报 HBM 指引下修", tickers: "全线减仓,弹性最大的模组股先卖" },
+      peak: { window: "当前 → SKHY 上市窗口", signals: "股价对利好钝化、散户共识化、资本开支大幅上调、二线鸡犬升天;SKHY 上市前的同业映射拉升与上市周的情绪高潮大概率是本轮『最后的烟火』", tickers: "利用上市前后的拉升分批派发,不做买入窗口" },
+      exit: { window: "触发即离场", signals: "① SKHY 上市后跌破发行价且 MU/SNDK 走出更低的高点;② NAND/DRAM 合约价环比转跌;③ MU 财报(2026-09 下旬)HBM 指引下修;④ 渠道库存天数回升——任一出现执行下一档减仓,②③同时出现清仓", tickers: "弹性最大的模组/二线先卖,MU 最后" },
     },
-    tactics: "持仓者:以 20 周均线或前低作移动止盈线,跌破减半;每季度盯 MU 财报的 HBM 出货指引与 TrendForce 合约价月报(环比转负 = 周期见顶确认)。空仓者:此位置的赔率不佳,宁可错过;若 2026H2 出现 20-30% 級别回调且合约价仍环比上行,才是最后一段的低吸窗口。",
+    tactics: "【持仓退出方案(三段式,围绕 SKHY 上市事件)】第一段·即刻:上市前的同业拉升中先卖 1/4-1/3,锁定利润(海力士 290 亿美元新股供给 = 产业链最强玩家在顶部套现,事件本身利多情绪、利空筹码);第二段·上市周:若 MU/SNDK/WDC 随 SKHY 挂牌出现放量冲高(blow-off),继续派发至剩 1/3 底仓——上市周是派发窗口不是加仓窗口;第三段·上市后 4-8 周:底仓去留看三个硬指标——SKHY 相对发行价强弱、MU 九月末财报 HBM 指引、TrendForce 合约价月报环比,任一恶化即清底仓。全程铁律:20 周均线跌破无条件减半;抛物线加速日(单日 +8% 以上放量)是卖点不是买点。空仓者:不参与 SKHY 打新式追高;若上市后出现 20-30% 回调且合约价仍环比上行,才有最后一段低吸的赔率。",
   },
   {
     theme: "物理AI",
@@ -244,6 +246,8 @@ export const SOURCES = [
   { name: "GoogleNews-TRON", url: "https://news.google.com/rss/search?q=%22Tron+Inc%22+OR+%22TRX+treasury%22&hl=en-US&gl=US&ceid=US:en" },
   { name: "GoogleNews-科技主题", url: "https://news.google.com/rss/search?q=%E5%AD%99%E5%AE%87%E6%99%A8+(%E7%89%A9%E7%90%86AI+OR+%E5%AD%98%E5%82%A8+OR+%E6%9C%BA%E5%99%A8%E4%BA%BA+OR+%E8%83%BD%E6%BA%90)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans" },
   { name: "BingNews", url: "https://www.bing.com/news/search?q=%22Justin+Sun%22+OR+%E5%AD%99%E5%AE%87%E6%99%A8&format=rss" },
+  // 存储线退出触发信号专用:SKHY 上市动态 + NAND/DRAM 价格拐点
+  { name: "BingNews-存储信号", url: "https://www.bing.com/news/search?q=%22SK+hynix%22+ADR+OR+SKHY+OR+%22NAND+price%22+OR+%22DRAM+price%22&format=rss" },
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
 
