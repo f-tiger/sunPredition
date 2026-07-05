@@ -176,7 +176,7 @@ export const STOCKS = [
   { market: "A股", ticker: "603728.SH", name: "鸣志电器", relation: 3, theme: "潜伏·空心杯", logic: "宇树关节空心杯电机独家供应商(2025订单环比+200%)+送样特斯拉;池内『最像海力士』——垄断卡位已确立、利润未爆发", risk: "净利极薄(26Q1仅1382万),PS约8.5倍;独家地位可能被二供稀释", fund: { mcap: "256.9亿元(2026-05-29)", val: "—", inv: "—", moat: "空心杯+步进双卡位", comp: "江苏雷利/鼎智、瑞士maxon" } },
   { market: "A股", ticker: "603662.SH", name: "柯力传感", relation: 2, theme: "潜伏·力传感", logic: "六维力/力矩传感器=万元级单价、国产化率最低的感知件", risk: "机器人收入占比尚小", fund: { mcap: "待核", val: "—", inv: "—", moat: "应变式传感龙头+六维力布局", comp: "东华测试、美国ATI" } },
   { market: "A股", ticker: "688322.SH", name: "奥比中光", relation: 3, theme: "潜伏·3D视觉", logic: "宇树视觉供应商;池内『引爆时刻最近』——2025营收9.4亿+67%、扭亏1.27亿,利润拐点进行中", risk: "估值不便宜(券商预测2026净利3亿)", fund: { mcap: "待核", val: "东吴预测2026/27收入15/21亿、净利3/5.1亿", inv: "—", moat: "3D结构光/ToF全技术路线+宇树卡位", comp: "速腾聚创(激光雷达路线)、英特尔RealSense停产后的空位" } },
-  { market: "A股", ticker: "688722.SH", name: "同益中", relation: 1, theme: "潜伏·腱绳", logic: "UHMWPE超高分子量聚乙烯纤维=灵巧手腱绳材料,全池最冷门", risk: "机器人用量占比极小,叙事最早期", fund: { mcap: "待核(小市值)", val: "—", inv: "—", moat: "UHMWPE国产头部", comp: "荷兰DSM" } },
+  { market: "A股", ticker: "688722.SH", name: "同益中", relation: 1, theme: "潜伏·腱绳(降级观察)", logic: "UHMWPE腱绳材料;BOM测算后降级:腱绳池<1%仅约10亿,天花板过低", risk: "价值池太小,几十倍数学不成立,仅保留观察不建仓", fund: { mcap: "待核(小市值)", val: "—", inv: "—", moat: "UHMWPE国产头部", comp: "荷兰DSM" } },
   { market: "A股", ticker: "601985.SH", name: "中国核电", relation: 1, theme: "能源", logic: "A 股核电映射", risk: "电价审批", fund: { mcap: "—", val: "股息率定价", inv: "—", moat: "在运+在建核电规模", comp: "中国广核" } },
   { market: "A股", ticker: "600118.SH", name: "中国卫星", relation: 1, theme: "太空", logic: "太空赛道 A 股映射", risk: "军工波动", fund: { mcap: "—", val: "—", inv: "—", moat: "卫星制造总装稀缺牌照", comp: "航天电子" } },
   { market: "A股", ticker: "300468.SZ", name: "四方精创", relation: 1, theme: "稳定币概念", logic: "A 股无直接加密标的,概念联动", risk: "纯概念", fund: { mcap: "—", val: "—", inv: "—", moat: "—", comp: "恒宝股份等概念股" } },
@@ -251,6 +251,8 @@ export const PLAYBOOK = [
       "SNDK 复盘:50倍 = 利润爆发(EPS约10倍)× 估值重估(PE 3-5倍)双引擎同时点火。筛选画像五要素:①小市值(A股<300亿) ②纯度(收入/叙事绑定单一瓶颈件) ③瓶颈垄断潜质(单机价值量高+国产化率低+工艺壁垒) ④经营杠杆(量产时利润非线性) ⑤低共识(大行覆盖少/未涨成主线)",
       "瓶颈层级(按单机价值量与国产化率排序):丝杠(行星滚柱,Optimus 14个线性关节耗材,国产化率<5%,磨削工艺壁垒=最像2024年初的HBM)> 灵巧手微传动/空心杯(自由度军备竞赛,价值量上升最陡)> 六维力传感(万元级单价)> 3D视觉 > 腱绳材料(超冷门)",
       "已验证的产业卡位:五洲新春丝杠进特斯拉链 / 鸣志电器=宇树关节空心杯独家供应商(2025订单环比+200%)/ 兆威机电=20自由度B20灵巧手(供优必选/小米/特斯拉)/ 奥比中光=宇树视觉供应商(2025营收9.4亿+67%、扭亏1.27亿)",
+      "BOM价值池测算(按100万台/年×单机BOM约15万元=1500亿总池):丝杠14%≈210亿(五洲若20%份额=42亿收入 vs 现有35亿,利润弹性最高)| 电机17%≈255亿(其中空心杯子池仅3%≈45亿——鸣志的『独家』是垄断小池,天花板有限但确定性高)| 灵巧手12%≈180亿(唯一随自由度升级占比持续上行的池子,兆威受益但PS16x已付)| 减速器10%≈150亿(绿的谐波现收入仅约5亿→若40%份额=60亿,收入弹性12倍全场最高——Serenity选它在弹性维度是对的,但720亿市值已预付)| 力传感6%≈90亿(柯力2.6倍)| 3D视觉3%≈45亿(奥比2.4倍)| 腱绳<1%≈10亿(同益中天花板过低,降级为观察仓)",
+      "Serenity(白毛股神)交叉验证:X粉丝70万+的匿名供应链分析师(@aleabitoreddit,前Reddit WSB因预测AXTI $12→$70被封),『瓶颈点理论』与本池画像方法论一致;分歧在执行——他买平台化部件商(6/5点名绿的谐波→两日+30%、市值720亿),本池买单瓶颈纯度(五洲/鸣志)。两个推论:①他点名即共识化,标的瞬间丧失『低共识』要素;②持有『符合其瓶颈理论但未被点名』的标的=免费的Serenity看涨期权(五洲/柯力/奥比在射程内)。风险:其跨境喊单已引发国内券商炮轰与监管关注,信息倒灌行情可能被窗口指导终结",
       "画像测算(2026-07快照):闪迪暴涨前=约380亿人民币市值+约520亿收入(PS≈0.7)+周期底微利;对照池内——鸣志257亿/年收约30亿(PS≈8.5)、兆威270亿/PS约16、奥比(市值待核)PS更高:『没有一只有闪迪式PS 0.7的起点』,A股已预付题材溢价。结论:①结构最像闪迪=五洲新春(大收入低利润主业+丝杠期权+池内最低PS,市值待核) ②最像海力士=鸣志电器(独家垄断卡位确立、利润未爆发,相当于2019年的海力士) ③引爆时刻最近=奥比中光(唯一已扭亏+66%增速,利润拐点进行中) ④期望值修正:估值半山腰起步,同等利润爆发对应10-20倍而非50倍;真正的『闪迪时刻』买点=Optimus跳票式恐慌把全板块PS打回3-5x时",
       "反面教材(不再早期):Rainbow Robotics 市值已约9.5万亿韩元(三星系,涨完一大轮);绿的谐波 PE 百倍——凡已成为主线共识的,不符合⑤,几十倍空间已被透支",
       "风险声明:彩票组合的数学前提是幂律分布——接受多数标的平庸甚至-50%,靠1-2只10倍+覆盖;若人形机器人量产证伪(Optimus 跳票6个月+),全池撤退",
@@ -330,6 +332,8 @@ export const SOURCES = [
   { name: "BingNews-存储个股", url: "https://www.bing.com/news/search?q=SNDK+OR+%22Micron+stock%22+OR+SanDisk+stock&format=rss" },
   // 港股标的与香港加密政策
   { name: "BingNews-港股标的", url: "https://www.bing.com/news/search?q=%E4%BC%98%E5%BF%85%E9%80%89+OR+%E5%9C%B0%E5%B9%B3%E7%BA%BF%E6%9C%BA%E5%99%A8%E4%BA%BA+OR+%E9%80%9F%E8%85%BE%E8%81%9A%E5%88%9B+OR+OSL%E9%9B%86%E5%9B%A2&format=rss" },
+  // Serenity(白毛股神)点名监控:其推文可致 A股标的 20cm 涨停
+  { name: "BingNews-Serenity", url: "https://www.bing.com/news/search?q=Serenity+%E7%99%BD%E6%AF%9B%E8%82%A1%E7%A5%9E+OR+aleabitoreddit&format=rss" },
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
 
@@ -364,6 +368,7 @@ export const IMPORTANT_RULES = [
   { label: "港股标的异动", re: /(优必选|ubtech|地平线|horizon robotics|速腾|robosense|OSL)[^。]{0,40}(大涨|大跌|暴跌|暴涨|异动|订单|解禁|配售|增发|回购|plunge|surge|tumble|placement|buyback)/i },
   { label: "7709/海力士杠杆", re: /7709|南方[^。]{0,8}海力士|海力士[^。]{0,12}(杠杆|槓桿|ETF)|hynix[^。]{0,20}leveraged/i },
   { label: "港股加密政策", re: /(港交所|香港|HKMA|SFC|HKEX)[^。]{0,30}(虚拟资产|稳定币|加密|代币化|digital asset|stablecoin|token)/i },
+  { label: "Serenity点名", re: /Serenity|白毛股神|aleabitoreddit/i },
 ];
 
 // 自动打标规则
