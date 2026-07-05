@@ -162,7 +162,7 @@ function buildSummary(items, origin) {
     `港股:${byMarket("港股")}`,
     `A股:${byMarket("A股")}`,
     ``,
-    `👁 <b>跟踪点</b>:SKHY(海力士ADR)上市窗口=存储持仓派发窗口 / MU 财报 HBM 指引与合约价月报 / WLFI 互诉 / Tron Inc. 增发 / Optimus 量产节点`,
+    `👁 <b>跟踪点</b>:SKHY(海力士ADR)上市=存储派发窗口 / 宇树科创板挂牌定价=物理AI温度计 / 优必选万台订单收入确认 / Optimus 量产节点 / MU 财报与合约价月报 / WLFI 互诉`,
     ``,
     `详见监控台:${origin} (非投资建议)`,
   ].join("\n");
