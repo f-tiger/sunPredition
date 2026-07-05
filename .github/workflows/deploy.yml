@@ -14,5 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cloudflare/wrangler-action@v3
+        id: wrangler
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Smoke test + initial fetch
+        run: |
+          URL="${{ steps.wrangler.outputs.deployment-url }}"
+          echo "Deployed at: $URL"
+          sleep 5
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/")
+          echo "dashboard HTTP $code"
+          test "$code" = "200"
+          echo "refresh result:"
+          curl -sf "$URL/api/refresh"
+          echo
+          curl -sf "$URL/api/feed" | head -c 400
+          echo
