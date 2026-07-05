@@ -1,0 +1,13 @@
+{
+  "name": "sunwatch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "孙宇晨(Justin Sun)预判监控台 — Cloudflare Worker",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

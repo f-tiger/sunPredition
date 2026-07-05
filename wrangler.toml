@@ -1,0 +1,15 @@
+name = "sunwatch"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+workers_dev = true
+
+# 每 30 分钟抓取一次信源
+[triggers]
+crons = ["*/30 * * * *"]
+
+[[kv_namespaces]]
+binding = "SUNWATCH_KV"
+id = "95e53046baf048cd803687c86aaa3f67"
+
+# 可选:接入 X API 时在 Cloudflare 后台或 wrangler secret 设置
+#   npx wrangler secret put X_BEARER_TOKEN
