@@ -53,6 +53,15 @@ export default {
         const test = await sendTelegram(cfg, "✅ <b>SunWatch</b> 配置成功!之后每次监控到孙宇晨新动态都会推送到这里。");
         return json({ ok: test.ok, chatId: cfg.chatId, chatName: chat.username || chat.title || chat.first_name || "", test });
       }
+      // 把当前监控结论(命中统计+最新动态+跨市场核心映射+跟踪点)推送到 Telegram
+      case "/api/push-summary": {
+        const cfg = await getTgConfig(env);
+        if (!cfg)
+          return json({ ok: false, error: "未配置 Telegram。访问 /api/setup-telegram?token=<bot token> 一键配置" });
+        const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
+        const r = await sendTelegram(cfg, buildSummary(items, url.origin));
+        return json(r);
+      }
       case "/favicon.ico":
       case "/favicon.svg":
         return new Response(
@@ -118,6 +127,40 @@ async function refreshFeed(env) {
     telegram = await notifyTelegram(cfg, fresh).catch((e) => ({ ok: false, error: String(e) }));
   }
   return { added: fresh.length, total: merged.length, errors, telegram };
+}
+
+// ---- 监控结论摘要 ----
+
+function buildSummary(items, origin) {
+  const scored = PREDICTIONS.filter((p) => !["marketing", "risk", "pending"].includes(p.verdict));
+  const hits = scored.filter((p) => p.verdict.startsWith("hit")).length;
+  const latest = items.slice(0, 5).map(
+    (i) => `• [${i.tags.join("/")}] <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 80)}</a>`
+  );
+  const byMarket = (m) =>
+    STOCKS.filter((s) => s.market === m)
+      .sort((a, b) => b.relation - a.relation)
+      .slice(0, 5)
+      .map((s) => `${s.name}(${s.ticker.split(".")[0]})`)
+      .join(" / ");
+  return [
+    `🔭 <b>SunWatch 监控结论</b> ${new Date().toISOString().slice(0, 10)}`,
+    ``,
+    `📊 <b>预判档案</b>:共 ${PREDICTIONS.length} 条;可评分 ${scored.length} 条中命中 ${hits} 条(其余为营销造势/风险事件/待验证)`,
+    `核心结论:他的言论不是可靠信号,资本动作才是;当前主线 = 存储论(已验证)+ 物理AI论(验证中)+ WLFI 决裂(风险)`,
+    ``,
+    `🆕 <b>最新动态</b>(库存 ${items.length} 条):`,
+    ...(latest.length ? latest : ["• 暂无,等待下轮抓取"]),
+    ``,
+    `🎯 <b>跨市场映射</b>(按关联度):`,
+    `美股:${byMarket("美股")}`,
+    `港股:${byMarket("港股")}`,
+    `A股:${byMarket("A股")}`,
+    ``,
+    `👁 <b>跟踪点</b>:WLFI 互诉进展 / Tron Inc. 增发与派息 / TRON AI 基金 10 亿美元落地 / 存储涨价持续性`,
+    ``,
+    `详见监控台:${origin} (非投资建议)`,
+  ].join("\n");
 }
 
 // ---- Telegram 推送 ----

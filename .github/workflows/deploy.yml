@@ -30,9 +30,9 @@ jobs:
           echo
           curl -sf "$URL/api/feed" | head -c 400
           echo
-      - name: Telegram connectivity check
+      - name: Push monitoring summary to Telegram
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
-          echo "telegram test:"
-          curl -s "$URL/api/test-telegram" || true
+          echo "push summary:"
+          curl -s "$URL/api/push-summary" || true
           echo

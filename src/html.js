@@ -57,15 +57,16 @@ export function renderDashboard() {
 <div class="stats" id="stats"></div>
 <div><button onclick="refresh()">立即抓取最新信息</button> <span class="meta" id="refreshMsg"></span></div>
 
+<h2>跨市场标的映射:美股 / 港股 / A股(关联强度 ★)</h2>
+<p class="meta">除 TRON 外均为"预判主题 → 标的"映射,不代表其实际持仓;A股无直接加密标的。</p>
+<div id="stocks"></div>
+
 <h2>实时监控流</h2>
 <div id="filterBar"></div>
 <div id="feed" style="margin-top:10px"><div class="card meta">加载中…</div></div>
 
 <h2>预判档案:预判 → 结果 → 他的操作</h2>
 <div id="archive"></div>
-
-<h2>美股映射(关联强度 ★)</h2>
-<div class="stocks" id="stocks"></div>
 
 <footer>
   数据信源:Google News RSS(英/中/TRON Inc. 三路)+ 可选 X API;每 30 分钟自动抓取,按关键词自动打标。
@@ -125,10 +126,16 @@ function renderArchive(preds){
   }).join('');
 }
 function renderStocks(st){
-  document.getElementById('stocks').innerHTML=st.map(s=>
-    '<div class="card"><b>'+s.ticker+'</b> · '+esc(s.name)+' <span class="stars">'+'★'.repeat(s.relation)+'☆'.repeat(5-s.relation)+'</span>'+
-    '<div style="margin-top:4px">'+esc(s.logic)+'</div><div class="meta" style="margin-top:4px">风险:'+esc(s.risk)+'</div></div>'
-  ).join('');
+  const markets=['美股','港股','A股'];
+  document.getElementById('stocks').innerHTML=markets.map(m=>{
+    const list=st.filter(s=>s.market===m).sort((a,b)=>b.relation-a.relation);
+    if(!list.length)return '';
+    return '<h3 style="margin:16px 0 8px;font-size:16px">'+m+'('+list.length+')</h3><div class="stocks">'+
+      list.map(s=>'<div class="card"><b>'+s.ticker+'</b> · '+esc(s.name)+
+      ' <span class="tag">'+esc(s.theme||'')+'</span> <span class="stars">'+'★'.repeat(s.relation)+'☆'.repeat(5-s.relation)+'</span>'+
+      '<div style="margin-top:4px">'+esc(s.logic)+'</div><div class="meta" style="margin-top:4px">风险:'+esc(s.risk)+'</div></div>').join('')+
+      '</div>';
+  }).join('');
 }
 async function refresh(){
   const el=document.getElementById('refreshMsg');el.textContent='抓取中…';

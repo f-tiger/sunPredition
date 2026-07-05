@@ -102,19 +102,45 @@ export const PREDICTIONS = [
   },
 ];
 
-// 美股映射
+// 跨市场标的映射(美股/港股/A股)。
+// 注意:除 TRON 外均为"预判主题→标的"的映射,不代表孙宇晨实际持仓;A股无直接加密标的。
 export const STOCKS = [
-  { ticker: "TRON", name: "Tron Inc.", relation: 5, logic: "TRX 价格 × 财库数量 → 每股 NAV;孙的言论/诉讼直接冲击股价", risk: "壳公司、10 亿美元 shelf 稀释、国会质询上市资格、WLFI 互诉外溢" },
-  { ticker: "CRCL", name: "Circle", relation: 2, logic: "孙自比『中国版 Circle』反证其为稳定币主线正统标的", risk: "与孙无股权关联,基本面独立,承接稳定币立法红利" },
-  { ticker: "COIN", name: "Coinbase", relation: 2, logic: "『牛市周期』预判兑现 → 交易/托管收入上升(行业 Beta)", risk: "行业周期风险为主,无孙个人风险传染" },
-  { ticker: "HOOD", name: "Robinhood", relation: 2, logic: "散户加密交易活跃度的周期 Beta", risk: "同上" },
-  { ticker: "MSTR", name: "Strategy", relation: 2, logic: "Tron Inc. 模仿其财库模式;『币库股』板块估值联动", risk: "BTC 财库 vs 自家币财库,资产质量不同" },
-  { ticker: "DJT", name: "Trump Media", relation: 1, logic: "同属特朗普加密概念;孙与特朗普家族互诉为负面情绪源", risk: "纯情绪/政治盘" },
-  { ticker: "SNDK", name: "SanDisk", relation: 3, logic: "其『永远缺存储』论(2025-11)的标志性验证标的:一年最高约50倍;NAND 供需与 AI 数据需求是主逻辑", risk: "涨幅已极大,高位波动剧烈;其言论是叙事放大器而非基本面来源" },
-  { ticker: "MU", name: "Micron", relation: 3, logic: "存储短缺论的 HBM/DRAM 主线标的,产能被预订至 2027-28 的直接受益者", risk: "存储周期反转与资本开支风险" },
-  { ticker: "WDC", name: "Western Digital", relation: 2, logic: "存储论延伸(HDD/数据中心存储);SanDisk 分拆母体", risk: "同上,弹性小于 SNDK/MU" },
-  { ticker: "NVDA", name: "NVIDIA", relation: 2, logic: "物理 AI 论的算力底座(机器人/具身智能训练与推理)", risk: "已充分定价,与孙的关联仅为主题呼应" },
-  { ticker: "TSLA", name: "Tesla", relation: 2, logic: "物理 AI 论的整机代表(Optimus 人形机器人量产叙事)", risk: "机器人业务兑现周期长,估值主要由其他业务驱动" },
+  // ---- 美股 ----
+  { market: "美股", ticker: "TRON", name: "Tron Inc.", relation: 5, theme: "直接载体", logic: "TRX 价格 × 财库数量 → 每股 NAV;孙的言论/诉讼直接冲击股价", risk: "壳公司、10 亿美元 shelf 稀释、国会质询上市资格、WLFI 互诉外溢" },
+  { market: "美股", ticker: "SNDK", name: "SanDisk", relation: 3, theme: "存储", logic: "『永远缺存储』论(2025-11)的标志性验证标的:一年最高约50倍", risk: "涨幅已极大,高位波动剧烈;其言论是叙事放大器而非基本面来源" },
+  { market: "美股", ticker: "MU", name: "Micron", relation: 3, theme: "存储", logic: "HBM/DRAM 主线,产能被预订至 2027-28 的直接受益者", risk: "存储周期反转与资本开支风险" },
+  { market: "美股", ticker: "WDC", name: "Western Digital", relation: 2, theme: "存储", logic: "HDD/数据中心存储;SanDisk 分拆母体", risk: "弹性小于 SNDK/MU" },
+  { market: "美股", ticker: "NVDA", name: "NVIDIA", relation: 2, theme: "物理AI", logic: "物理 AI 的算力底座(具身智能训练与推理)", risk: "已充分定价,与孙的关联仅为主题呼应" },
+  { market: "美股", ticker: "TSLA", name: "Tesla", relation: 2, theme: "物理AI", logic: "Optimus 人形机器人量产叙事的整机代表", risk: "机器人业务兑现周期长" },
+  { market: "美股", ticker: "RKLB", name: "Rocket Lab", relation: 2, theme: "太空", logic: "其『太空经济』赛道(个人2.8亿美元太空行站台)的可投美股代表", risk: "发射业务毛利低,商业化节奏不确定" },
+  { market: "美股", ticker: "CEG", name: "Constellation Energy", relation: 2, theme: "能源", logic: "『长期缺能源』论的核电/AI 电力主线标的", risk: "电价与数据中心签约节奏" },
+  { market: "美股", ticker: "CRCL", name: "Circle", relation: 2, theme: "稳定币", logic: "孙自比『中国版 Circle』反证其为稳定币主线正统标的", risk: "与孙无股权关联,基本面独立" },
+  { market: "美股", ticker: "COIN", name: "Coinbase", relation: 2, theme: "加密Beta", logic: "『牛市周期』预判兑现 → 交易/托管收入上升", risk: "行业周期风险为主" },
+  { market: "美股", ticker: "HOOD", name: "Robinhood", relation: 2, theme: "加密Beta", logic: "散户加密交易活跃度的周期 Beta", risk: "同上" },
+  { market: "美股", ticker: "MSTR", name: "Strategy", relation: 2, theme: "币库股", logic: "Tron Inc. 模仿其财库模式;板块估值联动", risk: "BTC 财库 vs 自家币财库,资产质量不同" },
+  { market: "美股", ticker: "DJT", name: "Trump Media", relation: 1, theme: "特朗普概念", logic: "孙与特朗普家族互诉为该概念负面情绪源", risk: "纯情绪/政治盘" },
+  // ---- 港股 ----
+  { market: "港股", ticker: "9880.HK", name: "优必选", relation: 3, theme: "物理AI", logic: "人形机器人第一股,具身智能预判的最直接港股映射", risk: "亏损、订单兑现与稀释风险" },
+  { market: "港股", ticker: "9660.HK", name: "地平线机器人", relation: 2, theme: "物理AI", logic: "智驾/机器人计算方案,物理 AI 的芯片层", risk: "竞争激烈(英伟达/华为)" },
+  { market: "港股", ticker: "2498.HK", name: "速腾聚创", relation: 2, theme: "物理AI", logic: "激光雷达 = 物理 AI 的感知层,已切入机器人客户", risk: "价格战,毛利承压" },
+  { market: "港股", ticker: "1810.HK", name: "小米集团", relation: 1, theme: "物理AI", logic: "汽车+IoT+机器人生态,物理 AI 泛映射", risk: "关联度弱,估值由手机/汽车主导" },
+  { market: "港股", ticker: "0981.HK", name: "中芯国际", relation: 2, theme: "存储/芯片", logic: "『缺芯片』论的中国制造端映射(代工自主链)", risk: "制程受限,地缘扰动" },
+  { market: "港股", ticker: "1347.HK", name: "华虹半导体", relation: 1, theme: "存储/芯片", logic: "特色工艺代工,芯片景气 Beta", risk: "周期性强" },
+  { market: "港股", ticker: "0863.HK", name: "OSL 集团", relation: 2, theme: "加密Beta", logic: "港股持牌加密交易所,承接『牛市周期』与港股加密政策红利", risk: "流动性差,波动极大" },
+  { market: "港股", ticker: "1816.HK", name: "中广核电力", relation: 1, theme: "能源", logic: "『长期缺能源』论的港股核电映射", risk: "电价管制,弹性低" },
+  { market: "港股", ticker: "6651.HK", name: "五一视界", relation: 1, theme: "物理AI", logic: "数字孪生/空间计算,其四大赛道之一的空间计算映射", risk: "小盘股,题材属性强" },
+  // ---- A股 ----
+  { market: "A股", ticker: "603986.SH", name: "兆易创新", relation: 3, theme: "存储", logic: "存储芯片设计龙头,『永远缺存储』论的 A 股核心映射", risk: "NOR/利基存储与 HBM 主线有差异" },
+  { market: "A股", ticker: "301308.SZ", name: "江波龙", relation: 3, theme: "存储", logic: "存储模组,NAND 涨价周期的直接受益者", risk: "模组环节利润弹性大但壁垒较低" },
+  { market: "A股", ticker: "688525.SH", name: "佰维存储", relation: 2, theme: "存储", logic: "存储模组+先进封测,同属涨价链", risk: "同上" },
+  { market: "A股", ticker: "688008.SH", name: "澜起科技", relation: 2, theme: "存储", logic: "内存接口芯片,DDR5/服务器内存升级受益", risk: "估值偏高" },
+  { market: "A股", ticker: "688017.SH", name: "绿的谐波", relation: 2, theme: "物理AI", logic: "谐波减速器 = 人形机器人核心零部件", risk: "订单尚未放量,题材波动大" },
+  { market: "A股", ticker: "002050.SZ", name: "三花智控", relation: 2, theme: "物理AI", logic: "机器人执行器/特斯拉链,Optimus 叙事映射", risk: "主业为热管理,机器人占比小" },
+  { market: "A股", ticker: "002747.SZ", name: "埃斯顿", relation: 2, theme: "物理AI", logic: "工业机器人本体龙头,工业自动化赛道映射", risk: "盈利承压" },
+  { market: "A股", ticker: "300124.SZ", name: "汇川技术", relation: 2, theme: "物理AI", logic: "工控/伺服龙头,『工业自动化』赛道核心", risk: "宏观制造业周期" },
+  { market: "A股", ticker: "601985.SH", name: "中国核电", relation: 1, theme: "能源", logic: "『长期缺能源』论的 A 股核电映射", risk: "电价与审批节奏" },
+  { market: "A股", ticker: "600118.SH", name: "中国卫星", relation: 1, theme: "太空", logic: "太空探索赛道的 A 股映射", risk: "订单与军工属性波动" },
+  { market: "A股", ticker: "300468.SZ", name: "四方精创", relation: 1, theme: "稳定币概念", logic: "A 股无直接加密标的,此为跨境支付/区块链概念联动", risk: "纯概念,基本面关联极弱" },
 ];
 
 // 监控信源(RSS)。X 无免费 API:主通道用 Google News 聚合(可捕获媒体转述的 X 言论);
