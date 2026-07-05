@@ -3,9 +3,9 @@ main = "src/index.js"
 compatibility_date = "2026-06-01"
 workers_dev = true
 
-# 每 30 分钟抓取一次信源
+# 每 30 分钟抓取(仅在命中重要信号时推送);每天北京时间 12:00(04:00 UTC)推送完整监控结论
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["*/30 * * * *", "0 4 * * *"]
 
 [[kv_namespaces]]
 binding = "SUNWATCH_KV"

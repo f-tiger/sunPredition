@@ -1,4 +1,4 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES } from "./data.js";
 import { renderDashboard } from "./html.js";
 
 const KV_KEY = "feed-items";
@@ -73,8 +73,18 @@ export default {
     }
   },
 
-  async scheduled(_event, env, _ctx) {
-    await refreshFeed(env);
+  async scheduled(event, env, _ctx) {
+    const result = await refreshFeed(env);
+    const cfg = await getTgConfig(env);
+    if (!cfg) return;
+    if (event.cron === "0 4 * * *") {
+      // 每日北京时间 12:00:完整监控结论(含核心信号)
+      const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
+      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev")).catch(() => {});
+    } else if (result.important.length) {
+      // 30 分钟轮询:仅命中重要信号时额外推送
+      await sendTelegram(cfg, buildAlert(result.important)).catch(() => {});
+    }
   },
 };
 
@@ -120,13 +130,22 @@ async function refreshFeed(env) {
     JSON.stringify({ at: new Date().toISOString(), added: fresh.length, errors })
   );
 
-  // 有新条目时推送 Telegram(失败不影响主流程)
-  let telegram = null;
-  const cfg = fresh.length ? await getTgConfig(env) : null;
-  if (cfg) {
-    telegram = await notifyTelegram(cfg, fresh).catch((e) => ({ ok: false, error: String(e) }));
-  }
-  return { added: fresh.length, total: merged.length, errors, telegram };
+  // 标记命中重要信号的新条目(推送决策由 scheduled 处理:日常静默,重要信号才实时推)
+  const important = fresh
+    .map((i) => {
+      const rule = IMPORTANT_RULES.find((r) => r.re.test(i.title));
+      return rule ? { ...i, signal: rule.label } : null;
+    })
+    .filter(Boolean);
+  return { added: fresh.length, total: merged.length, errors, important };
+}
+
+// 重要信号即时推送
+function buildAlert(items) {
+  const lines = items.slice(0, 5).map(
+    (i) => `🚨 <b>[${i.signal}]</b> <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 100)}</a>`
+  );
+  return `⚡ <b>SunWatch 重要信号</b>\n\n${lines.join("\n")}\n\n对照操盘纪律执行,详见监控台核心信号清单。`;
 }
 
 // ---- 监控结论摘要 ----
@@ -154,6 +173,9 @@ function buildSummary(items, origin) {
     `📈 <b>主题周期定位</b>:`,
     ...stages,
     ``,
+    `🧭 <b>核心信号(触发即执行)</b>:`,
+    ...CORE_SIGNALS.map((s) => `• ${escHtml(s)}`),
+    ``,
     `🆕 <b>最新动态</b>(库存 ${items.length} 条):`,
     ...(latest.length ? latest : ["• 暂无,等待下轮抓取"]),
     ``,
@@ -175,18 +197,6 @@ async function getTgConfig(env) {
   if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)
     return { token: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID };
   return (await env.SUNWATCH_KV.get("tg-config", "json")) || null;
-}
-
-async function notifyTelegram(cfg, items) {
-  const top = items.slice(0, 10);
-  const lines = top.map(
-    (i) =>
-      `• [${i.tags.join("/")}] <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 120)}</a>` +
-      (i.published ? ` <i>(${i.published.slice(0, 10)})</i>` : "")
-  );
-  const more = items.length > top.length ? `\n…另有 ${items.length - top.length} 条,详见监控台` : "";
-  const text = `🔭 <b>SunWatch:孙宇晨监控更新 ${items.length} 条</b>\n\n${lines.join("\n")}${more}`;
-  return sendTelegram(cfg, text);
 }
 
 async function sendTelegram(cfg, text) {

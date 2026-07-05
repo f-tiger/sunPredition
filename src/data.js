@@ -298,6 +298,28 @@ export const SOURCES = [
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
 
+// 核心信号清单:进每日 TG 摘要,含触发价位/条件(2026-07-05 快照,更新代码即更新)
+export const CORE_SIGNALS = [
+  "【存储·退出】SKHY(海力士ADR)7/10前后挂牌:上市前同业拉升先卖1/4-1/3;上市周放量冲高继续派发至剩1/3底仓",
+  "【存储·清仓触发】任一:SKHY破发+MU/SNDK更低高点 / NAND·DRAM合约价环比转负 / MU九月末财报下修HBM指引;②③同现→清仓",
+  "【物理AI·入局】优必选120-130港元第一批(现价约157不追)、100-110第二批、破90止损;绿的谐波350-380第一批、300以下第二批",
+  "【物理AI·宇树定价锚】开盘市值<600亿(PS<25x)可首批;>1000亿(PS40x+)只看不买;全行业温度计",
+  "【物理AI·验证加仓】优必选中报确认万台收入 / Optimus实际交付 / 行业季度出货环比+50% → 加至5-8%",
+  "【TRON·事件】诉讼和解/派息=做多窗口;增发/国会听证=回避;仓位≤1%当日止损",
+];
+
+// 重要信号规则:30分钟抓取中命中任一,立即额外推送 TG
+export const IMPORTANT_RULES = [
+  { label: "SKHY上市/破发", re: /SKHY|hynix[^。]{0,40}(list|IPO|debut|fall|drop|plunge|上市|挂牌|破发|暴跌)/i },
+  { label: "存储价格拐点", re: /(NAND|DRAM|闪存|存储芯片|memory)[^。]{0,30}(price|价格)[^。]{0,20}(fall|drop|decline|cut|下跌|转跌|回落|跳水|见顶)/i },
+  { label: "MU指引", re: /(micron|美光)[^。]{0,40}(guidance|outlook|forecast|指引|展望|下修|miss)/i },
+  { label: "宇树IPO", re: /(宇树|unitree)[^。]{0,40}(IPO|上市|挂牌|定价|发行|debut|list)/i },
+  { label: "优必选订单/业绩", re: /(优必选|ubtech)[^。]{0,40}(订单|收入|交付|中报|业绩|order|deliver|earnings|revenue)/i },
+  { label: "Optimus节点", re: /optimus[^。]{0,50}(production|deliver|delay|halt|量产|交付|下线|推迟|停)/i },
+  { label: "WLFI/诉讼", re: /(WLFI|world liberty)[^。]{0,50}(court|ruling|settle|判决|和解|dismiss)|孙宇晨[^。]{0,20}(败诉|胜诉|和解|判决)/i },
+  { label: "TronInc增发/退市", re: /tron inc[^。]{0,50}(offering|dilut|delist|nasdaq|增发|退市|问询)/i },
+];
+
 // 自动打标规则
 export const TAG_RULES = [
   { tag: "预判", re: /predict|forecast|price target|bull|bear|expects?|预测|预判|牛市|熊市|看涨|看跌/i },
