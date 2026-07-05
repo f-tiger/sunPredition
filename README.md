@@ -22,11 +22,11 @@
 ## Telegram 推送配置
 
 1. 在 Telegram 找 **@BotFather** → `/newbot` 创建机器人,得到 bot token。
-2. 给你的新机器人发一条任意消息,然后打开 `https://api.telegram.org/bot<你的token>/getUpdates`,在返回 JSON 里找到 `chat.id`。
-3. 配置 secrets(两种方式任选):
-   - 命令行:`npx wrangler secret put TELEGRAM_BOT_TOKEN` 和 `npx wrangler secret put TELEGRAM_CHAT_ID`
-   - 或 Cloudflare Dashboard → Workers → sunwatch → Settings → Variables and Secrets
-4. 访问 `https://<你的站点>/api/test-telegram` 验证连通(会发一条测试消息)。
+2. 给你的新机器人发一条任意消息(必须先发,否则拿不到 chat_id)。
+3. 访问 `https://<你的站点>/api/setup-telegram?token=<bot token>` —— 自动发现 chat_id、写入配置并发送测试消息,一步完成。
+4. 之后可随时访问 `https://<你的站点>/api/test-telegram` 验证连通。
+
+> 高级方式:也可用 Cloudflare secrets(`TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`,经 `npx wrangler secret put` 或 Dashboard 设置),secrets 优先级高于上述 KV 配置。已配置后重复调用 setup 端点需携带一致 token 才能覆盖。
 
 ## 部署(二选一)
 

@@ -23,10 +23,35 @@ export default {
         return json(result);
       }
       case "/api/test-telegram": {
-        if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID)
-          return json({ ok: false, error: "未配置 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets" });
-        const r = await sendTelegram(env, "✅ <b>SunWatch</b> 测试消息:Telegram 推送已连通。");
+        const cfg = await getTgConfig(env);
+        if (!cfg)
+          return json({ ok: false, error: "未配置 Telegram。访问 /api/setup-telegram?token=<bot token> 一键配置" });
+        const r = await sendTelegram(cfg, "✅ <b>SunWatch</b> 测试消息:Telegram 推送已连通。");
         return json(r);
+      }
+      // 一键配置:先给机器人发一条消息,再访问 /api/setup-telegram?token=<bot token>
+      // 自动通过 getUpdates 发现 chat_id 并存入 KV,随后发送测试消息。
+      // 已配置后再次调用需携带与现有配置一致的 token 才能覆盖(防止他人篡改)。
+      case "/api/setup-telegram": {
+        const token = url.searchParams.get("token")?.trim();
+        if (!token) return json({ ok: false, error: "缺少 ?token=<bot token> 参数" });
+        const existing = await getTgConfig(env);
+        if (existing && existing.token !== token)
+          return json({ ok: false, error: "已存在配置,token 不匹配,拒绝覆盖" });
+        const upd = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
+        const body = await upd.json().catch(() => ({}));
+        if (!body.ok)
+          return json({ ok: false, error: `token 无效或 Telegram API 出错: ${body.description || upd.status}` });
+        const chats = (body.result || [])
+          .map((u) => u.message?.chat || u.edited_message?.chat || u.channel_post?.chat)
+          .filter(Boolean);
+        if (!chats.length)
+          return json({ ok: false, error: "还没收到消息:请先在 Telegram 里给你的机器人发一条任意消息,再刷新本页面" });
+        const chat = chats[chats.length - 1];
+        const cfg = { token, chatId: String(chat.id) };
+        await env.SUNWATCH_KV.put("tg-config", JSON.stringify(cfg));
+        const test = await sendTelegram(cfg, "✅ <b>SunWatch</b> 配置成功!之后每次监控到孙宇晨新动态都会推送到这里。");
+        return json({ ok: test.ok, chatId: cfg.chatId, chatName: chat.username || chat.title || chat.first_name || "", test });
       }
       case "/favicon.ico":
       case "/favicon.svg":
@@ -86,17 +111,25 @@ async function refreshFeed(env) {
     JSON.stringify({ at: new Date().toISOString(), added: fresh.length, errors })
   );
 
-  // 有新条目时推送 Telegram(需配置 secrets;失败不影响主流程)
+  // 有新条目时推送 Telegram(失败不影响主流程)
   let telegram = null;
-  if (fresh.length && env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
-    telegram = await notifyTelegram(env, fresh).catch((e) => ({ ok: false, error: String(e) }));
+  const cfg = fresh.length ? await getTgConfig(env) : null;
+  if (cfg) {
+    telegram = await notifyTelegram(cfg, fresh).catch((e) => ({ ok: false, error: String(e) }));
   }
   return { added: fresh.length, total: merged.length, errors, telegram };
 }
 
 // ---- Telegram 推送 ----
 
-async function notifyTelegram(env, items) {
+// 配置优先级:Cloudflare secrets(TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID)> KV(/api/setup-telegram 写入)
+async function getTgConfig(env) {
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)
+    return { token: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID };
+  return (await env.SUNWATCH_KV.get("tg-config", "json")) || null;
+}
+
+async function notifyTelegram(cfg, items) {
   const top = items.slice(0, 10);
   const lines = top.map(
     (i) =>
@@ -105,17 +138,17 @@ async function notifyTelegram(env, items) {
   );
   const more = items.length > top.length ? `\n…另有 ${items.length - top.length} 条,详见监控台` : "";
   const text = `🔭 <b>SunWatch:孙宇晨监控更新 ${items.length} 条</b>\n\n${lines.join("\n")}${more}`;
-  return sendTelegram(env, text);
+  return sendTelegram(cfg, text);
 }
 
-async function sendTelegram(env, text) {
+async function sendTelegram(cfg, text) {
   const resp = await fetch(
-    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+    `https://api.telegram.org/bot${cfg.token}/sendMessage`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        chat_id: env.TELEGRAM_CHAT_ID,
+        chat_id: cfg.chatId,
         text: text.slice(0, 4000),
         parse_mode: "HTML",
         disable_web_page_preview: true,
