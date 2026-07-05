@@ -1,7 +1,7 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES } from "./data.js";
 import { renderDashboard } from "./html.js";
 
-const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表
+const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
 const MAX_ITEMS = 300;
 
 export default {
