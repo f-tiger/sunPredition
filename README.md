@@ -17,16 +17,24 @@
 - **X 渠道**:X 无免费 API。默认通过新闻聚合间接覆盖其 X 言论;如有 X API key,执行 `npx wrangler secret put X_BEARER_TOKEN` 后自动启用 @justinsuntron 时间线直连。
 - **预判档案**:2019–2026 每个阶段的"预判 → 验证结果 → 他的操作"三栏时间线,含命中统计。
 - **美股映射**:TRON / CRCL / COIN / HOOD / MSTR / DJT 关联强度与传导逻辑卡片。
+- **Telegram 推送**:每次抓到新条目自动推送到你的 Telegram(标签 + 标题 + 链接,单次最多 10 条)。
+
+## Telegram 推送配置
+
+1. 在 Telegram 找 **@BotFather** → `/newbot` 创建机器人,得到 bot token。
+2. 给你的新机器人发一条任意消息,然后打开 `https://api.telegram.org/bot<你的token>/getUpdates`,在返回 JSON 里找到 `chat.id`。
+3. 配置 secrets(两种方式任选):
+   - 命令行:`npx wrangler secret put TELEGRAM_BOT_TOKEN` 和 `npx wrangler secret put TELEGRAM_CHAT_ID`
+   - 或 Cloudflare Dashboard → Workers → sunwatch → Settings → Variables and Secrets
+4. 访问 `https://<你的站点>/api/test-telegram` 验证连通(会发一条测试消息)。
 
 ## 部署(二选一)
 
 **方式 A:GitHub Actions 自动部署(推荐)**
 
 1. 在 Cloudflare Dashboard → My Profile → API Tokens 创建一个 *Edit Cloudflare Workers* 模板的 token。
-2. 在本仓库 Settings → Secrets and variables → Actions 添加:
-   - `CLOUDFLARE_API_TOKEN`:上一步的 token
-   - `CLOUDFLARE_ACCOUNT_ID`:Cloudflare Dashboard 右侧栏的 Account ID
-3. 把本分支合并/推送到 `main`,Actions 会自动部署;之后访问 `https://sunwatch.<你的子域>.workers.dev`,点一次「立即抓取」初始化数据。
+2. 在本仓库 Settings → Secrets and variables → Actions 添加 `CLOUDFLARE_API_TOKEN`。
+3. 推送 `main` 或开发分支(见 deploy.yml)即自动部署;之后访问 `https://sunwatch.<你的子域>.workers.dev`,点一次「立即抓取」初始化数据。
 
 **方式 B:本地一条命令**
 

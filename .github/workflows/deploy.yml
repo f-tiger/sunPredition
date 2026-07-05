@@ -2,7 +2,9 @@ name: Deploy SunWatch to Cloudflare Workers
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - claude/sun-yuchen-investment-research-yzz9mx
     paths: ["src/**", "wrangler.toml", ".github/workflows/deploy.yml"]
   workflow_dispatch:
 
@@ -14,4 +16,3 @@ jobs:
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

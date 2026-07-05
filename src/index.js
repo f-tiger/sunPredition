@@ -22,6 +22,12 @@ export default {
         const result = await refreshFeed(env);
         return json(result);
       }
+      case "/api/test-telegram": {
+        if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID)
+          return json({ ok: false, error: "未配置 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets" });
+        const r = await sendTelegram(env, "✅ <b>SunWatch</b> 测试消息:Telegram 推送已连通。");
+        return json(r);
+      }
       case "/favicon.ico":
       case "/favicon.svg":
         return new Response(
@@ -79,7 +85,52 @@ async function refreshFeed(env) {
     "last-refresh",
     JSON.stringify({ at: new Date().toISOString(), added: fresh.length, errors })
   );
-  return { added: fresh.length, total: merged.length, errors };
+
+  // 有新条目时推送 Telegram(需配置 secrets;失败不影响主流程)
+  let telegram = null;
+  if (fresh.length && env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+    telegram = await notifyTelegram(env, fresh).catch((e) => ({ ok: false, error: String(e) }));
+  }
+  return { added: fresh.length, total: merged.length, errors, telegram };
+}
+
+// ---- Telegram 推送 ----
+
+async function notifyTelegram(env, items) {
+  const top = items.slice(0, 10);
+  const lines = top.map(
+    (i) =>
+      `• [${i.tags.join("/")}] <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 120)}</a>` +
+      (i.published ? ` <i>(${i.published.slice(0, 10)})</i>` : "")
+  );
+  const more = items.length > top.length ? `\n…另有 ${items.length - top.length} 条,详见监控台` : "";
+  const text = `🔭 <b>SunWatch:孙宇晨监控更新 ${items.length} 条</b>\n\n${lines.join("\n")}${more}`;
+  return sendTelegram(env, text);
+}
+
+async function sendTelegram(env, text) {
+  const resp = await fetch(
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_CHAT_ID,
+        text: text.slice(0, 4000),
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    }
+  );
+  const body = await resp.json().catch(() => ({}));
+  return { ok: resp.ok && body.ok === true, status: resp.status, description: body.description };
+}
+
+function escHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escAttr(s) {
+  return String(s || "").replace(/"/g, "%22");
 }
 
 async function fetchRss(source) {
