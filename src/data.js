@@ -137,16 +137,16 @@ export const STOCKS = [
   // ---- 港股 ----
   { market: "港股", ticker: "9880.HK", name: "优必选", relation: 3, theme: "物理AI", logic: "人形机器人第一股;2026-07-01 宣布订单破万台并公布售价——0→1 验证的关键事件", risk: "亏损,PE 不适用;万台订单的收入确认节奏是真伪试金石",
     fund: { mcap: "约 422 亿港元(2026-04),订单破万后待重估", val: "PS 约 25 倍(行业以 PS 估值,普遍亏损)", inv: "2025 全尺寸出货 1079 台(+35867%)、收入 8.2 亿(+2204%),全球第一", moat: "全尺寸人形机器人量产交付经验全球最多", comp: "Unitree(出货 5500 台居首但以小尺寸为主)、特斯拉 Optimus、Figure" } },
-  { market: "港股", ticker: "9660.HK", name: "地平线机器人", relation: 2, theme: "物理AI", logic: "智驾/机器人计算方案,物理 AI 芯片层", risk: "亏损;竞争激烈",
-    fund: { mcap: "—", val: "PS 估值", inv: "—", moat: "国产智驾芯片出货量第一,征程系列生态", comp: "NVDA(Thor)、华为昇腾、黑芝麻" } },
-  { market: "港股", ticker: "2498.HK", name: "速腾聚创", relation: 2, theme: "物理AI", logic: "激光雷达=物理 AI 感知层,已切入机器人客户", risk: "价格战毛利承压",
-    fund: { mcap: "—", val: "PS 估值", inv: "—", moat: "车载激光雷达出货前二,机器人第二曲线", comp: "禾赛 HSAI(美股)、华为" } },
+  { market: "港股", ticker: "9660.HK", name: "地平线机器人", relation: 2, theme: "物理AI", logic: "智驾/机器人计算方案;股价贴 52 周低,与物理 AI 热度背离的左侧标的", risk: "跌至低位的原因待查证(价格战/竞争/客户流失?),查证前仅小仓潜伏",
+    fund: { mcap: "股价 3.64 港元(2026-06-26),52 周区间 3.63-11.32,处最低位", val: "分析师 12 月均目标 11.10(21 买入/0 卖出,隐含 +205%)", inv: "—", moat: "国产智驾芯片出货量第一,征程系列生态", comp: "NVDA(Thor)、华为昇腾、黑芝麻" } },
+  { market: "港股", ticker: "2498.HK", name: "速腾聚创", relation: 2, theme: "物理AI", logic: "激光雷达=物理 AI 感知层,已切入机器人客户", risk: "价格战毛利承压;历史上有解禁暴跌前科",
+    fund: { mcap: "待补实时价", val: "PS 估值;2026Q1 收入 4.59 亿元 +39.9%,增速需延续", inv: "—", moat: "车载激光雷达出货前二,机器人第二曲线", comp: "禾赛 HSAI(美股)、华为" } },
   { market: "港股", ticker: "1810.HK", name: "小米集团", relation: 1, theme: "物理AI", logic: "汽车+IoT+机器人生态泛映射", risk: "关联度弱", fund: { mcap: "—", val: "—", inv: "—", moat: "生态+制造", comp: "华为、苹果" } },
   { market: "港股", ticker: "0981.HK", name: "中芯国际", relation: 2, theme: "存储/芯片", logic: "『缺芯片』论的中国制造端映射", risk: "先进制程受限",
     fund: { mcap: "—", val: "A/H 溢价大", inv: "—", moat: "大陆代工龙头,国产替代唯一规模载体", comp: "台积电(技术代差)、华虹" } },
   { market: "港股", ticker: "1347.HK", name: "华虹半导体", relation: 1, theme: "存储/芯片", logic: "特色工艺代工 Beta", risk: "周期性强", fund: { mcap: "—", val: "—", inv: "—", moat: "特色工艺(功率/嵌入式存储)", comp: "中芯、世界先进" } },
-  { market: "港股", ticker: "0863.HK", name: "OSL 集团", relation: 2, theme: "加密Beta", logic: "港股持牌加密交易所", risk: "流动性差波动大",
-    fund: { mcap: "小盘", val: "—", inv: "—", moat: "香港持牌合规交易所稀缺牌照", comp: "HashKey、富途/老虎的加密通道" } },
+  { market: "港股", ticker: "0863.HK", name: "OSL 集团", relation: 2, theme: "加密Beta", logic: "港股持牌加密交易所;政策催化在路上(港交所虚拟资产指数系列、与华夏基金代币化基金)", risk: "流动性差波动大,只做政策波段",
+    fund: { mcap: "股价 10.70 港元(2026-06-04),52 周区间 10.25-20.30,处低位区", val: "12 月均目标价 20.01(隐含约翻倍)", inv: "—", moat: "香港持牌合规交易所稀缺牌照", comp: "HashKey、富途/老虎的加密通道" } },
   { market: "港股", ticker: "1816.HK", name: "中广核电力", relation: 1, theme: "能源", logic: "『长期缺能源』港股核电映射", risk: "电价管制弹性低", fund: { mcap: "—", val: "股息率定价(<3.5% 性价比消失)", inv: "—", moat: "在运核电规模", comp: "中国核电(A)" } },
   { market: "港股", ticker: "6651.HK", name: "五一视界", relation: 1, theme: "物理AI", logic: "数字孪生/空间计算映射", risk: "小盘题材", fund: { mcap: "小盘", val: "—", inv: "—", moat: "数字孪生场景积累", comp: "51WORLD 同赛道创业公司众多" } },
   // ---- A股 ----
@@ -296,6 +296,8 @@ export const SOURCES = [
   // 存储线退出触发信号专用:SKHY 上市动态 + NAND/DRAM 价格拐点 + 存储个股异动
   { name: "BingNews-存储信号", url: "https://www.bing.com/news/search?q=%22SK+hynix%22+ADR+OR+SKHY+OR+%22NAND+price%22+OR+%22DRAM+price%22&format=rss" },
   { name: "BingNews-存储个股", url: "https://www.bing.com/news/search?q=SNDK+OR+%22Micron+stock%22+OR+SanDisk+stock&format=rss" },
+  // 港股标的与香港加密政策
+  { name: "BingNews-港股标的", url: "https://www.bing.com/news/search?q=%E4%BC%98%E5%BF%85%E9%80%89+OR+%E5%9C%B0%E5%B9%B3%E7%BA%BF%E6%9C%BA%E5%99%A8%E4%BA%BA+OR+%E9%80%9F%E8%85%BE%E8%81%9A%E5%88%9B+OR+OSL%E9%9B%86%E5%9B%A2&format=rss" },
   { name: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/justin-sun" },
 ];
 
@@ -305,6 +307,8 @@ export const CORE_SIGNALS = [
   "【存储·底仓清仓触发(7/10后4-8周)】任一出现减下一档,两项同现清仓:① SKHY跌破发行价且MU/SNDK更低高点 ② NAND·DRAM合约价环比转负(TrendForce月报) ③ MU 9月下旬财报下修HBM指引",
   "【存储·铁律】20周均线跌破无条件减半;单日+8%放量的抛物线日是卖点不是买点;卖出顺序:模组/二线→SNDK→MU",
   "【物理AI·入局】优必选120-130港元第一批(现价约157不追)、100-110第二批、破90止损;绿的谐波350-380第一批、300以下第二批",
+  "【港股·左侧潜伏】地平线(9660)3.64港元贴52周低(3.63-11.32),与物理AI热度背离——先查跌因(价格战/大客户?),无基本面恶化则3.6-4.0区≤0.5%仓潜伏,破3.4止损,首目标6 | 速腾(2498)等实时价,PS<15x才分批,Q1收入+39.9%需延续",
+  "【港股·加密波段】OSL(0863)10.3-11支撑区波段买(52周低10.25,现约10.7),催化=港交所虚拟资产指数/代币化基金落地;18-20兑现,破10止损——只做政策波段不长持",
   "【物理AI·宇树定价锚】开盘市值<600亿(PS<25x)可首批;>1000亿(PS40x+)只看不买;全行业温度计",
   "【物理AI·验证加仓】优必选中报确认万台收入 / Optimus实际交付 / 行业季度出货环比+50% → 加至5-8%",
   "【TRON·事件】诉讼和解/派息=做多窗口;增发/国会听证=回避;仓位≤1%当日止损",
@@ -321,6 +325,8 @@ export const IMPORTANT_RULES = [
   { label: "Optimus节点", re: /optimus[^。]{0,50}(production|deliver|delay|halt|量产|交付|下线|推迟|停)/i },
   { label: "WLFI/诉讼", re: /(WLFI|world liberty)[^。]{0,50}(court|ruling|settle|判决|和解|dismiss)|孙宇晨[^。]{0,20}(败诉|胜诉|和解|判决)/i },
   { label: "TronInc增发/退市", re: /tron inc[^。]{0,50}(offering|dilut|delist|nasdaq|增发|退市|问询)/i },
+  { label: "港股标的异动", re: /(优必选|ubtech|地平线|horizon robotics|速腾|robosense|OSL)[^。]{0,40}(大涨|大跌|暴跌|暴涨|异动|订单|解禁|配售|增发|回购|plunge|surge|tumble|placement|buyback)/i },
+  { label: "港股加密政策", re: /(港交所|香港|HKMA|SFC|HKEX)[^。]{0,30}(虚拟资产|稳定币|加密|代币化|digital asset|stablecoin|token)/i },
 ];
 
 // 自动打标规则
