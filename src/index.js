@@ -77,10 +77,13 @@ export default {
     const result = await refreshFeed(env);
     const cfg = await getTgConfig(env);
     if (!cfg) return;
-    if (event.cron === "0 4 * * *") {
-      // 每日北京时间 12:00:完整监控结论(含核心信号)
+    const DAILY = {
+      "30 0 * * *": "🌅 早盘简报(美股隔夜复盘 · A/H 开盘前)",
+      "30 12 * * *": "🌇 美股开盘前简报(A/H 收盘复盘 · 执行提醒)",
+    };
+    if (DAILY[event.cron]) {
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
-      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev")).catch(() => {});
+      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron])).catch(() => {});
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
       await sendTelegram(cfg, buildAlert(result.important)).catch(() => {});
@@ -150,7 +153,7 @@ function buildAlert(items) {
 
 // ---- 监控结论摘要 ----
 
-function buildSummary(items, origin) {
+function buildSummary(items, origin, label) {
   const scored = PREDICTIONS.filter((p) => !["marketing", "risk", "pending"].includes(p.verdict));
   const hits = scored.filter((p) => p.verdict.startsWith("hit")).length;
   const latest = items.slice(0, 5).map(
@@ -166,6 +169,7 @@ function buildSummary(items, origin) {
   const stages = PLAYBOOK.map((p) => `• ${p.theme}:<b>${STAGE_CN[p.stage] || p.stage}</b> — ${p.stageNote}`);
   return [
     `🔭 <b>SunWatch 监控结论</b> ${new Date().toISOString().slice(0, 10)}`,
+    ...(label ? [label] : []),
     ``,
     `📊 <b>预判档案</b>:共 ${PREDICTIONS.length} 条;可评分 ${scored.length} 条中命中 ${hits} 条(其余为营销造势/风险事件/待验证)`,
     `核心结论:他的言论不是可靠信号,资本动作才是`,
