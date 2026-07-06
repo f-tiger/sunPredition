@@ -203,20 +203,48 @@ async function getTgConfig(env) {
   return (await env.SUNWATCH_KV.get("tg-config", "json")) || null;
 }
 
+// 长消息按行分段(行内 HTML 标签完整,行边界切分不会截断标签);
+// 单段解析失败时剥离标签降级纯文本重发,保证必达。
 async function sendTelegram(cfg, text) {
-  const resp = await fetch(
-    `https://api.telegram.org/bot${cfg.token}/sendMessage`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: cfg.chatId,
-        text: text.slice(0, 4000),
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
+  const chunks = splitByLines(text, 3500);
+  let last = null;
+  for (const chunk of chunks) {
+    last = await tgSend(cfg, chunk, "HTML");
+    if (!last.ok && /parse entities/i.test(last.description || "")) {
+      last = await tgSend(cfg, chunk.replace(/<[^>]+>/g, ""), null);
     }
-  );
+    if (!last.ok) break;
+  }
+  return { ok: !!(last && last.ok), parts: chunks.length, status: last?.status, description: last?.description };
+}
+
+function splitByLines(text, max) {
+  const chunks = [];
+  let cur = "";
+  for (const line of text.split("\n")) {
+    const ln = line.length > max ? line.slice(0, max) : line;
+    if (cur && cur.length + 1 + ln.length > max) {
+      chunks.push(cur);
+      cur = ln;
+    } else {
+      cur = cur ? cur + "\n" + ln : ln;
+    }
+  }
+  if (cur) chunks.push(cur);
+  return chunks.length ? chunks : [""];
+}
+
+async function tgSend(cfg, text, mode) {
+  const resp = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      chat_id: cfg.chatId,
+      text: text.slice(0, 4000),
+      ...(mode ? { parse_mode: mode } : {}),
+      disable_web_page_preview: true,
+    }),
+  });
   const body = await resp.json().catch(() => ({}));
   return { ok: resp.ok && body.ok === true, status: resp.status, description: body.description };
 }
