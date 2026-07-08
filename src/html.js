@@ -55,7 +55,15 @@ export function renderDashboard() {
 </header>
 
 <div class="stats" id="stats"></div>
-<div><button onclick="refresh()">立即抓取最新信息</button> <span class="meta" id="refreshMsg"></span></div>
+<div><button onclick="refresh()">立即抓取最新信息</button> <button onclick="refreshQuotes()" style="margin-left:8px">刷新行情</button> <span class="meta" id="refreshMsg"></span></div>
+
+<h2>今日行动面板(实时行情 × 触发线)</h2>
+<p class="meta">现价来自 Yahoo Finance,每 30 分钟自动刷新;价格穿越触发线时 Telegram 实时报警。🔴=触发线已穿越(执行动作) 🟡=距触发线 3% 以内(备战) 🟢=安全距离。</p>
+<div id="actionboard"><div class="card meta">行情加载中…</div></div>
+
+<h2>预测记录与打分(给自己建档)</h2>
+<p class="meta">本系统每次明确判断都在此公开记档——命中与失误同等展示,与孙宇晨预判档案同一标准。</p>
+<div id="forecasts"></div>
 
 <h2>主题周期定位与操盘框架</h2>
 <p class="meta">四阶段模型:早期信号 → 中期主升 → 高峰泡沫 → 退潮。阶段判定附依据;各阶段给出可观测信号与对应标的;操盘纪律含具体触发条件。非投资建议。</p>
@@ -85,14 +93,62 @@ const VERDICT={hit:["✅ 命中","v-hit"],["hit-weak"]:["✅ 命中(弱)","v-hit
   marketing:["📣 营销造势","v-marketing"],risk:["⚠️ 风险事件","v-risk"],
   pending:["⏳ 待验证","v-partial"]};
 
+let WATCH=[];
 async function load(){
-  const [a,f]=await Promise.all([
+  const [a,f,q]=await Promise.all([
     fetch('/api/archive').then(r=>r.json()),
-    fetch('/api/feed').then(r=>r.json())
+    fetch('/api/feed').then(r=>r.json()),
+    fetch('/api/quotes').then(r=>r.json()).catch(()=>({quotes:[]}))
   ]);
-  FEED=f.items||[];
+  FEED=f.items||[]; WATCH=a.watchlist||[];
   renderStats(a,f); renderArchive(a.predictions); renderStocks(a.stocks);
-  renderPlaybook(a.playbook||[]); renderFilters(); renderFeed();
+  renderPlaybook(a.playbook||[]); renderForecasts(a.forecasts||[]);
+  renderActionBoard(q); renderFilters(); renderFeed();
+}
+async function refreshQuotes(){
+  const el=document.getElementById('refreshMsg');el.textContent='刷新行情中…';
+  try{
+    await fetch('/api/refresh-quotes');
+    const q=await fetch('/api/quotes').then(r=>r.json());
+    renderActionBoard(q); el.textContent='行情已更新 '+(q.at||'').replace('T',' ').slice(0,16);
+  }catch(e){el.textContent='行情刷新失败:'+e.message}
+}
+function renderActionBoard(q){
+  const quotes=q.quotes||[];
+  if(!quotes.length){document.getElementById('actionboard').innerHTML='<div class="card meta">暂无行情——点「刷新行情」初始化(部署后首次需手动触发一次)。</div>';return;}
+  const qm=Object.fromEntries(quotes.map(x=>[x.symbol,x]));
+  document.getElementById('actionboard').innerHTML='<div class="stocks">'+WATCH.map(w=>{
+    const qt=qm[w.symbol];
+    if(!qt)return '<div class="card meta">'+esc(w.name)+':行情不可用</div>';
+    const rows=(w.levels||[]).map(lv=>{
+      const dist=(lv.price-qt.price)/qt.price*100;
+      const crossed=(lv.dir==='below'&&qt.price<=lv.price)||(lv.dir==='above'&&qt.price>=lv.price);
+      const near=!crossed&&Math.abs(dist)<=3;
+      const light=crossed?'🔴':near?'🟡':'🟢';
+      return '<div style="font-size:13px;margin-top:3px">'+light+' '+esc(lv.label)+' <b>'+lv.price.toLocaleString()+'</b>'+
+        ' <span class="meta">(距离 '+(dist>0?'+':'')+dist.toFixed(1)+'%)</span>'+
+        (crossed?'<div style="color:var(--miss);font-weight:600">→ '+esc(lv.act)+'</div>':'')+
+      '</div>';
+    }).join('');
+    const chg=qt.changePct;
+    return '<div class="card"><b>'+esc(w.name)+'</b> <span class="tag">'+esc(w.group)+'</span>'+
+      '<div style="font-size:20px;font-weight:700;margin-top:2px">'+qt.price.toLocaleString()+
+      ' <span style="font-size:14px" class="'+(chg>=0?'v-hit':'v-miss')+'">'+(chg>0?'+':'')+chg+'%</span></div>'+
+      (rows||'<div class="meta" style="font-size:12.5px">无触发线(仅监控)</div>')+'</div>';
+  }).join('')+'</div><div class="meta" style="margin-top:6px">行情时间:'+(q.at||'—').replace('T',' ').slice(0,16)+' UTC</div>';
+}
+const F_VERDICT={hit:['✅ 命中','v-hit'],miss:['❌ 失误','v-miss'],partial:['🟡 部分','v-partial'],pending:['⏳ 验证中','v-partial']};
+function renderForecasts(fc){
+  const scored=fc.filter(x=>x.verdict!=='pending');
+  const hits=scored.filter(x=>x.verdict==='hit').length;
+  document.getElementById('forecasts').innerHTML=
+    '<div class="meta" style="margin-bottom:8px">可评分 '+scored.length+' 条,命中 '+hits+' 条'+(scored.length?'(命中率 '+Math.round(hits/scored.length*100)+'%)':'')+'</div>'+
+    fc.map(x=>{
+      const[v,c]=F_VERDICT[x.verdict]||[x.verdict,''];
+      return '<div class="card"><b>'+x.date+'</b> · <b class="'+c+'">'+v+'</b><div style="margin-top:4px">'+esc(x.call)+'</div>'+
+      '<div class="meta" style="margin-top:3px">依据:'+esc(x.basis)+'</div>'+
+      '<div style="margin-top:3px;font-size:13.5px">结果:'+esc(x.outcome)+'</div></div>';
+    }).join('');
 }
 const STAGE_META={early:['早期信号','v-hit'],mid:['中期主升','v-partial'],peak:['高峰泡沫','v-miss'],exit:['退潮','v-risk']};
 function renderPlaybook(pb){

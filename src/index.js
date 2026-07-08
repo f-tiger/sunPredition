@@ -1,4 +1,4 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS } from "./data.js";
 import { renderDashboard } from "./html.js";
 
 const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
@@ -17,7 +17,15 @@ export default {
         return json({ count: items.length, items });
       }
       case "/api/archive":
-        return json({ predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK });
+        return json({ predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST });
+      case "/api/quotes": {
+        const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { at: null, quotes: [] };
+        return json(q);
+      }
+      case "/api/refresh-quotes": {
+        const r = await refreshQuotes(env);
+        return json(r);
+      }
       case "/api/refresh": {
         const result = await refreshFeed(env);
         return json(result);
@@ -59,7 +67,9 @@ export default {
         if (!cfg)
           return json({ ok: false, error: "未配置 Telegram。访问 /api/setup-telegram?token=<bot token> 一键配置" });
         const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
-        const r = await sendTelegram(cfg, buildSummary(items, url.origin));
+        await refreshQuotes(env).catch(() => null);
+        const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+        const r = await sendTelegram(cfg, buildSummary(items, url.origin, null, q.quotes));
         return json(r);
       }
       case "/favicon.ico":
@@ -75,15 +85,24 @@ export default {
 
   async scheduled(event, env, _ctx) {
     const result = await refreshFeed(env);
+    const quoteResult = await refreshQuotes(env).catch(() => null);
     const cfg = await getTgConfig(env);
     if (!cfg) return;
+    // 价格穿越触发线:实时报警(独立于新闻)
+    if (quoteResult && quoteResult.crossings.length) {
+      const lines = quoteResult.crossings.map(
+        (c) => `🎯 <b>${escHtml(c.name)}</b> ${c.dir === "below" ? "跌破" : "升破"} <b>${escHtml(c.label)}</b>(${c.level})\n现价 ${c.price} → 动作:${escHtml(c.act)}`
+      );
+      await sendTelegram(cfg, `⚡ <b>价格触发</b>\n\n${lines.join("\n\n")}`).catch(() => {});
+    }
     const DAILY = {
       "30 0 * * *": "🌅 早盘简报(美股隔夜复盘 · A/H 开盘前)",
       "30 12 * * *": "🌇 美股开盘前简报(A/H 收盘复盘 · 执行提醒)",
     };
     if (DAILY[event.cron]) {
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
-      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron])).catch(() => {});
+      const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes)).catch(() => {});
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
       await sendTelegram(cfg, buildAlert(result.important)).catch(() => {});
@@ -143,6 +162,55 @@ async function refreshFeed(env) {
   return { added: fresh.length, total: merged.length, errors, important };
 }
 
+// ---- 实时行情引擎(Yahoo Finance chart API) ----
+
+async function refreshQuotes(env) {
+  const prev = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+  const prevMap = Object.fromEntries(prev.quotes.map((q) => [q.symbol, q]));
+  const results = await Promise.allSettled(WATCHLIST.map((w) => fetchQuote(w)));
+  const quotes = [];
+  const crossings = [];
+  for (const r of results) {
+    if (r.status !== "fulfilled" || !r.value) continue;
+    const q = r.value;
+    quotes.push(q);
+    const prevQ = prevMap[q.symbol];
+    const w = WATCHLIST.find((x) => x.symbol === q.symbol);
+    if (!prevQ || !w) continue;
+    for (const lv of w.levels) {
+      const crossedBelow = lv.dir === "below" && prevQ.price > lv.price && q.price <= lv.price;
+      const crossedAbove = lv.dir === "above" && prevQ.price < lv.price && q.price >= lv.price;
+      if (crossedBelow || crossedAbove) {
+        crossings.push({ name: w.name, dir: lv.dir, label: lv.label, level: lv.price, price: q.price, act: lv.act });
+      }
+    }
+  }
+  const payload = { at: new Date().toISOString(), quotes };
+  await env.SUNWATCH_KV.put("quotes", JSON.stringify(payload));
+  return { count: quotes.length, crossings };
+}
+
+async function fetchQuote(w) {
+  const resp = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(w.symbol)}?interval=1d&range=5d`,
+    { headers: { "user-agent": "Mozilla/5.0 (sunwatch)" } }
+  );
+  if (!resp.ok) return null;
+  const meta = (await resp.json())?.chart?.result?.[0]?.meta;
+  if (!meta || !meta.regularMarketPrice) return null;
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+  return {
+    symbol: w.symbol,
+    name: w.name,
+    group: w.group,
+    price,
+    changePct: prevClose ? Math.round(((price - prevClose) / prevClose) * 1000) / 10 : 0,
+    currency: meta.currency || "",
+    at: new Date().toISOString(),
+  };
+}
+
 // 重要信号即时推送
 function buildAlert(items) {
   const lines = items.slice(0, 5).map(
@@ -153,7 +221,10 @@ function buildAlert(items) {
 
 // ---- 监控结论摘要 ----
 
-function buildSummary(items, origin, label) {
+function buildSummary(items, origin, label, quotes) {
+  const quoteLines = (quotes || [])
+    .slice(0, 12)
+    .map((q) => `• ${q.name} ${fmtPrice(q.price)} (${q.changePct > 0 ? "+" : ""}${q.changePct}%)`);
   const scored = PREDICTIONS.filter((p) => !["marketing", "risk", "pending"].includes(p.verdict));
   const hits = scored.filter((p) => p.verdict.startsWith("hit")).length;
   const latest = items.slice(0, 5).map(
@@ -171,6 +242,7 @@ function buildSummary(items, origin, label) {
     `🔭 <b>SunWatch 监控结论</b> ${new Date().toISOString().slice(0, 10)}`,
     ...(label ? [label] : []),
     ``,
+    ...(quoteLines.length ? [`💹 <b>实时行情</b>:`, ...quoteLines, ``] : []),
     `📊 <b>预判档案</b>:共 ${PREDICTIONS.length} 条;可评分 ${scored.length} 条中命中 ${hits} 条(其余为营销造势/风险事件/待验证)`,
     `核心结论:他的言论不是可靠信号,资本动作才是`,
     ``,
@@ -247,6 +319,10 @@ async function tgSend(cfg, text, mode) {
   });
   const body = await resp.json().catch(() => ({}));
   return { ok: resp.ok && body.ok === true, status: resp.status, description: body.description };
+}
+
+function fmtPrice(p) {
+  return p >= 10000 ? Math.round(p).toLocaleString("en-US") : p >= 100 ? p.toFixed(1) : p.toFixed(2);
 }
 
 function escHtml(s) {

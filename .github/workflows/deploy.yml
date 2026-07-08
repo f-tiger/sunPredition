@@ -28,6 +28,9 @@ jobs:
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo
+          echo "quotes:"
+          curl -s "$URL/api/refresh-quotes" || true
+          echo
           curl -sf "$URL/api/feed" | head -c 400
           echo
       - name: Push monitoring summary to Telegram

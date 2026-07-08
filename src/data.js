@@ -318,6 +318,50 @@ export const PLAYBOOK = [
   },
 ];
 
+// 实时行情监控清单(Yahoo Finance 符号)+ 触发线。
+// dir: "below"=跌破触发 / "above"=升破触发;act=触发后动作
+export const WATCHLIST = [
+  { symbol: "000660.KS", name: "SK海力士", group: "存储", levels: [
+    { price: 2187000, dir: "below", label: "应急线(7/2低)", act: "直接降至1/2仓,不等挂牌" },
+    { price: 2555000, dir: "above", label: "定价参考位", act: "ADR定价折让消失,派发照常" },
+    { price: 2900000, dir: "above", label: "派发加速位", act: "全部派发动作立即执行" } ] },
+  { symbol: "SNDK", name: "SanDisk", group: "存储", levels: [
+    { price: 1745, dir: "below", label: "7/2崩盘低点", act: "跌破=下行趋势确认,第一段市价完成" },
+    { price: 2000, dir: "above", label: "6月峰值区", act: "冲高即派发" } ] },
+  { symbol: "MU", name: "Micron", group: "存储", levels: [
+    { price: 300, dir: "below", label: "参考支撑(待校准)", act: "关注更低高点形态" } ] },
+  { symbol: "7709.HK", name: "南方两倍海力士", group: "存储", levels: [
+    { price: 100, dir: "below", label: "参考位(待校准)", act: "反弹优先卖出" } ] },
+  { symbol: "9880.HK", name: "优必选", group: "物理AI", levels: [
+    { price: 130, dir: "below", label: "第一批买入区上沿", act: "120-130分批买入" },
+    { price: 110, dir: "below", label: "第二批买入区", act: "100-110第二批" },
+    { price: 90, dir: "below", label: "止损线", act: "订单证伪,离场" } ] },
+  { symbol: "9660.HK", name: "地平线机器人", group: "物理AI", levels: [
+    { price: 4.0, dir: "below", label: "潜伏区上沿", act: "3.6-4.0小仓潜伏(先查跌因)" },
+    { price: 3.4, dir: "below", label: "止损线", act: "潜伏仓离场" } ] },
+  { symbol: "688017.SS", name: "绿的谐波", group: "物理AI", levels: [
+    { price: 380, dir: "below", label: "第一批买入区", act: "350-380分批接" },
+    { price: 300, dir: "below", label: "第二批买入区", act: "300以下第二批" } ] },
+  { symbol: "0863.HK", name: "OSL集团", group: "加密", levels: [
+    { price: 11, dir: "below", label: "支撑区买点", act: "10.3-11波段买" },
+    { price: 10, dir: "below", label: "止损线", act: "波段仓离场" },
+    { price: 18, dir: "above", label: "兑现区", act: "18-20分批了结" } ] },
+  { symbol: "TRON", name: "Tron Inc.", group: "孙宇晨", levels: [] },
+  { symbol: "CRCL", name: "Circle", group: "加密", levels: [] },
+  { symbol: "603667.SS", name: "五洲新春", group: "潜伏池", levels: [] },
+  { symbol: "003021.SZ", name: "兆威机电", group: "潜伏池", levels: [] },
+];
+
+// 预测记录与打分:给自己建档,像给孙宇晨建档一样。verdict: hit/miss/partial/pending
+export const FORECASTS = [
+  { date: "2026-07-05", call: "存储线处于『高峰区间后段』,风险大于机会,应派发", basis: "SNDK 50倍+散户共识化+资本开支上调+SKHY天量发行", verdict: "hit", outcome: "7/1-7/2 板块崩盘(费半-6%,SNDK-14%,MU-13%);三星7/7利好出尽-6%再验证" },
+  { date: "2026-07-05", call: "上市周主情景(40%):挂牌前同业冲高,冲高派发", basis: "注意力理论+同业映射", verdict: "miss", outcome: "落空:实际7/1-7/2已崩盘,我引用的SNDK $2000+是6月峰值滞后数据——情景权重标错。教训:顶部判定成立时立即派发,不设计『等冲高』剧本;行情数据必须实时化(本次网站升级的直接原因)" },
+  { date: "2026-07-05", call: "遇冷情景(25%):定价折让扩大、破发风险", basis: "ADR定价$165.26 vs 市价对应值折让5%", verdict: "hit", outcome: "7/6-7/7走的正是此路径,折让扩至9%+;概率已上调为主情景" },
+  { date: "2026-07-05", call: "7709只适合事件窗口短线,严禁长持,震荡=负复利双杀", basis: "两倍日重置方差拖累数学", verdict: "hit", outcome: "7/2正股-9%当日7709约-18%;震荡下跌中损耗持续兑现" },
+  { date: "2026-07-06", call: "周检:清仓触发0/3,底仓无需动;本周执行事件去风险", basis: "合约价仍+58~75%,MU未下修", verdict: "pending", outcome: "待SKHY挂牌与8月合约价验证" },
+  { date: "2026-07-07", call: "Q3基准情形(55%):-20~35%区间筑底,9月MU财报不降则修复上攻", basis: "盈利引擎未熄(三星+19倍)vs估值重置", verdict: "pending", outcome: "验证窗口:2026Q3" },
+];
+
 // 监控信源(RSS)。X 无免费 API:主通道用 Google News 聚合(可捕获媒体转述的 X 言论);
 // 设置 X_BEARER_TOKEN secret 后自动启用 X API 直连。
 export const SOURCES = [
