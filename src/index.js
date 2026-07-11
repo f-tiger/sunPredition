@@ -1,5 +1,21 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS } from "./data.js";
-import { renderDashboard, renderTrackRecord } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, slugify } from "./html.js";
+
+// IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
+const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
+const SITE = "https://sunwatch.tuoqiantu.workers.dev";
+const TRACK_MATCHERS = {
+  storage: (g) => /存储/.test(g || ""),
+  "physical-ai": (g) => /物理AI|潜伏/.test(g || ""),
+  energy: (g) => /能源|太空/.test(g || ""),
+  crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
+};
+function allUrls() {
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/feed.xml"];
+  for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
+  for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
+  return urls;
+}
 
 const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
 const MAX_ITEMS = 300;
@@ -7,6 +23,22 @@ const MAX_ITEMS = 300;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // pSEO 动态路由
+    if (url.pathname.startsWith("/stock/")) {
+      const slug = url.pathname.slice(7);
+      const s = STOCKS.find((x) => slugify(x.ticker) === slug);
+      if (!s) return new Response("Not found", { status: 404 });
+      const q = ((await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] }).quotes.find((x) => x.symbol && slugify(x.symbol) === slug || x.name === s.name);
+      const related = STOCKS.filter((x) => x.theme === s.theme && x.ticker !== s.ticker).slice(0, 6);
+      return new Response(renderStockPage(s, q, related), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname.startsWith("/track/") && url.pathname !== "/track-record") {
+      const id = url.pathname.slice(7);
+      const t = TRACKS.find((x) => x.id === id && x.id !== "all");
+      if (!t) return new Response("Not found", { status: 404 });
+      const m = TRACK_MATCHERS[id] || (() => false);
+      return new Response(renderTrackPage(t, PLAYBOOK.filter((p) => m(p.theme)), STOCKS.filter((s) => m(s.theme))), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
     switch (url.pathname) {
       case "/":
         return new Response(renderDashboard(), {
@@ -147,10 +179,31 @@ export default {
       }
       case "/track-record":
         return new Response(renderTrackRecord(FORECASTS, PREDICTIONS), { headers: { "content-type": "text/html; charset=utf-8" } });
+      case "/feed.xml": {
+        const items = ((await env.SUNWATCH_KV.get(KV_KEY, "json")) || []).slice(0, 15);
+        const STAGE_CN = { early: "早期信号", mid: "中期主升", peak: "高峰区间", exit: "退潮" };
+        const daily = PLAYBOOK.slice(0, 5).map((p) => `${p.theme}:${STAGE_CN[p.stage] || p.stage}`).join(";");
+        const today = new Date().toISOString().slice(0, 10);
+        const rss = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>SunWatch Pro · AI 赛道信号</title><link>${SITE}/</link><description>五大AI赛道周期定位与市场信号(免费预告版)</description>
+<item><title>【每日预告 ${today}】${xmlEsc(daily)}</title><link>${SITE}/</link><guid>${SITE}/daily-${today}</guid></item>
+${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link)}</link><guid>${i.id}</guid>${i.published ? `<pubDate>${new Date(i.published).toUTCString()}</pubDate>` : ""}</item>`).join("\n")}
+</channel></rss>`;
+        return new Response(rss, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });
+      }
+      case `/${INDEXNOW_KEY}.txt`:
+        return new Response(INDEXNOW_KEY, { headers: { "content-type": "text/plain" } });
+      case "/api/ping-indexnow": {
+        const r = await fetch("https://api.indexnow.org/indexnow", {
+          method: "POST",
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: allUrls() }),
+        }).catch(() => null);
+        return json({ ok: !!r && (r.status === 200 || r.status === 202), status: r?.status, urls: allUrls().length });
+      }
       case "/robots.txt":
         return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
       case "/sitemap.xml":
-        return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>https://sunwatch.tuoqiantu.workers.dev/</loc><changefreq>hourly</changefreq></url>\n<url><loc>https://sunwatch.tuoqiantu.workers.dev/track-record</loc><changefreq>daily</changefreq></url>\n</urlset>`, { headers: { "content-type": "application/xml" } });
+        return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${allUrls().map((u) => `<url><loc>${u}</loc><changefreq>daily</changefreq></url>`).join("\n")}\n</urlset>`, { headers: { "content-type": "application/xml" } });
       case "/favicon.ico":
       case "/favicon.svg":
         return new Response(
@@ -189,6 +242,14 @@ export default {
       // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)
       if (event.cron === "30 12 * * *") {
         await broadcastFree(env, buildTeaser(q.quotes)).catch(() => {});
+      }
+      // 早间:自动向 IndexNow 推送全站 URL(Bing/Yandex/Naver 秒级收录)
+      if (event.cron === "30 0 * * *") {
+        await fetch("https://api.indexnow.org/indexnow", {
+          method: "POST",
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: allUrls() }),
+        }).catch(() => {});
       }
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
@@ -480,6 +541,10 @@ async function tgSend(cfg, text, mode) {
   });
   const body = await resp.json().catch(() => ({}));
   return { ok: resp.ok && body.ok === true, status: resp.status, description: body.description };
+}
+
+function xmlEsc(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function fmtPrice(p) {

@@ -24,6 +24,56 @@ ${rows}
 </div></body></html>`;
 }
 
+const PAGE_CSS = `:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--accent:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#171e26;--ink:#e6edf3;--muted:#8b98a5;--line:#2a3441;--accent:#60a5fa}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system,"PingFang SC",system-ui,sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:24px 16px 64px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
+const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="https://t.me/sunwatchBot">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
+
+// pSEO:单只标的页
+export function renderStockPage(s, quote, related) {
+  const title = `${s.name}(${s.ticker})${s.theme}赛道分析·买卖触发线`;
+  const q = quote ? `<div class="card"><b>实时行情</b><div style="font-size:22px;font-weight:700">${quote.price.toLocaleString()} <span style="font-size:14px;color:${quote.changePct >= 0 ? "#16803c" : "#b42318"}">${quote.changePct > 0 ? "+" : ""}${quote.changePct}%</span></div><div class="meta">${(quote.at || "").replace("T", " ").slice(0, 16)} UTC · Yahoo Finance</div></div>` : "";
+  const f = s.fund || {};
+  const rows = [["投资逻辑", s.logic], ["市值/规模", f.mcap], ["稀缺性/护城河", f.moat], ["竞争对手", f.comp], ["风险", s.risk]]
+    .filter(([, v]) => v && v !== "—")
+    .map(([k, v]) => `<div style="margin-top:6px"><b style="color:var(--muted);font-size:13px">${k}</b><div>${escS(v)}</div></div>`).join("");
+  const rel = (related || []).map((r) => `<a href="/stock/${slugify(r.ticker)}">${escS(r.name)}</a>`).join(" · ");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escS(title)} | SunWatch Pro</title>
+<meta name="description" content="${escS(s.name + " " + s.ticker + " " + s.theme + "赛道:" + (s.logic || "").slice(0, 80))}">
+<meta property="og:title" content="${escS(title)}"><meta property="og:description" content="${escS((s.logic || "").slice(0, 100))}">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/stock/${slugify(s.ticker)}"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › ${escS(s.market)} › ${escS(s.theme)}</p>
+<h1>${escS(s.name)} <span class="tag">${escS(s.ticker)}</span> <span class="tag">${escS(s.market)}</span></h1>
+${q}<div class="card">${rows}</div>${CTA}
+${rel ? `<p class="meta">同赛道标的:${rel}</p>` : ""}
+<p class="meta">本页为研究框架,非投资建议;具体买入区间/止损线/仓位方案为 Pro 内容。</p>
+</div></body></html>`;
+}
+
+export function slugify(t) {
+  return String(t).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+}
+
+// pSEO:赛道长文页
+export function renderTrackPage(track, playbooks, stocks) {
+  const title = `${track.name}赛道周期定位与三市场标的(2026)`;
+  const pb = playbooks.map((p) => `<div class="card"><b>${escS(p.theme)}</b> <span class="tag">${escS(p.stageNote)}</span><ul style="margin:8px 0 0 18px;padding:0">${p.basis.map((b) => `<li style="margin:3px 0">${escS(b)}</li>`).join("")}</ul></div>`).join("");
+  const st = stocks.map((s) => `<a href="/stock/${slugify(s.ticker)}">${escS(s.name)}(${escS(s.ticker)})</a>`).join(" · ");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escS(title)} | SunWatch Pro</title>
+<meta name="description" content="${escS(track.name)}赛道深度分析:周期阶段判定与依据、A股/港股/美股标的映射。">
+<meta property="og:title" content="${escS(title)}">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track/${track.id}"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › 赛道</p><h1>${escS(title)}</h1>
+${pb}<div class="card"><b>本赛道标的</b><div style="margin-top:6px">${st || "—"}</div></div>${CTA}
+<p class="meta">研究框架,非投资建议;操盘纪律与触发线为 Pro 内容。</p>
+</div></body></html>`;
+}
+
 // 仪表盘:单文件 HTML,数据由 /api/feed 与 /api/archive 提供
 export function renderDashboard() {
   return `<!doctype html>
