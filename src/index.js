@@ -60,6 +60,18 @@ export default {
         }
         return new Response("ok");
       }
+      // 一次性自举(仅在无任何激活码时可用,幂等安全):配置 webhook + 生成首个激活码
+      case "/api/bootstrap-pro": {
+        const cfg = await getTgConfig(env);
+        if (!cfg) return json({ ok: false, error: "未配置 Telegram" });
+        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+        if (Object.keys(lic).length) return json({ ok: true, already: true, note: "已初始化过,不再重复" });
+        const wh = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(url.origin + "/tg-webhook")}`).then((r) => r.json()).catch(() => ({}));
+        const code = "SW-" + Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
+        lic[code] = { createdAt: new Date().toISOString(), chatId: null, note: "首个激活码(自举生成)" };
+        await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
+        return json({ ok: true, webhook: wh.ok === true, firstCode: code });
+      }
       // 一次性配置:把 bot 的 webhook 指到本 Worker(站长专用)
       case "/api/set-webhook": {
         const cfg = await getTgConfig(env);

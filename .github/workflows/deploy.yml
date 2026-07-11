@@ -33,6 +33,12 @@ jobs:
           echo
           curl -sf "$URL/api/feed" | head -c 400
           echo
+      - name: Bootstrap Pro (webhook + first code, idempotent)
+        run: |
+          URL="${{ steps.wrangler.outputs.deployment-url }}"
+          echo "bootstrap:"
+          curl -s "$URL/api/bootstrap-pro" || true
+          echo
       - name: Push monitoring summary to Telegram
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
