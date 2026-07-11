@@ -19,7 +19,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 <h1>📊 SunWatch Pro 公开战绩</h1>
 <p>每一次明确判断公开建档,命中与失误同等展示(失误附教训)。当前:可评分 <b>${scored.length}</b> 条,命中 <b>${hits}</b> 条${scored.length ? `,命中率 <b>${Math.round((hits / scored.length) * 100)}%</b>` : ""}。</p>
 ${rows}
-<p><a href="/">← 返回 SunWatch Pro 主站</a> · <a href="https://t.me/sunwatchBot">🤖 免费订阅每日信号预告</a></p>
+<p><a href="/">← 返回 SunWatch Pro 主站</a> · <a href="/go/tg">🤖 免费订阅每日信号预告</a></p>
 <p class="meta">另设孙宇晨预判档案(2019-2026,同一建档标准)见主站。本页内容为研究记录,非投资建议。</p>
 </div></body></html>`;
 }
@@ -30,7 +30,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .wrap{max-width:820px;margin:0 auto;padding:24px 16px 64px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="https://t.me/sunwatchBot">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
+const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
 
 // pSEO:单只标的页
 export function renderStockPage(s, quote, related) {
@@ -134,7 +134,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="https://t.me/sunwatchBot" target="_blank" rel="noopener">🤖 免费订阅信号预告</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/go/tg">🤖 免费订阅信号预告</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>

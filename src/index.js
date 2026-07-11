@@ -23,7 +23,10 @@ const MAX_ITEMS = 300;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // pSEO 动态路由
+    // pSEO 动态路由(含 PV 计数)
+    if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track")) {
+      ctx.waitUntil(bumpGrowth(env, "pv"));
+    }
     if (url.pathname.startsWith("/stock/")) {
       const slug = url.pathname.slice(7);
       const s = STOCKS.find((x) => slugify(x.ticker) === slug);
@@ -204,6 +207,18 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
       case "/sitemap.xml":
         return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${allUrls().map((u) => `<url><loc>${u}</loc><changefreq>daily</changefreq></url>`).join("\n")}\n</urlset>`, { headers: { "content-type": "application/xml" } });
+      // 增长度量:CTA 点击计数 → 跳转 bot
+      case "/go/tg": {
+        ctx.waitUntil(bumpGrowth(env, "tgClicks"));
+        return Response.redirect("https://t.me/sunwatchBot", 302);
+      }
+      case "/api/growth": {
+        const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
+        const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+        const proBound = Object.values(lic).filter((l) => l.chatId).length;
+        return json({ pv: g.pv || 0, tgClicks: g.tgClicks || 0, freeSubs: free.length, codesIssued: Object.keys(lic).length, proBound });
+      }
       case "/favicon.ico":
       case "/favicon.svg":
         return new Response(
@@ -236,9 +251,10 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
     if (DAILY[event.cron]) {
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
       const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+      const gLine = await growthLine(env).catch(() => "");
       const text = buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes);
-      await sendTelegram(cfg, text).catch(() => {});
-      await broadcastPro(env, text).catch(() => {});
+      await sendTelegram(cfg, text + (gLine ? `\n\n${gLine}` : "")).catch(() => {}); // 站长版含增长数据
+      await broadcastPro(env, text).catch(() => {}); // 订户版不含
       // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)
       if (event.cron === "30 12 * * *") {
         await broadcastFree(env, buildTeaser(q.quotes)).catch(() => {});
@@ -367,6 +383,21 @@ function buildAlert(items) {
     (i) => `🚨 <b>[${i.signal}]</b> <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 100)}</a>`
   );
   return `⚡ <b>SunWatch 重要信号</b>\n\n${lines.join("\n")}\n\n对照操盘纪律执行,详见监控台核心信号清单。`;
+}
+
+// 增长计数(低频写,容忍并发损耗)
+async function bumpGrowth(env, key) {
+  const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
+  g[key] = (g[key] || 0) + 1;
+  await env.SUNWATCH_KV.put("growth", JSON.stringify(g));
+}
+
+async function growthLine(env) {
+  const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
+  const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+  const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+  const proBound = Object.values(lic).filter((l) => l.chatId).length;
+  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}`;
 }
 
 // ---- Pro 会员工具 ----
