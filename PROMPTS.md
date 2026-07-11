@@ -43,3 +43,12 @@
 **目标**:安装用户点名的 GitHub 项目 claude code skills,提升能力。
 **步骤**:1) 先审查仓库内容(README/skills 结构/有无可疑指令与脚本) 2) 审查通过后克隆并安装至项目 .claude/skills(随 git 持久化) 3) 记录安装清单与生效方式(新会话加载) 4) 有可疑内容则停止并报告。
 **执行结果**:审查通过(纯Markdown指令、无脚本、无可疑模式);选择性安装 7/889:seo、marketing-campaign、content-engine、brand-voice、market-research、social-publisher(需SocialClaw key,备用)、growth-log → .claude/skills/(随仓库持久化,新会话自动加载)。全量889个技能不装,防上下文污染。
+
+## 2026-07-11 · 内容飞轮 + 结构化数据(应用 ECC seo 技能)
+
+**目标**:让站点每天自动"上新"可收录内容(搜索引擎偏好活跃站点),并按 seo 技能方法论补结构化数据,提升富结果概率。
+**步骤**:
+1. 读取 .claude/skills/seo/SKILL.md 方法论对照现状。
+2. 每日复盘页 /daily/<date>:每日 cron 把当日摘要快照存 KV 并生成独立文章页(JSON-LD Article),/daily 索引页列出近30天;sitemap 动态纳入 → 站点每天自动+1页新内容。
+3. 结构化数据:标的页/赛道页/战绩页注入 JSON-LD(BreadcrumbList + Article),提升搜索富结果。
+4. 测试→部署→IndexNow 自动收录。

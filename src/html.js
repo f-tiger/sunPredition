@@ -45,7 +45,9 @@ export function renderStockPage(s, quote, related) {
 <title>${escS(title)} | SunWatch Pro</title>
 <meta name="description" content="${escS(s.name + " " + s.ticker + " " + s.theme + "赛道:" + (s.logic || "").slice(0, 80))}">
 <meta property="og:title" content="${escS(title)}"><meta property="og:description" content="${escS((s.logic || "").slice(0, 100))}">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/stock/${slugify(s.ticker)}"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/stock/${slugify(s.ticker)}">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch Pro"},about:s.name})}</script>
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"SunWatch Pro",item:"https://sunwatch.tuoqiantu.workers.dev/"},{"@type":"ListItem",position:2,name:s.market},{"@type":"ListItem",position:3,name:s.name}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › ${escS(s.market)} › ${escS(s.theme)}</p>
 <h1>${escS(s.name)} <span class="tag">${escS(s.ticker)}</span> <span class="tag">${escS(s.market)}</span></h1>
 ${q}<div class="card">${rows}</div>${CTA}
@@ -67,10 +69,44 @@ export function renderTrackPage(track, playbooks, stocks) {
 <title>${escS(title)} | SunWatch Pro</title>
 <meta name="description" content="${escS(track.name)}赛道深度分析:周期阶段判定与依据、A股/港股/美股标的映射。">
 <meta property="og:title" content="${escS(title)}">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track/${track.id}"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track/${track.id}">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch Pro"}})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › 赛道</p><h1>${escS(title)}</h1>
 ${pb}<div class="card"><b>本赛道标的</b><div style="margin-top:6px">${st || "—"}</div></div>${CTA}
 <p class="meta">研究框架,非投资建议;操盘纪律与触发线为 Pro 内容。</p>
+</div></body></html>`;
+}
+
+// 每日复盘页(内容飞轮:每天一篇可收录文章,含 JSON-LD Article)
+export function renderDailyPage(snap) {
+  const title = `AI 赛道每日复盘 ${snap.date}:周期定位与市场异动`;
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: title, datePublished: snap.date, author: { "@type": "Organization", name: "SunWatch Pro" }, publisher: { "@type": "Organization", name: "SunWatch Pro" } });
+  const stages = snap.stages.map((s) => `<div class="card"><b>${escS(s.theme)}</b> <span class="tag">${escS(s.stage)}</span><div class="meta" style="margin-top:3px">${escS(s.note)}</div></div>`).join("");
+  const movers = (snap.movers || []).map((m) => `<li>${escS(m.name)} ${m.pct > 0 ? "+" : ""}${m.pct}%</li>`).join("");
+  const heads = (snap.headlines || []).map((h) => `<li><a href="${escS(h.link)}" rel="nofollow">${escS(h.title)}</a></li>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escS(title)} | SunWatch Pro</title>
+<meta name="description" content="${snap.date} 存储/物理AI/能源/加密赛道周期定位复盘与当日市场异动。">
+<meta property="og:title" content="${escS(title)}">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/daily/${snap.date}">
+<script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › <a href="/daily">每日复盘</a> › ${snap.date}</p>
+<h1>${escS(title)}</h1>
+<h2 style="font-size:17px">赛道周期定位</h2>${stages}
+${movers ? `<h2 style="font-size:17px">当日异动</h2><div class="card"><ul style="margin:0 0 0 18px;padding:0">${movers}</ul></div>` : ""}
+${heads ? `<h2 style="font-size:17px">当日要闻</h2><div class="card"><ul style="margin:0 0 0 18px;padding:0">${heads}</ul></div>` : ""}
+${CTA}<p class="meta">研究记录,非投资建议;具体买卖价位与触发线为 Pro 内容。</p>
+</div></body></html>`;
+}
+
+export function renderDailyIndex(dates) {
+  const items = dates.map((d) => `<div class="card"><a href="/daily/${d}"><b>${d}</b> AI 赛道每日复盘</a></div>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 赛道每日复盘归档 | SunWatch Pro</title>
+<meta name="description" content="存储/物理AI/能源/加密赛道每日周期定位复盘归档,每天自动更新。">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/daily"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › 每日复盘</p><h1>📅 每日复盘归档</h1>
+${items || '<div class="card meta">首篇复盘将于明日北京时间 08:30 自动生成。</div>'}${CTA}
 </div></body></html>`;
 }
 

@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, slugify } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, slugify } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -34,6 +34,17 @@ export default {
       const q = ((await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] }).quotes.find((x) => x.symbol && slugify(x.symbol) === slug || x.name === s.name);
       const related = STOCKS.filter((x) => x.theme === s.theme && x.ticker !== s.ticker).slice(0, 6);
       return new Response(renderStockPage(s, q, related), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname === "/daily") {
+      const list = await env.SUNWATCH_KV.list({ prefix: "daily-" });
+      const dates = list.keys.map((k) => k.name.slice(6)).sort().reverse().slice(0, 30);
+      return new Response(renderDailyIndex(dates), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname.startsWith("/daily/")) {
+      const d = url.pathname.slice(7);
+      const snap = await env.SUNWATCH_KV.get(`daily-${d}`, "json");
+      if (!snap) return new Response("Not found", { status: 404 });
+      return new Response(renderDailyPage(snap), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
     }
     if (url.pathname.startsWith("/track/") && url.pathname !== "/track-record") {
       const id = url.pathname.slice(7);
@@ -205,8 +216,11 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       }
       case "/robots.txt":
         return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
-      case "/sitemap.xml":
-        return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${allUrls().map((u) => `<url><loc>${u}</loc><changefreq>daily</changefreq></url>`).join("\n")}\n</urlset>`, { headers: { "content-type": "application/xml" } });
+      case "/sitemap.xml": {
+        const list = await env.SUNWATCH_KV.list({ prefix: "daily-" }).catch(() => ({ keys: [] }));
+        const dailies = list.keys.map((k) => `${SITE}/daily/${k.name.slice(6)}`).slice(-30);
+        return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...allUrls(), SITE + "/daily", ...dailies].map((u) => `<url><loc>${u}</loc><changefreq>daily</changefreq></url>`).join("\n")}\n</urlset>`, { headers: { "content-type": "application/xml" } });
+      }
       // 增长度量:CTA 点击计数 → 跳转 bot
       case "/go/tg": {
         ctx.waitUntil(bumpGrowth(env, "tgClicks"));
@@ -259,12 +273,22 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       if (event.cron === "30 12 * * *") {
         await broadcastFree(env, buildTeaser(q.quotes)).catch(() => {});
       }
-      // 早间:自动向 IndexNow 推送全站 URL(Bing/Yandex/Naver 秒级收录)
+      // 早间:保存每日复盘快照(内容飞轮:站点每天自动+1个可收录页面)
       if (event.cron === "30 0 * * *") {
+        const today = new Date().toISOString().slice(0, 10);
+        const STAGE_CN = { early: "早期信号", mid: "中期主升", peak: "高峰区间", exit: "退潮" };
+        const snapshot = {
+          date: today,
+          stages: PLAYBOOK.map((p) => ({ theme: p.theme, stage: STAGE_CN[p.stage] || p.stage, note: p.stageNote })),
+          movers: (q.quotes || []).filter((x) => Math.abs(x.changePct) >= 2).slice(0, 8).map((x) => ({ name: x.name, pct: x.changePct })),
+          headlines: items.slice(0, 6).map((i) => ({ title: i.title, link: i.link })),
+        };
+        await env.SUNWATCH_KV.put(`daily-${today}`, JSON.stringify(snapshot)).catch(() => {});
+        // IndexNow:全站 URL + 今日新页
         await fetch("https://api.indexnow.org/indexnow", {
           method: "POST",
           headers: { "content-type": "application/json; charset=utf-8" },
-          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: allUrls() }),
+          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: [...allUrls(), `${SITE}/daily/${today}`, `${SITE}/daily`] }),
         }).catch(() => {});
       }
     } else if (result.important.length) {
