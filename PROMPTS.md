@@ -37,3 +37,9 @@
 3. 无法自主使用的输出"待用户一键"清单(所需凭证、预期收益)。
 4. 自建缺口组件:增长度量层(页面访问/CTA点击/激活转化 KV 计数 + 每日增长数据入 TG 简报)——规模化的前提是可度量。
 **交付**:调研矩阵 + 已安装组件 + 增长度量上线。
+
+## 2026-07-11 · 安装用户指定的 ECC skills(affaan-m/ECC)
+
+**目标**:安装用户点名的 GitHub 项目 claude code skills,提升能力。
+**步骤**:1) 先审查仓库内容(README/skills 结构/有无可疑指令与脚本) 2) 审查通过后克隆并安装至项目 .claude/skills(随 git 持久化) 3) 记录安装清单与生效方式(新会话加载) 4) 有可疑内容则停止并报告。
+**执行结果**:审查通过(纯Markdown指令、无脚本、无可疑模式);选择性安装 7/889:seo、marketing-campaign、content-engine、brand-voice、market-research、social-publisher(需SocialClaw key,备用)、growth-log → .claude/skills/(随仓库持久化,新会话自动加载)。全量889个技能不装,防上下文污染。
