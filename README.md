@@ -1,4 +1,15 @@
-# sunPredition · SunWatch 孙宇晨预判监控
+# sunPredition · SunWatch Pro:AI 热点赛道投资罗盘(可订阅工具)
+
+## 商业化运营手册(站长专用)
+
+产品分两层:**免费版**(赛道分析/周期定位/行情/档案)与 **Pro**(全部买卖价位、触发线、操盘纪律、TG 实时信号)。定价建议 ¥199/月 或 ¥1999/年,收款方式自定(微信/支付宝/USDT),收款后发激活码。
+
+1. **一次性初始化 webhook**(部署后执行一次):浏览器打开 `https://<站点>/api/set-webhook?token=<bot token>`
+2. **生成激活码**(每卖出一份执行一次):`https://<站点>/api/gen-code?token=<bot token>` → 返回 `SW-XXXXXX`
+3. **交付给订户**:① 网页端:首页底部"激活 Pro"输入激活码;② TG 信号:向 @sunwatchBot 发送 `/start SW-XXXXXX`(一码绑一个 TG,防转卖)
+4. 订户激活后自动接收:每日双简报、价格触发线报警、重要信号快讯(与站长同款,站长通道独立不受影响)
+
+---
 
 调研孙宇晨(Justin Sun)的历史预判、验证结果与同期操作,映射美股投资策略,并提供一个部署在 Cloudflare Workers 上的**实时预判监控台**。
 

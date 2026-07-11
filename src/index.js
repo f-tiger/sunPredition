@@ -1,4 +1,4 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS } from "./data.js";
 import { renderDashboard } from "./html.js";
 
 const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
@@ -16,8 +16,58 @@ export default {
         const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
         return json({ count: items.length, items });
       }
-      case "/api/archive":
-        return json({ predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST });
+      case "/api/archive": {
+        const pro = await isPro(env, url.searchParams.get("key"));
+        const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro };
+        return json(pro ? full : redact(full));
+      }
+      // ---- Pro 会员体系 ----
+      // 生成激活码(站长专用,以 bot token 鉴权):/api/gen-code?token=<bot token>
+      case "/api/gen-code": {
+        const cfg = await getTgConfig(env);
+        if (!cfg || url.searchParams.get("token") !== cfg.token)
+          return json({ ok: false, error: "鉴权失败:需携带 bot token" });
+        const code = "SW-" + Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
+        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+        lic[code] = { createdAt: new Date().toISOString(), chatId: null };
+        await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
+        return json({ ok: true, code, note: "发给订户:网页输入激活,或向 bot 发 /start " + code + " 绑定TG信号" });
+      }
+      case "/api/activate": {
+        const ok = await isPro(env, url.searchParams.get("code"));
+        return json({ ok, error: ok ? undefined : "激活码无效" });
+      }
+      // Telegram webhook:订户 /start <code> 绑定信号推送
+      case "/tg-webhook": {
+        if (request.method !== "POST") return new Response("ok");
+        const upd = await request.json().catch(() => ({}));
+        const msg = upd.message;
+        const cfg = await getTgConfig(env);
+        if (msg?.chat?.id && cfg) {
+          const m = (msg.text || "").match(/\/start\s+(SW-[A-Z0-9]+)/i);
+          if (m) {
+            const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+            const code = m[1].toUpperCase();
+            if (lic[code] && (!lic[code].chatId || String(lic[code].chatId) === String(msg.chat.id))) {
+              lic[code].chatId = msg.chat.id;
+              lic[code].activatedAt = new Date().toISOString();
+              await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, "✅ Pro 已激活!你将收到:每日双简报(北京 08:30/20:30)、价格触发线报警、重要信号快讯。", null);
+            } else {
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, "❌ 激活码无效或已被他人绑定。购买请联系站长。", null);
+            }
+          }
+        }
+        return new Response("ok");
+      }
+      // 一次性配置:把 bot 的 webhook 指到本 Worker(站长专用)
+      case "/api/set-webhook": {
+        const cfg = await getTgConfig(env);
+        if (!cfg || url.searchParams.get("token") !== cfg.token)
+          return json({ ok: false, error: "鉴权失败" });
+        const r = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(url.origin + "/tg-webhook")}`);
+        return json(await r.json().catch(() => ({})));
+      }
       case "/api/quotes": {
         const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { at: null, quotes: [] };
         return json(q);
@@ -93,7 +143,9 @@ export default {
       const lines = quoteResult.crossings.map(
         (c) => `🎯 <b>${escHtml(c.name)}</b> ${c.dir === "below" ? "跌破" : "升破"} <b>${escHtml(c.label)}</b>(${c.level})\n现价 ${c.price} → 动作:${escHtml(c.act)}`
       );
-      await sendTelegram(cfg, `⚡ <b>价格触发</b>\n\n${lines.join("\n\n")}`).catch(() => {});
+      const alertText = `⚡ <b>价格触发</b>\n\n${lines.join("\n\n")}`;
+      await sendTelegram(cfg, alertText).catch(() => {});
+      await broadcastPro(env, alertText).catch(() => {});
     }
     const DAILY = {
       "30 0 * * *": "🌅 早盘简报(美股隔夜复盘 · A/H 开盘前)",
@@ -102,10 +154,14 @@ export default {
     if (DAILY[event.cron]) {
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
       const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
-      await sendTelegram(cfg, buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes)).catch(() => {});
+      const text = buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes);
+      await sendTelegram(cfg, text).catch(() => {});
+      await broadcastPro(env, text).catch(() => {});
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
-      await sendTelegram(cfg, buildAlert(result.important)).catch(() => {});
+      const text = buildAlert(result.important);
+      await sendTelegram(cfg, text).catch(() => {});
+      await broadcastPro(env, text).catch(() => {});
     }
   },
 };
@@ -217,6 +273,43 @@ function buildAlert(items) {
     (i) => `🚨 <b>[${i.signal}]</b> <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 100)}</a>`
   );
   return `⚡ <b>SunWatch 重要信号</b>\n\n${lines.join("\n")}\n\n对照操盘纪律执行,详见监控台核心信号清单。`;
+}
+
+// ---- Pro 会员工具 ----
+
+async function isPro(env, code) {
+  if (!code) return false;
+  const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+  return !!lic[String(code).toUpperCase()];
+}
+
+// 免费层脱敏:保留赛道分析与周期定位,隐藏具体价位/触发线/操盘纪律
+function redact(full) {
+  const LOCK = "🔒 Pro 会员可见";
+  return {
+    ...full,
+    watchlist: full.watchlist.map((w) => ({ ...w, levels: [] })),
+    playbook: full.playbook.map((p) => ({
+      ...p,
+      stages: Object.fromEntries(Object.entries(p.stages).map(([k, v]) => [k, { ...v, signals: v.signals, tickers: LOCK }])),
+      tactics: LOCK,
+    })),
+    stocks: full.stocks.map((s) => ({ ...s, logic: s.logic, risk: s.risk, fund: s.fund ? { ...s.fund, mcap: s.fund.mcap, val: LOCK, inv: LOCK, moat: s.fund.moat, comp: s.fund.comp } : s.fund })),
+  };
+}
+
+// 广播给所有已绑定的 Pro 订户(不含站长,站长走原通道)
+async function broadcastPro(env, text) {
+  const cfg = await getTgConfig(env);
+  if (!cfg) return 0;
+  const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+  const chatIds = [...new Set(Object.values(lic).map((l) => l.chatId).filter(Boolean))].filter((id) => String(id) !== String(cfg.chatId));
+  let sent = 0;
+  for (const chatId of chatIds) {
+    const r = await sendTelegram({ token: cfg.token, chatId }, text).catch(() => null);
+    if (r && r.ok) sent++;
+  }
+  return sent;
 }
 
 // ---- 监控结论摘要 ----

@@ -5,7 +5,7 @@ export function renderDashboard() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SunWatch · 孙宇晨预判监控台</title>
+<title>SunWatch Pro · AI 热点赛道投资罗盘</title>
 <style>
   :root{
     --bg:#f6f7f9; --card:#ffffff; --ink:#1a202c; --muted:#64748b;
@@ -50,8 +50,10 @@ export function renderDashboard() {
 </head>
 <body><div class="wrap">
 <header>
-  <h1>🔭 SunWatch · 孙宇晨预判监控台</h1>
-  <p>预判档案 · 验证结果 · 同期操作 · 实时信息流(Google News 聚合 + 可选 X API 直连)· 美股映射</p>
+  <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号</p>
+  <div id="trackNav" style="margin:10px 0 4px"></div>
+  <div id="proBar" style="margin:6px 0"></div>
 </header>
 
 <div class="stats" id="stats"></div>
@@ -80,6 +82,18 @@ export function renderDashboard() {
 <h2>预判档案:预判 → 结果 → 他的操作</h2>
 <div id="archive"></div>
 
+<h2 id="pricing">订阅 Pro</h2>
+<div class="stocks">
+  <div class="card"><b>免费版</b><div style="font-size:22px;font-weight:700;margin:4px 0">¥0</div>
+    <div style="font-size:14px">✅ 五大赛道深度分析与周期定位<br>✅ 实时行情与新闻监控流<br>✅ 孙宇晨预判档案 + 系统预测记录<br>🔒 具体买卖价位与触发线<br>🔒 操盘纪律与仓位方案<br>🔒 Telegram 实时信号</div></div>
+  <div class="card" style="border-color:var(--accent)"><b>Pro 会员</b> <span class="tag">推荐</span><div style="font-size:22px;font-weight:700;margin:4px 0">¥199/月 <span class="meta" style="font-size:13px">或 ¥1999/年</span></div>
+    <div style="font-size:14px">✅ 免费版全部内容<br>✅ <b>全部买入区间 / 止损线 / 仓位方案</b><br>✅ <b>实时触发线报警(价格穿越秒推 TG)</b><br>✅ 每日双简报(北京 08:30 / 20:30)<br>✅ 重要信号快讯(SKHY/宇树/Optimus/合约价拐点等)</div>
+    <div class="meta" style="margin-top:6px">购买:联系站长付款(微信/支付宝/USDT)获取激活码 → 下方输入激活;TG 信号:向 @sunwatchBot 发送 /start 激活码</div></div>
+</div>
+<div class="card" style="margin-top:10px"><b>激活 Pro</b>
+  <div style="margin-top:6px"><input id="proKey" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px">
+  <button onclick="activatePro()">激活</button> <span class="meta" id="proMsg"></span></div></div>
+
 <footer>
   数据信源:Google News RSS(英/中/TRON Inc. 三路)+ 可选 X API;每 30 分钟自动抓取,按关键词自动打标。
   详细调研与引用见仓库 <code>report/</code> 目录。<br>
@@ -93,17 +107,45 @@ const VERDICT={hit:["✅ 命中","v-hit"],["hit-weak"]:["✅ 命中(弱)","v-hit
   marketing:["📣 营销造势","v-marketing"],risk:["⚠️ 风险事件","v-risk"],
   pending:["⏳ 待验证","v-partial"]};
 
-let WATCH=[];
+let WATCH=[],ARCH=null,QDATA={quotes:[]},TRACK='all';
+const TRACK_MATCH={all:()=>true,storage:g=>/存储/.test(g||''),['physical-ai']:g=>/物理AI|潜伏/.test(g||''),energy:g=>/能源|太空/.test(g||''),crypto:g=>/加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g||'')};
+function proKey(){return localStorage.getItem('swkey')||''}
 async function load(){
+  const key=proKey();
   const [a,f,q]=await Promise.all([
-    fetch('/api/archive').then(r=>r.json()),
+    fetch('/api/archive'+(key?'?key='+encodeURIComponent(key):'')).then(r=>r.json()),
     fetch('/api/feed').then(r=>r.json()),
     fetch('/api/quotes').then(r=>r.json()).catch(()=>({quotes:[]}))
   ]);
-  FEED=f.items||[]; WATCH=a.watchlist||[];
-  renderStats(a,f); renderArchive(a.predictions); renderStocks(a.stocks);
-  renderPlaybook(a.playbook||[]); renderForecasts(a.forecasts||[]);
-  renderActionBoard(q); renderFilters(); renderFeed();
+  FEED=f.items||[]; WATCH=a.watchlist||[]; ARCH=a; QDATA=q;
+  renderTrackNav(a.tracks||[]); renderProBar(a.pro);
+  renderStats(a,f); renderAll(); renderFilters(); renderFeed();
+}
+function renderAll(){
+  const m=TRACK_MATCH[TRACK]||(()=>true);
+  renderArchive(ARCH.predictions);
+  renderStocks((ARCH.stocks||[]).filter(s=>TRACK==='all'||m(s.theme)));
+  renderPlaybook((ARCH.playbook||[]).filter(p=>TRACK==='all'||m(p.theme)));
+  renderForecasts(ARCH.forecasts||[]);
+  renderActionBoard({...QDATA,quotes:(QDATA.quotes||[]).filter(x=>TRACK==='all'||m(x.group))});
+}
+function renderTrackNav(tracks){
+  document.getElementById('trackNav').innerHTML=tracks.map(t=>
+    '<span class="chip'+(TRACK===t.id?' active':'')+'" onclick="setTrack(\\''+t.id+'\\')" style="font-size:14px;padding:4px 14px">'+t.name+'</span>').join('');
+}
+function setTrack(id){TRACK=id;renderTrackNav(ARCH.tracks||[]);renderAll();}
+function renderProBar(pro){
+  document.getElementById('proBar').innerHTML=pro
+    ?'<span class="tag" style="font-size:13px;padding:2px 10px">✨ Pro 已激活:全部价位与信号可见</span>'
+    :'<span class="meta">当前为免费版:具体买卖价位/触发线/操盘纪律为 🔒 Pro 内容 — <a href="#pricing">订阅 Pro</a></span>';
+}
+async function activatePro(){
+  const code=document.getElementById('proKey').value.trim().toUpperCase();
+  const el=document.getElementById('proMsg');
+  if(!code){el.textContent='请输入激活码';return}
+  const r=await fetch('/api/activate?code='+encodeURIComponent(code)).then(r=>r.json());
+  if(r.ok){localStorage.setItem('swkey',code);el.textContent='✅ 激活成功,刷新数据…';load();}
+  else el.textContent='❌ '+(r.error||'激活失败');
 }
 async function refreshQuotes(){
   const el=document.getElementById('refreshMsg');el.textContent='刷新行情中…';

@@ -318,6 +318,15 @@ export const PLAYBOOK = [
   },
 ];
 
+// 赛道导航(产品化信息架构)
+export const TRACKS = [
+  { id: "all", name: "总览", match: () => true },
+  { id: "storage", name: "存储", match: (g) => /存储/.test(g) },
+  { id: "physical-ai", name: "物理AI", match: (g) => /物理AI|潜伏/.test(g) },
+  { id: "energy", name: "能源/太空", match: (g) => /能源|太空/.test(g) },
+  { id: "crypto", name: "加密/稳定币", match: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g) },
+];
+
 // 实时行情监控清单(Yahoo Finance 符号)+ 触发线。
 // dir: "below"=跌破触发 / "above"=升破触发;act=触发后动作
 export const WATCHLIST = [
