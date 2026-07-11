@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS } from "./data.js";
-import { renderDashboard } from "./html.js";
+import { renderDashboard, renderTrackRecord } from "./html.js";
 
 const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
 const MAX_ITEMS = 300;
@@ -45,6 +45,17 @@ export default {
         const cfg = await getTgConfig(env);
         if (msg?.chat?.id && cfg) {
           const m = (msg.text || "").match(/\/start\s+(SW-[A-Z0-9]+)/i);
+          // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
+          if (!m && /^\/start/.test(msg.text || "")) {
+            const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+            if (!free.includes(msg.chat.id)) {
+              free.push(msg.chat.id);
+              await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
+            }
+            await tgSend({ token: cfg.token, chatId: msg.chat.id },
+              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 升级 Pro:https://sunwatch.tuoqiantu.workers.dev/#pricing\n公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record", null);
+            return new Response("ok");
+          }
           if (m) {
             const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
             const code = m[1].toUpperCase();
@@ -134,6 +145,12 @@ export default {
         const r = await sendTelegram(cfg, buildSummary(items, url.origin, null, q.quotes));
         return json(r);
       }
+      case "/track-record":
+        return new Response(renderTrackRecord(FORECASTS, PREDICTIONS), { headers: { "content-type": "text/html; charset=utf-8" } });
+      case "/robots.txt":
+        return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
+      case "/sitemap.xml":
+        return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>https://sunwatch.tuoqiantu.workers.dev/</loc><changefreq>hourly</changefreq></url>\n<url><loc>https://sunwatch.tuoqiantu.workers.dev/track-record</loc><changefreq>daily</changefreq></url>\n</urlset>`, { headers: { "content-type": "application/xml" } });
       case "/favicon.ico":
       case "/favicon.svg":
         return new Response(
@@ -169,6 +186,10 @@ export default {
       const text = buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes);
       await sendTelegram(cfg, text).catch(() => {});
       await broadcastPro(env, text).catch(() => {});
+      // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)
+      if (event.cron === "30 12 * * *") {
+        await broadcastFree(env, buildTeaser(q.quotes)).catch(() => {});
+      }
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
       const text = buildAlert(result.important);
@@ -322,6 +343,41 @@ async function broadcastPro(env, text) {
     if (r && r.ok) sent++;
   }
   return sent;
+}
+
+// 免费订户广播(线索漏斗:预告版+升级CTA)
+async function broadcastFree(env, text) {
+  const cfg = await getTgConfig(env);
+  if (!cfg) return 0;
+  const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+  const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+  const proIds = new Set(Object.values(lic).map((l) => String(l.chatId)).filter(Boolean));
+  let sent = 0;
+  for (const chatId of free) {
+    if (proIds.has(String(chatId)) || String(chatId) === String(cfg.chatId)) continue;
+    const r = await sendTelegram({ token: cfg.token, chatId }, text).catch(() => null);
+    if (r && r.ok) sent++;
+  }
+  return sent;
+}
+
+function buildTeaser(quotes) {
+  const STAGE_CN = { early: "早期信号", mid: "中期主升", peak: "高峰区间", exit: "退潮" };
+  const stages = PLAYBOOK.slice(0, 5).map((p) => `• ${p.theme}:<b>${STAGE_CN[p.stage] || p.stage}</b>`);
+  const movers = (quotes || []).filter((q) => Math.abs(q.changePct) >= 3).slice(0, 3)
+    .map((q) => `• ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct}%`);
+  const lockedCount = CORE_SIGNALS.length + WATCHLIST.reduce((n, w) => n + w.levels.length, 0);
+  return [
+    `🔭 <b>SunWatch 每日预告</b> ${new Date().toISOString().slice(0, 10)}`,
+    ``,
+    `📈 赛道周期定位:`,
+    ...stages,
+    ...(movers.length ? [``, `💹 今日异动:`, ...movers] : []),
+    ``,
+    `🔒 今日 <b>${lockedCount}</b> 条核心信号与触发线状态为 Pro 内容(具体买卖价位/止损/仓位/实时报警)`,
+    `升级 Pro:https://sunwatch.tuoqiantu.workers.dev/#pricing`,
+    `公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record`,
+  ].join("\n");
 }
 
 // ---- 监控结论摘要 ----
