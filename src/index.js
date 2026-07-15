@@ -3,6 +3,8 @@ import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, r
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
+// Telegram webhook 校验密钥(防伪造 webhook 调用;每日 cron 自愈重注册)
+const WEBHOOK_SECRET = "swhk-9d2f7c41e8b3a650c7d19e84f2b5a3c8";
 const SITE = "https://sunwatch.tuoqiantu.workers.dev";
 const TRACK_MATCHERS = {
   storage: (g) => /存储/.test(g || ""),
@@ -86,6 +88,9 @@ export default {
       // Telegram webhook:订户 /start <code> 绑定信号推送
       case "/tg-webhook": {
         if (request.method !== "POST") return new Response("ok");
+        // 软校验:带 secret 头但不匹配 → 拒;未带头(重注册前的旧 webhook)暂放行,每日 cron 重注册后恒有头
+        const sec = request.headers.get("x-telegram-bot-api-secret-token");
+        if (sec && sec !== WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
         const upd = await request.json().catch(() => ({}));
         const msg = upd.message;
         const cfg = await getTgConfig(env);
@@ -284,6 +289,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           headlines: items.slice(0, 6).map((i) => ({ title: i.title, link: i.link })),
         };
         await env.SUNWATCH_KV.put(`daily-${today}`, JSON.stringify(snapshot)).catch(() => {});
+        // webhook 自愈重注册(带 secret_token,幂等)
+        await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${WEBHOOK_SECRET}`).catch(() => {});
         // IndexNow:全站 URL + 今日新页
         await fetch("https://api.indexnow.org/indexnow", {
           method: "POST",
