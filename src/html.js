@@ -178,9 +178,15 @@ export function renderDashboard() {
 <div class="stats" id="stats"></div>
 <div><button onclick="refresh()">立即抓取最新信息</button> <button onclick="refreshQuotes()" style="margin-left:8px">刷新行情</button> <span class="meta" id="refreshMsg"></span></div>
 
+<h2>📌 今日要做</h2>
+<div id="todayActions"></div>
+
 <h2>今日行动面板(实时行情 × 触发线)</h2>
 <p class="meta">现价来自 Yahoo Finance,每 30 分钟自动刷新;价格穿越触发线时 Telegram 实时报警。🔴=触发线已穿越(执行动作) 🟡=距触发线 3% 以内(备战) 🟢=安全距离。</p>
 <div id="actionboard"><div class="card meta">行情加载中…</div></div>
+
+<h2>🧭 核心信号清单(完整版)</h2>
+<div id="coreSignals"></div>
 
 <h2>预测记录与打分(给自己建档)</h2>
 <p class="meta">本系统每次明确判断都在此公开记档——命中与失误同等展示,与孙宇晨预判档案同一标准。</p>

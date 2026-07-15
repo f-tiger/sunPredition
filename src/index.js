@@ -1,4 +1,4 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
 import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, slugify } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
@@ -66,7 +66,7 @@ export default {
       }
       case "/api/archive": {
         const pro = await isPro(env, url.searchParams.get("key"));
-        const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro };
+        const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro, actions: ACTION_QUEUE, coreSignals: CORE_SIGNALS };
         return json(pro ? full : redact(full));
       }
       // ---- Pro 会员体系 ----
@@ -450,6 +450,8 @@ function redact(full) {
       stages: Object.fromEntries(Object.entries(p.stages).map(([k, v]) => [k, { ...v, signals: v.signals, tickers: LOCK }])),
       tactics: LOCK,
     })),
+    coreSignals: full.coreSignals.map((s, i) => `🔒 信号 ${i + 1}(Pro 可见)`),
+    actions: full.actions.map((a) => ({ until: a.until, text: "🔒 Pro 会员可见" })),
     stocks: full.stocks.map((s) => ({ ...s, logic: s.logic, risk: s.risk, fund: s.fund ? { ...s.fund, mcap: s.fund.mcap, val: LOCK, inv: LOCK, moat: s.fund.moat, comp: s.fund.comp } : s.fund })),
   };
 }
@@ -506,47 +508,42 @@ function buildTeaser(quotes) {
 // ---- 监控结论摘要 ----
 
 function buildSummary(items, origin, label, quotes) {
-  const quoteLines = (quotes || [])
-    .slice(0, 12)
-    .map((q) => `• ${q.name} ${fmtPrice(q.price)} (${q.changePct > 0 ? "+" : ""}${q.changePct}%)`);
-  const scored = PREDICTIONS.filter((p) => !["marketing", "risk", "pending"].includes(p.verdict));
-  const hits = scored.filter((p) => p.verdict.startsWith("hit")).length;
-  const latest = items.slice(0, 5).map(
-    (i) => `• [${i.tags.join("/")}] <a href="${escAttr(i.link)}">${escHtml(i.title).slice(0, 80)}</a>`
-  );
-  const byMarket = (m) =>
-    STOCKS.filter((s) => s.market === m)
-      .sort((a, b) => b.relation - a.relation)
-      .slice(0, 5)
-      .map((s) => `${s.name}(${s.ticker.split(".")[0]})`)
-      .join(" / ");
-  const STAGE_CN = { early: "早期信号", mid: "中期主升", peak: "高峰区间", exit: "退潮" };
-  const stages = PLAYBOOK.map((p) => `• ${p.theme}:<b>${STAGE_CN[p.stage] || p.stage}</b> — ${p.stageNote}`);
+  const today = new Date().toISOString().slice(0, 10);
+  // 【今日要做】来自 ACTION_QUEUE(过期自动隐藏)
+  const actions = ACTION_QUEUE.filter((a) => a.until >= today).slice(0, 3).map((a, i) => `${i + 1}. ${escHtml(a.text)}`);
+  // 【风险灯】五赛道一行
+  const LIGHT = { early: "🟢", mid: "🟡", peak: "🔴", exit: "⚫" };
+  const SHORT = { "存储": "存储", "物理AI": "物理AI", "能源/核电": "能源", "加密/稳定币": "加密", "TRON直接线": "TRON" };
+  const lights = PLAYBOOK.filter((p) => SHORT[p.theme]).map((p) => `${SHORT[p.theme]}${LIGHT[p.stage] || "⚪"}`).join(" ");
+  // 【异动】|±3%| 以上,最多5条
+  const movers = (quotes || []).filter((q) => Math.abs(q.changePct) >= 3)
+    .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 5)
+    .map((q) => `• ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct}%`);
+  // 【下一触发】距离最近的买/卖触发线(含新机会买点)
+  const qm = Object.fromEntries((quotes || []).map((x) => [x.symbol, x]));
+  const near = [];
+  for (const w of WATCHLIST) {
+    const q = qm[w.symbol];
+    if (!q) continue;
+    for (const lv of w.levels) {
+      const crossed = (lv.dir === "below" && q.price <= lv.price) || (lv.dir === "above" && q.price >= lv.price);
+      if (crossed) continue;
+      const dist = Math.abs((lv.price - q.price) / q.price) * 100;
+      near.push({ dist, line: `• ${w.name} ${fmtPrice(q.price)} → ${escHtml(lv.label)} ${fmtPrice(lv.price)}(差${dist.toFixed(1)}%)` });
+    }
+  }
+  near.sort((a, b) => a.dist - b.dist);
   return [
-    `🔭 <b>SunWatch 监控结论</b> ${new Date().toISOString().slice(0, 10)}`,
-    ...(label ? [label] : []),
+    `🔭 <b>SunWatch</b> ${today}${label ? " · " + label.replace(/(简报|[()·]|美股隔夜复盘|A\/H 开盘前|A\/H 收盘复盘|执行提醒|\s)/g, "") : ""}`,
     ``,
-    ...(quoteLines.length ? [`💹 <b>实时行情</b>:`, ...quoteLines, ``] : []),
-    `📊 <b>预判档案</b>:共 ${PREDICTIONS.length} 条;可评分 ${scored.length} 条中命中 ${hits} 条(其余为营销造势/风险事件/待验证)`,
-    `核心结论:他的言论不是可靠信号,资本动作才是`,
+    `📌 <b>今日要做</b>`,
+    ...(actions.length ? actions : ["今日无必做动作,持仓按兵不动"]),
     ``,
-    `📈 <b>主题周期定位</b>:`,
-    ...stages,
+    `🚦 ${lights}`,
+    ...(movers.length ? [``, `💹 <b>异动</b>`, ...movers] : []),
+    ...(near.length ? [``, `🎯 <b>最近触发线</b>`, ...near.slice(0, 3).map((n) => n.line)] : []),
     ``,
-    `🧭 <b>核心信号(触发即执行)</b>:`,
-    ...CORE_SIGNALS.map((s) => `• ${escHtml(s)}`),
-    ``,
-    `🆕 <b>最新动态</b>(库存 ${items.length} 条):`,
-    ...(latest.length ? latest : ["• 暂无,等待下轮抓取"]),
-    ``,
-    `🎯 <b>跨市场映射</b>(按关联度):`,
-    `美股:${byMarket("美股")}`,
-    `港股:${byMarket("港股")}`,
-    `A股:${byMarket("A股")}`,
-    ``,
-    `👁 <b>跟踪点</b>:SKHY(海力士ADR)上市=存储派发窗口 / 宇树科创板挂牌定价=物理AI温度计 / 优必选万台订单收入确认 / Optimus 量产节点 / MU 财报与合约价月报 / WLFI 互诉`,
-    ``,
-    `详见监控台:${origin} (非投资建议)`,
+    `详情与全部信号:${origin}`,
   ].join("\n");
 }
 
