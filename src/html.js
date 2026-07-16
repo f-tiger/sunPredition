@@ -33,7 +33,7 @@ const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
 
 // pSEO:单只标的页
-export function renderStockPage(s, quote, related) {
+export function renderStockPage(s, quote, related, news) {
   const title = `${s.name}(${s.ticker})${s.theme}赛道分析·买卖触发线`;
   const q = quote ? `<div class="card"><b>实时行情</b><div style="font-size:22px;font-weight:700">${quote.price.toLocaleString()} <span style="font-size:14px;color:${quote.changePct >= 0 ? "#16803c" : "#b42318"}">${quote.changePct > 0 ? "+" : ""}${quote.changePct}%</span></div><div class="meta">${(quote.at || "").replace("T", " ").slice(0, 16)} UTC · Yahoo Finance</div></div>` : "";
   const f = s.fund || {};
@@ -50,7 +50,8 @@ export function renderStockPage(s, quote, related) {
 <script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"SunWatch Pro",item:"https://sunwatch.tuoqiantu.workers.dev/"},{"@type":"ListItem",position:2,name:s.market},{"@type":"ListItem",position:3,name:s.name}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › ${escS(s.market)} › ${escS(s.theme)}</p>
 <h1>${escS(s.name)} <span class="tag">${escS(s.ticker)}</span> <span class="tag">${escS(s.market)}</span></h1>
-${q}<div class="card">${rows}</div>${CTA}
+${q}<div class="card">${rows}</div>
+${(news && news.length) ? `<div class="card"><b>最新动态</b><ul style="margin:6px 0 0 18px;padding:0">${news.map((n) => `<li style="margin:3px 0"><a href="${escS(n.link)}" rel="nofollow">${escS(n.title)}</a>${n.published ? ` <span class="meta">${n.published.slice(0, 10)}</span>` : ""}</li>`).join("")}</ul></div>` : ""}${CTA}
 ${rel ? `<p class="meta">同赛道标的:${rel}</p>` : ""}
 <p class="meta">本页为研究框架,非投资建议;具体买入区间/止损线/仓位方案为 Pro 内容。</p>
 </div></body></html>`;

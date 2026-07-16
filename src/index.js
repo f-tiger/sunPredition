@@ -35,7 +35,15 @@ export default {
       if (!s) return new Response("Not found", { status: 404 });
       const q = ((await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] }).quotes.find((x) => x.symbol && slugify(x.symbol) === slug || x.name === s.name);
       const related = STOCKS.filter((x) => x.theme === s.theme && x.ticker !== s.ticker).slice(0, 6);
-      return new Response(renderStockPage(s, q, related), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+      // 注入该标的最新新闻(随 30 分钟抓取自动更新 → 页面持续新鲜)
+      const feed = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
+      const nameCore = s.name.replace(/\(.*?\)|(重点)/g, "").trim();
+      const tickerCore = s.ticker.replace(/\.(SH|SZ|HK|KS)$/i, "").replace(/[^A-Za-z0-9一-龥]/g, "");
+      const news = feed.filter((i) => {
+        const t = i.title || "";
+        return (nameCore.length >= 2 && t.includes(nameCore)) || (tickerCore.length >= 3 && t.toUpperCase().includes(tickerCore.toUpperCase()));
+      }).slice(0, 5);
+      return new Response(renderStockPage(s, q, related, news), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
     }
     if (url.pathname === "/daily") {
       const list = await env.SUNWATCH_KV.list({ prefix: "daily-" });
@@ -105,6 +113,25 @@ export default {
             }
             await tgSend({ token: cfg.token, chatId: msg.chat.id },
               "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 升级 Pro:https://sunwatch.tuoqiantu.workers.dev/#pricing\n公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record", null);
+            return new Response("ok");
+          }
+          if (!m && /^\/(status|help)/.test(msg.text || "")) {
+            const cmd = msg.text.trim().split(/\s/)[0];
+            if (cmd === "/status") {
+              const lic0 = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+              const isProSub = Object.values(lic0).some((l) => String(l.chatId) === String(msg.chat.id));
+              const free0 = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+              const isFree = free0.includes(msg.chat.id);
+              const txt = isProSub
+                ? "✨ 你是 Pro 会员:每日双简报 + 价格触发报警 + 重要信号快讯全量接收。"
+                : isFree
+                ? "🆓 你是免费订户:每晚收信号预告。升级 Pro 解锁具体价位与实时报警 → https://sunwatch.tuoqiantu.workers.dev/#pricing"
+                : "你还未订阅。发送 /start 即可免费订阅每日信号预告。";
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, txt, null);
+            } else {
+              await tgSend({ token: cfg.token, chatId: msg.chat.id },
+                "可用命令:\n/start — 免费订阅每日预告\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://sunwatch.tuoqiantu.workers.dev", null);
+            }
             return new Response("ok");
           }
           if (m) {
