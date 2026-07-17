@@ -111,6 +111,31 @@ ${items || '<div class="card meta">首篇复盘将于明日北京时间 08:30 �
 </div></body></html>`;
 }
 
+
+// FAQ 页(FAQPage schema 富结果)
+export function renderFaq() {
+  const QA = [
+    ["什么是触发线?", "预先设定的价格条件,如『跌破 X 则减仓』『回落到 Y 区间则分批买入』。系统每 30 分钟核对实时行情,价格穿越触发线时通过 Telegram 即时报警——把判断变成可执行的纪律,而不是预测。"],
+    ["信号多久更新一次?", "行情与触发线每 30 分钟自动核对;每日两次简报(北京 08:30 / 20:30);重要事件(如财报、上市、政策)实时推送。"],
+    ["如何订阅?", "免费版:向 Telegram 机器人 @sunwatchBot 发送 /start,每晚收到信号预告。Pro:联系站长获取激活码,在网站底部输入解锁全部价位,并向机器人发送 /start 激活码 绑定实时信号。"],
+    ["激活码规则是什么?", "一个激活码只能绑定一个 Telegram 账号(防转卖);网页端激活后浏览器本地记住,换设备重新输入即可。"],
+    ["数据来源是什么?", "行情来自 Yahoo Finance;新闻来自 Google News、Bing News、Cointelegraph 等公开信源;关键事实经多源交叉核验并标注日期。"],
+    ["这和荐股有什么区别?", "本站不承诺收益、不代客理财,提供的是研究框架与触发线纪律工具;所有判断公开建档(含失误),命中率可在公开战绩页查证。所有内容不构成投资建议。"],
+    ["预测不准怎么办?", "每一次判断都写入公开档案,命中与失误同等展示,失误附教训。系统的核心不是预测涨跌,而是『若价格到 X 则做 Y』的预设执行,准确性可被持续审计。"],
+    ["会退款吗?", "虚拟信号服务开通后不支持退款;可先用免费版评估质量再决定升级。"],
+  ];
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: QA.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
+  const body = QA.map(([q, a]) => `<div class="card"><b>${escS(q)}</b><div style="margin-top:4px">${escS(a)}</div></div>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>常见问题 FAQ | SunWatch Pro</title>
+<meta name="description" content="SunWatch Pro 常见问题:触发线是什么、信号频率、订阅方式、激活码规则、数据来源、与荐股的区别。">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/faq">
+<script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › FAQ</p><h1>❓ 常见问题</h1>
+${body}${CTA}
+</div></body></html>`;
+}
+
 // 仪表盘:单文件 HTML,数据由 /api/feed 与 /api/archive 提供
 export function renderDashboard() {
   return `<!doctype html>
@@ -171,7 +196,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/go/tg">🤖 免费订阅信号预告</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>

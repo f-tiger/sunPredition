@@ -361,6 +361,11 @@ export const WATCHLIST = [
   { symbol: "TRON", name: "Tron Inc.", group: "孙宇晨", levels: [] },
   { symbol: "CRCL", name: "Circle", group: "加密", levels: [] },
   { symbol: "603667.SS", name: "五洲新春", group: "潜伏池", levels: [] },
+  { symbol: "603728.SS", name: "鸣志电器", group: "潜伏池", levels: [] },
+  { symbol: "603009.SS", name: "北特科技", group: "潜伏池", levels: [] },
+  { symbol: "603662.SS", name: "柯力传感", group: "潜伏池", levels: [] },
+  { symbol: "688322.SS", name: "奥比中光", group: "潜伏池", levels: [] },
+  { symbol: "2432.HK", name: "越疆Dobot", group: "潜伏池", levels: [] },
   { symbol: "003021.SZ", name: "兆威机电", group: "潜伏池", levels: [] },
 ];
 

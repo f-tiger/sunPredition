@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, slugify } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -13,7 +13,7 @@ const TRACK_MATCHERS = {
   crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
 };
 function allUrls() {
-  const urls = [SITE + "/", SITE + "/track-record", SITE + "/feed.xml"];
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
   return urls;
@@ -223,6 +223,8 @@ export default {
         const r = await sendTelegram(cfg, buildSummary(items, url.origin, null, q.quotes));
         return json(r);
       }
+      case "/faq":
+        return new Response(renderFaq(), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
       case "/track-record":
         return new Response(renderTrackRecord(FORECASTS, PREDICTIONS), { headers: { "content-type": "text/html; charset=utf-8" } });
       case "/feed.xml": {
@@ -289,6 +291,12 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       const alertText = `⚡ <b>价格触发</b>\n\n${lines.join("\n\n")}`;
       await sendTelegram(cfg, alertText).catch(() => {});
       await broadcastPro(env, alertText).catch(() => {});
+    }
+    if (quoteResult && quoteResult.panics && quoteResult.panics.length) {
+      const pl = quoteResult.panics.map((p) => `• ${p.name} ${p.changePct}%(恐慌日纪律:分批小仓,批间≥10%回调或≥4周)`);
+      const t = `🟢 <b>恐慌买点候选(潜伏池)</b>\n\n${pl.join("\n")}`;
+      await sendTelegram(cfg, t).catch(() => {});
+      await broadcastPro(env, t).catch(() => {});
     }
     const DAILY = {
       "30 0 * * *": "🌅 早盘简报(美股隔夜复盘 · A/H 开盘前)",
@@ -411,7 +419,19 @@ async function refreshQuotes(env) {
   }
   const payload = { at: new Date().toISOString(), quotes };
   await env.SUNWATCH_KV.put("quotes", JSON.stringify(payload));
-  return { count: quotes.length, crossings };
+  // 恐慌买点候选:潜伏池标的单日 ≤ -5%(『只在恐慌日买』纪律的自动执行器);当日去重
+  const panics = [];
+  for (const q of quotes) {
+    const w = WATCHLIST.find((x) => x.symbol === q.symbol);
+    if (w && w.group === "潜伏池" && q.changePct <= -5) {
+      const key = `panic-${q.symbol}-${new Date().toISOString().slice(0, 10)}`;
+      if (!(await env.SUNWATCH_KV.get(key))) {
+        await env.SUNWATCH_KV.put(key, "1", { expirationTtl: 172800 });
+        panics.push(q);
+      }
+    }
+  }
+  return { count: quotes.length, crossings, panics };
 }
 
 async function fetchQuote(w) {
