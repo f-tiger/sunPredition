@@ -98,3 +98,10 @@
 3. 重建每周一 05:00 UTC 存储清仓周检 trigger;CLAUDE.md 定时任务段更新为新 trigger ID。
 4. 验证:wrangler deploy --dry-run 通过 → push 部署分支 → Actions 日志确认部署与 TG 推送。
 **交付**:数据入库 + licenses 管理端点 + 双 trigger 恢复 + 本记录。
+
+## 2026-07-20 · 周检 #3(重建后周检 trigger 首跑,trig_01TDZnEwc4BUgdVoFk6J2tmX)
+
+**目标**:按三硬指标做存储清仓周检并入库。
+**核实数据**(WebSearch,标日期):正股 000660 7/20 收 185.8万韩元(+0.7%);TrendForce 7/3:3Q26 DRAM +13~18%/NAND +10~15%(增速三连降,消费端承受力见顶);MU 无下修(FQ3 营收 $414.6亿/EPS $25.11);SKHY 7/14 因两倍杠杆 ETF 上市单日 +19% 冲高后回落至 $154.03(7/17);板块官方入熊(距高点 -20%+)。
+**判定**:清仓触发 0/3(①半触发:更低低点成立但 SKHY 未破发 ②合约价未转负 ③MU 未下修)→ 底仓 1/3 维持;回补条款暂停(趋势破坏),重启前提入 WATCHLIST(正股收复 218.7万 above 线新增)。
+**交付**:CORE_SIGNALS 周检判定置顶 + FORECASTS 建档 + WATCHLIST 企稳触发线 + 部署推送 TG。
