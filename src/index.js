@@ -89,6 +89,33 @@ export default {
         await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
         return json({ ok: true, code, note: "发给订户:网页输入激活,或向 bot 发 /start " + code + " 绑定TG信号" });
       }
+      // 激活码管理(站长专用,bot token 鉴权)。列表:/api/licenses?token=<bot token>;吊销:&revoke=SW-XXXXXX
+      case "/api/licenses": {
+        const cfg = await getTgConfig(env);
+        if (!cfg || url.searchParams.get("token") !== cfg.token)
+          return json({ ok: false, error: "鉴权失败:需携带 bot token" });
+        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+        const revoke = (url.searchParams.get("revoke") || "").trim().toUpperCase();
+        if (revoke) {
+          if (!lic[revoke]) return json({ ok: false, error: "激活码不存在:" + revoke });
+          const revoked = (await env.SUNWATCH_KV.get("licenses-revoked", "json")) || {};
+          revoked[revoke] = { ...lic[revoke], revokedAt: new Date().toISOString() };
+          delete lic[revoke];
+          await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
+          await env.SUNWATCH_KV.put("licenses-revoked", JSON.stringify(revoked));
+          return json({ ok: true, revoked: revoke, note: "已吊销:网页/API 即刻失效,TG 广播自下一轮起不再包含该订户" });
+        }
+        const revokedAll = (await env.SUNWATCH_KV.get("licenses-revoked", "json")) || {};
+        const list = Object.entries(lic).map(([code, l]) => ({
+          code,
+          status: l.chatId ? "已绑定TG" : "未绑定",
+          createdAt: l.createdAt || null,
+          activatedAt: l.activatedAt || null,
+          chatId: l.chatId || null,
+          note: l.note || undefined,
+        }));
+        return json({ ok: true, total: list.length, revokedTotal: Object.keys(revokedAll).length, licenses: list, usage: "吊销:本接口加 &revoke=<码>;吊销记录存 licenses-revoked(审计)" });
+      }
       case "/api/activate": {
         const ok = await isPro(env, url.searchParams.get("code"));
         return json({ ok, error: ok ? undefined : "激活码无效" });

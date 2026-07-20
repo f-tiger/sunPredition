@@ -16,7 +16,7 @@ SunWatch:孙宇晨预判监控 + 跨市场(美/港/A)投资执行系统。
 - 数据层:`src/data.js`(PREDICTIONS 孙宇晨档案 / STOCKS 标的卡 / PLAYBOOK 操盘框架 / CORE_SIGNALS 核心信号 / IMPORTANT_RULES 快讯规则 / WATCHLIST 实时行情触发线 / FORECASTS 自我预测档案)
 - 行情:Yahoo Finance 每 30 分钟刷新,价格穿越 WATCHLIST 触发线 → TG 秒报
 - TG:每日北京 08:30 / 20:30 双简报(cron `30 0 * * *` 与 `30 12 * * *`,UTC);长消息自动分段(勿再出现截断 HTML 的 bug)
-- 定时任务(claude-code-remote triggers):每周一 05:00 UTC 存储清仓周检;**每日 02:00 UTC(北京10:00)自主优化循环(trig_01JWYRaVn7LsLonfSidfS4os,从 BACKLOG.md 取件,用户已授权全程自主决策不询问)**;一次性任务按事件另设
+- 定时任务(claude-code-remote triggers,2026-07-20 重建——旧 trigger 曾全部丢失致循环中断 7/17-19,教训:每轮顺手 list_triggers 核对心跳):每周一 05:00 UTC 存储清仓周检(trig 见下次周检记录);**每日 02:00 UTC(北京10:00)自主优化循环(trig_01PiwKEKQsJXDDkueQ8yKXGi,从 BACKLOG.md 取件,用户已授权全程自主决策不询问)**;一次性任务按事件另设
 
 ## 铁律(教训换来的)
 

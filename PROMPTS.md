@@ -86,3 +86,15 @@
 1. /faq 页:8 个常见问题(触发线是什么/信号频率/如何订阅/绑定TG/激活码规则/数据来源/与荐股的区别/免责),FAQPage JSON-LD 富结果;入 sitemap 与 IndexNow;首页导航加入口。
 2. WATCHLIST 补入鸣志/北特/柯力/奥比/越疆(潜伏池组);refreshQuotes 新增恐慌检测:潜伏池标的单日 ≤-5% → TG 即时推『🟢 恐慌买点候选』(对应"只在恐慌日买"纪律的自动执行器)。
 3. dry-run + 冒烟 → push → BACKLOG 勾销。
+
+## 2026-07-20 · 每日优化循环 #4(循环重建后首轮;数据补课 + BACKLOG #5)
+
+**背景**:每日循环 trigger 曾丢失,7/17-19 中断;今日以新 trigger(trig_01PiwKEKQsJXDDkueQ8yKXGi,每日北京10:00)重建并首跑。每周一周检 trigger 同样丢失,本轮一并重建。
+**目标**:①补课中断期行情并把触发判定入库 ②取件 BACKLOG #5 licenses 管理端点 ③修复定时任务记录。
+**需实时核实的数据**(已 WebSearch,标注日期):SKHY 7/17 收 $154.03;SNDK 7/17 收 $1354.82(7/13 -12.6%、7/16 再 -8%,破 $1745 触发线=更低低点确认);MU 7/17 收 $848.95(破 $1010 线);海力士正股 000660 7/20 晨 182.9万韩元(深破 218.7万应急线);Evercore 逆势上调 SNDK 目标至 $3,100(对手盘信息)。
+**步骤**:
+1. CORE_SIGNALS 顶部新增【周初快照判定 2026-07-20】(触发线盘点+执行结论);ACTION_QUEUE 清理 7/17 过期项、新增本周行动;FORECASTS 建档"下行趋势确认"判断。
+2. src/index.js 新增 /api/licenses(站长 bot token 鉴权):GET 列表(码/状态/绑定/时间);&revoke=码 吊销(移入 licenses-revoked 审计,isPro/广播即刻失效)。BACKLOG #5 勾销。
+3. 重建每周一 05:00 UTC 存储清仓周检 trigger;CLAUDE.md 定时任务段更新为新 trigger ID。
+4. 验证:wrangler deploy --dry-run 通过 → push 部署分支 → Actions 日志确认部署与 TG 推送。
+**交付**:数据入库 + licenses 管理端点 + 双 trigger 恢复 + 本记录。
