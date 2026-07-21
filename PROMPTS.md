@@ -105,3 +105,13 @@
 **核实数据**(WebSearch,标日期):正股 000660 7/20 收 185.8万韩元(+0.7%);TrendForce 7/3:3Q26 DRAM +13~18%/NAND +10~15%(增速三连降,消费端承受力见顶);MU 无下修(FQ3 营收 $414.6亿/EPS $25.11);SKHY 7/14 因两倍杠杆 ETF 上市单日 +19% 冲高后回落至 $154.03(7/17);板块官方入熊(距高点 -20%+)。
 **判定**:清仓触发 0/3(①半触发:更低低点成立但 SKHY 未破发 ②合约价未转负 ③MU 未下修)→ 底仓 1/3 维持;回补条款暂停(趋势破坏),重启前提入 WATCHLIST(正股收复 218.7万 above 线新增)。
 **交付**:CORE_SIGNALS 周检判定置顶 + FORECASTS 建档 + WATCHLIST 企稳触发线 + 部署推送 TG。
+
+## 2026-07-21 · 每日优化循环 #5(BACKLOG #6:IndexNow 健壮化)
+
+**目标**:①隔夜行情核查(SKHY 是否测试 $149 破发线,若破发清仓触发①成立须入库) ②BACKLOG #6:IndexNow 429 重试 + 最近状态记录(KV) + 简报收录健康度。
+**步骤**:
+1. WebSearch 核实 7/20 美股收盘:SKHY/SNDK/MU;有触发即入 CORE_SIGNALS/FORECASTS。
+2. 新增 pingIndexNow(env, urls):429/5xx/网络失败重试≤2次(退避1s/3s),结果写 KV `indexnow-status`(时间/状态码/尝试次数/URL数);两处调用点(/api/ping-indexnow 与每日 cron)改走该函数。
+3. growthLine 追加收录健康度(读 indexnow-status:✅状态码+日期 / ⚠️失败+次数)→ 每日简报站长行自动携带。
+4. dry-run + push 部署 + Actions 验证;BACKLOG 勾销 #6。
+**验收**:dry-run 通过;/api/ping-indexnow 返回含 attempts/status;简报增长行含收录段。

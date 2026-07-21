@@ -268,12 +268,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       case `/${INDEXNOW_KEY}.txt`:
         return new Response(INDEXNOW_KEY, { headers: { "content-type": "text/plain" } });
       case "/api/ping-indexnow": {
-        const r = await fetch("https://api.indexnow.org/indexnow", {
-          method: "POST",
-          headers: { "content-type": "application/json; charset=utf-8" },
-          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: allUrls() }),
-        }).catch(() => null);
-        return json({ ok: !!r && (r.status === 200 || r.status === 202), status: r?.status, urls: allUrls().length });
+        const rec = await pingIndexNow(env, allUrls());
+        return json(rec);
       }
       case "/robots.txt":
         return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
@@ -353,12 +349,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         await env.SUNWATCH_KV.put(`daily-${today}`, JSON.stringify(snapshot)).catch(() => {});
         // webhook 自愈重注册(带 secret_token,幂等)
         await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${WEBHOOK_SECRET}`).catch(() => {});
-        // IndexNow:全站 URL + 今日新页
-        await fetch("https://api.indexnow.org/indexnow", {
-          method: "POST",
-          headers: { "content-type": "application/json; charset=utf-8" },
-          body: JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: [...allUrls(), `${SITE}/daily/${today}`, `${SITE}/daily`] }),
-        }).catch(() => {});
+        // IndexNow:全站 URL + 今日新页(429/5xx 自动重试,状态入 KV 供简报健康度)
+        await pingIndexNow(env, [...allUrls(), `${SITE}/daily/${today}`, `${SITE}/daily`]).catch(() => {});
       }
     } else if (result.important.length) {
       // 30 分钟轮询:仅命中重要信号时额外推送
@@ -502,7 +494,31 @@ async function growthLine(env) {
   const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
   const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
   const proBound = Object.values(lic).filter((l) => l.chatId).length;
-  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}`;
+  const idx = (await env.SUNWATCH_KV.get("indexnow-status", "json")) || null;
+  const idxTxt = idx ? (idx.ok ? ` | 收录✅${idx.status}(${idx.at.slice(5, 10)})` : ` | 收录⚠️${idx.status || "网络失败"}×${idx.attempts}`) : "";
+  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${idxTxt}`;
+}
+
+// IndexNow 提交(429/5xx/网络错误退避重试 ≤2 次),最近状态写 KV `indexnow-status` 供简报健康度展示
+async function pingIndexNow(env, urlList) {
+  const payload = JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList });
+  let status = 0;
+  let attempts = 0;
+  for (const wait of [0, 1000, 3000]) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    attempts++;
+    const r = await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: payload,
+    }).catch(() => null);
+    status = r ? r.status : 0;
+    if (status === 200 || status === 202) break;
+    if (status && status !== 429 && status < 500) break; // 非429的4xx是请求问题,重试无意义
+  }
+  const rec = { at: new Date().toISOString(), status, ok: status === 200 || status === 202, attempts, urls: urlList.length };
+  await env.SUNWATCH_KV.put("indexnow-status", JSON.stringify(rec)).catch(() => {});
+  return rec;
 }
 
 // ---- Pro 会员工具 ----
