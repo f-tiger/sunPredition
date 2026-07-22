@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -13,9 +13,10 @@ const TRACK_MATCHERS = {
   crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
 };
 function allUrls() {
-  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml"];
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
+  for (const { id } of forecastSlugs(FORECASTS)) urls.push(`${SITE}/forecast/${id}`);
   return urls;
 }
 
@@ -26,7 +27,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // pSEO 动态路由(含 PV 计数)
-    if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track")) {
+    if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast")) {
       ctx.waitUntil(bumpGrowth(env, "pv"));
     }
     if (url.pathname.startsWith("/stock/")) {
@@ -55,6 +56,17 @@ export default {
       const snap = await env.SUNWATCH_KV.get(`daily-${d}`, "json");
       if (!snap) return new Response("Not found", { status: 404 });
       return new Response(renderDailyPage(snap), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
+    }
+    if (url.pathname === "/forecast") {
+      return new Response(renderForecastIndex(forecastSlugs(FORECASTS)), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname.startsWith("/forecast/")) {
+      const id = decodeURIComponent(url.pathname.slice(10));
+      const all = forecastSlugs(FORECASTS);
+      const hit = all.find((x) => x.id === id);
+      if (!hit) return new Response("Not found", { status: 404 });
+      const related = all.filter((x) => x.id !== id).slice(-4).reverse();
+      return new Response(renderForecastPage(hit.f, hit.id, related), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
     }
     if (url.pathname.startsWith("/track/") && url.pathname !== "/track-record") {
       const id = url.pathname.slice(7);

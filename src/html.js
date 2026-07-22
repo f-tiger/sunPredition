@@ -1,11 +1,20 @@
 // 公开战绩页(服务端渲染,可分享,SEO 友好)
+// 为每条 FORECASTS 生成稳定 id(date + 同日序号;判断只追加不重排 → id 稳定)。战绩内容矩阵化的地基。
+export function forecastSlugs(forecasts) {
+  const seen = {};
+  return forecasts.map((f) => {
+    const n = (seen[f.date] = (seen[f.date] || 0) + 1);
+    return { id: `${f.date}-${n}`, f };
+  });
+}
+
 export function renderTrackRecord(forecasts, predictions) {
   const scored = forecasts.filter((f) => f.verdict !== "pending");
   const hits = scored.filter((f) => f.verdict === "hit").length;
   const V = { hit: "✅ 命中", miss: "❌ 失误", partial: "🟡 部分", pending: "⏳ 验证中" };
   const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const rows = forecasts.map((f) =>
-    `<div class="card"><b>${f.date}</b> · <b>${V[f.verdict] || f.verdict}</b><div style="margin-top:4px">${esc(f.call)}</div><div class="meta" style="margin-top:3px">结果:${esc(f.outcome)}</div></div>`).join("");
+  const rows = forecastSlugs(forecasts).map(({ id, f }) =>
+    `<div class="card"><b>${f.date}</b> · <b>${V[f.verdict] || f.verdict}</b><div style="margin-top:4px">${esc(f.call)}</div><div class="meta" style="margin-top:3px">结果:${esc(f.outcome)}</div><div class="meta" style="margin-top:5px"><a href="/forecast/${id}">查看该判断复盘 →</a></div></div>`).join("");
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SunWatch Pro 公开战绩 · 命中率实录</title>
 <meta name="description" content="SunWatch Pro 的每一次市场判断公开建档:命中与失误同等展示。当前可评分 ${scored.length} 条,命中 ${hits} 条。">
@@ -111,6 +120,51 @@ ${items || '<div class="card meta">首篇复盘将于明日北京时间 08:30 �
 </div></body></html>`;
 }
 
+
+// 单条判断复盘页(战绩内容矩阵化:每条 FORECASTS 一篇可收录文章,含 Article + BreadcrumbList)
+export function renderForecastPage(f, id, related) {
+  const V = { hit: "✅ 命中", miss: "❌ 失误", partial: "🟡 部分", pending: "⏳ 验证中" };
+  const verdict = V[f.verdict] || f.verdict;
+  const short = String(f.call || "").slice(0, 28);
+  const title = `复盘 ${f.date}:${short}${f.call && f.call.length > 28 ? "…" : ""} — ${verdict.replace(/[✅❌🟡⏳]\s*/, "")}`;
+  const desc = `SunWatch Pro 判断建档(${f.date}):${String(f.call || "").slice(0, 60)}。结果:${String(f.outcome || "").slice(0, 70)}。命中与失误同等公开。`;
+  const url = `https://sunwatch.tuoqiantu.workers.dev/forecast/${id}`;
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: title, datePublished: f.date, author: { "@type": "Organization", name: "SunWatch Pro" }, publisher: { "@type": "Organization", name: "SunWatch Pro" }, mainEntityOfPage: url });
+  const bc = JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "SunWatch Pro", item: "https://sunwatch.tuoqiantu.workers.dev/" }, { "@type": "ListItem", position: 2, name: "公开战绩", item: "https://sunwatch.tuoqiantu.workers.dev/track-record" }, { "@type": "ListItem", position: 3, name: f.date }] });
+  const relCards = (related || []).map(({ id: rid, f: rf }) => `<div class="card"><a href="/forecast/${rid}"><b>${rf.date}</b> · ${V[rf.verdict] || rf.verdict}</a><div class="meta" style="margin-top:3px">${escS(String(rf.call || "").slice(0, 40))}…</div></div>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escS(title)} | SunWatch Pro</title>
+<meta name="description" content="${escS(desc)}">
+<meta property="og:title" content="${escS(title)}"><meta property="og:description" content="${escS(desc)}">
+<link rel="canonical" href="${url}">
+<script type="application/ld+json">${ld}</script>
+<script type="application/ld+json">${bc}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › <a href="/track-record">公开战绩</a> › ${f.date}</p>
+<h1>${escS(title)}</h1>
+<div class="card"><b>判断(${f.date})</b><div style="margin-top:4px">${escS(f.call)}</div></div>
+<div class="card"><b>依据</b><div style="margin-top:4px">${escS(f.basis)}</div></div>
+<div class="card"><b>结果 · ${verdict}</b><div style="margin-top:4px">${escS(f.outcome)}</div>${f.verdictNote ? `<div class="meta" style="margin-top:4px">${escS(f.verdictNote)}</div>` : ""}</div>
+${relCards ? `<h2 style="font-size:17px">其他判断</h2>${relCards}` : ""}
+${CTA}<p class="meta">研究记录,命中与失误同等展示;具体买卖价位与触发线为 Pro 内容。非投资建议。</p>
+</div></body></html>`;
+}
+
+// 战绩复盘索引页(把 N 条判断聚合为一个可收录入口)
+export function renderForecastIndex(items) {
+  const V = { hit: "✅ 命中", miss: "❌ 失误", partial: "🟡 部分", pending: "⏳ 验证中" };
+  const scored = items.filter(({ f }) => f.verdict !== "pending");
+  const hits = scored.filter(({ f }) => f.verdict === "hit").length;
+  const cards = items.map(({ id, f }) => `<div class="card"><a href="/forecast/${id}"><b>${f.date}</b> · ${V[f.verdict] || f.verdict}</a><div style="margin-top:4px">${escS(String(f.call || "").slice(0, 50))}${f.call && f.call.length > 50 ? "…" : ""}</div></div>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>判断复盘归档 · 每条建档单独成页 | SunWatch Pro</title>
+<meta name="description" content="SunWatch Pro 每一次市场判断的独立复盘页归档:可评分 ${scored.length} 条,命中 ${hits} 条。命中与失误同等公开。">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/forecast"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › <a href="/track-record">公开战绩</a> › 复盘归档</p>
+<h1>🗂️ 判断复盘归档</h1>
+<p>每一次明确判断单独成页,命中与失误同等展示。当前可评分 <b>${scored.length}</b> 条,命中 <b>${hits}</b> 条${scored.length ? `,命中率 <b>${Math.round((hits / scored.length) * 100)}%</b>` : ""}。</p>
+${cards}${CTA}
+</div></body></html>`;
+}
 
 // FAQ 页(FAQPage schema 富结果)
 export function renderFaq() {

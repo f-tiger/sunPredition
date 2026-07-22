@@ -115,3 +115,13 @@
 3. growthLine 追加收录健康度(读 indexnow-status:✅状态码+日期 / ⚠️失败+次数)→ 每日简报站长行自动携带。
 4. dry-run + push 部署 + Actions 验证;BACKLOG 勾销 #6。
 **验收**:dry-run 通过;/api/ping-indexnow 返回含 attempts/status;简报增长行含收录段。
+
+## 2026-07-22 · 每日优化循环 #6(BACKLOG #7:FORECASTS 战绩内容矩阵化)
+
+**目标**:把每条 FORECASTS 判断做成独立可收录页 /forecast/<id>,每页含 Article+BreadcrumbList JSON-LD、与战绩页互链,全部进 sitemap 与 IndexNow——让"公开战绩"从 1 页扩成 N 页机流量入口(战绩=本站差异化获客素材)。
+**需实时核实**:隔夜 SKHY 是否触及 $149 破发线(触发即入库);其余判断不新增,只做内容矩阵化。
+**步骤**:
+1. html.js:新增 forecastSlugs(FORECASTS) 生成稳定 id(date+同日序号,append 稳定);renderForecastPage(f,id,related) 单篇复盘页(keyword 化 title/description、命中徽章、依据/结果、JSON-LD、CTA、互链);renderForecastIndex 索引页。
+2. index.js:路由 /forecast(索引)与 /forecast/<id>(单篇,404 兜底);/forecast* 计 PV;allUrls() 纳入全部 forecast 页 + 索引 → 自动进 sitemap/IndexNow;战绩页每条卡片链到对应 /forecast/<id>(需 renderTrackRecord 传 id)。
+3. dry-run + push 部署 + Actions 验证;BACKLOG 勾销 #7。
+**验收**:dry-run 通过;/forecast 列出全部;/forecast/<id> 200 且含 canonical 与 Article schema;sitemap 含 forecast 页。
