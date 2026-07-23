@@ -125,3 +125,14 @@
 2. index.js:路由 /forecast(索引)与 /forecast/<id>(单篇,404 兜底);/forecast* 计 PV;allUrls() 纳入全部 forecast 页 + 索引 → 自动进 sitemap/IndexNow;战绩页每条卡片链到对应 /forecast/<id>(需 renderTrackRecord 传 id)。
 3. dry-run + push 部署 + Actions 验证;BACKLOG 勾销 #7。
 **验收**:dry-run 通过;/forecast 列出全部;/forecast/<id> 200 且含 canonical 与 Article schema;sitemap 含 forecast 页。
+
+## 2026-07-23 · 每日优化循环 #7(BACKLOG #9:英文着陆页 /en + 英文战绩页 /en/track-record)
+
+**目标**:开英文获客入口——Serenity 案例证明中英信息差有市场。捕获 "Justin Sun predictions / portfolio tracker" 类英文搜索意图,不重构中文 SPA 首页。
+**范围(可评审,纯新增路由)**:
+1. /en 英文着陆页:说明 SunWatch 是什么(孙宇晨预判监控+跨市场执行)、可验证命中率(从 FORECASTS 计算,语言中立数字)、CTA 到 /en/track-record 与 TG。
+2. /en/track-record 英文战绩页:命中率 + 每条判断(日期+命中徽章+我审校的忠实英文摘要 FORECAST_EN 映射;缺失则只显日期+徽章,优雅降级,绝不在英文页显示中文)。
+3. hreflang 双向:/ ↔ /en、/track-record ↔ /en/track-record(en/zh-CN/x-default),中文两页 head 补 alternate。
+4. allUrls 纳入 /en 与 /en/track-record → sitemap/IndexNow。
+**红线**:英文摘要必须忠实于已建档中文判断,不新增/不夸大;数字沿用已核实值。
+**验收**:dry-run 通过;/en 与 /en/track-record 200、含 canonical+hreflang;英文页无中文正文;sitemap 含两页。BACKLOG 勾销 #9(首页 SPA 全量 i18n 留作后续)。

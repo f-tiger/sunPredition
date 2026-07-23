@@ -20,6 +20,10 @@ export function renderTrackRecord(forecasts, predictions) {
 <meta name="description" content="SunWatch Pro 的每一次市场判断公开建档:命中与失误同等展示。当前可评分 ${scored.length} 条,命中 ${hits} 条。">
 <meta property="og:title" content="SunWatch Pro 公开战绩:${scored.length} 条判断,命中 ${hits} 条">
 <meta property="og:description" content="包括 2026-07 存储板块见顶判定、SKHY 上市派发窗口等。命中与失误同等公开。">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
+<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
+<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
+<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
 <style>:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--accent:#2563eb}
 @media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#171e26;--ink:#e6edf3;--muted:#8b98a5;--line:#2a3441;--accent:#60a5fa}}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system,"PingFang SC",system-ui,sans-serif}
@@ -40,6 +44,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
+const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div></div>`;
 
 // pSEO:单只标的页
 export function renderStockPage(s, quote, related, news) {
@@ -166,6 +171,72 @@ ${cards}${CTA}
 </div></body></html>`;
 }
 
+// 英文战绩摘要(忠实于已建档中文判断,人工审校;键=forecastSlugs 的 id)。缺失则英文页仅显示日期+徽章,绝不显示中文。
+const FORECAST_EN = {
+  "2026-07-05-1": "Storage sector in the late stage of its peak zone: risk outweighs opportunity — distribute.",
+  "2026-07-05-2": "IPO-week base case (40%): peers spike before listing, distribute into the spike. Missed — the crash had already happened; I cited stale June-peak data and mis-weighted the scenario.",
+  "2026-07-05-3": "Cold-reception scenario (25%): pricing discount widens, break-issue (below IPO price) risk rises.",
+  "2026-07-05-4": "The 2x-leveraged 7709 suits only short event windows — never hold it long; choppy tape means negative-compounding double drag.",
+  "2026-07-06-1": "Weekly check: 0 of 3 liquidation triggers fired; hold the core, de-risk around the event this week.",
+  "2026-07-07-1": "Q3 base case (55%): bottoming in the -20% to -35% band; if Micron's late-September earnings don't cut HBM guidance, a recovery rally follows.",
+  "2026-07-13-1": "Weekly-check aside: 'trend is up this week, lower-high not confirmed.' Missed — SNDK fell 12.6% that same day and the downtrend was confirmed by 7/17. Lesson: in a discipline week, execute the plan, don't editorialize on direction.",
+  "2026-07-20-1": "Storage downtrend confirmed: lower-lows in place (SNDK $1,354 / MU $849); SKHY break-issue below $149 raised to the base case.",
+  "2026-07-20-2": "Weekly check #3: 0 of 3 liquidation triggers; hold the 1/3 core unchanged; buy-back clause suspended — a -37.8% drawdown is a trend break, not a healthy dip.",
+};
+
+// 英文着陆页 /en(英文获客入口:孙宇晨预判监控 + 跨市场执行;可验证命中率)
+export function renderLandingEN(forecasts) {
+  const scored = forecasts.filter((f) => f.verdict !== "pending");
+  const hits = scored.filter((f) => f.verdict === "hit").length;
+  const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SunWatch Pro — Justin Sun prediction monitor & cross-market execution</title>
+<meta name="description" content="SunWatch Pro tracks Justin Sun's calls and turns market judgments into executable triggers across US, HK and A-share markets. Public track record: ${scored.length} scored calls, ${hits} hits (${rate}%). Research, not investment advice.">
+<meta property="og:title" content="SunWatch Pro — Justin Sun prediction monitor & trigger-based execution">
+<meta property="og:description" content="Turn judgments into price triggers, not predictions. Public hit/miss record, ${rate}% hit rate.">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/en">
+<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en">
+<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/">
+<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">中文</a> · English</p>
+<h1>SunWatch Pro</h1>
+<p>A monitoring system that tracks <b>Justin Sun's</b> public calls and, more importantly, turns market judgments into <b>executable price triggers</b> across US, Hong Kong and mainland-China (A-share) markets — "if price crosses X, do Y", watched by machine 24/7, pushed to Telegram.</p>
+<div class="card"><b>Not predictions — triggers.</b><div class="meta" style="margin-top:4px">Every judgment is written as a falsifiable price condition and logged. Hits and misses are shown side by side (misses carry the lesson).</div></div>
+<div class="card"><b>Public track record</b><div style="margin-top:4px">Scored calls: <b>${scored.length}</b> · Hits: <b>${hits}</b>${scored.length ? ` · Hit rate <b>${rate}%</b>` : ""}</div><div class="meta" style="margin-top:4px"><a href="/en/track-record">See the full English track record →</a></div></div>
+<h2 style="font-size:17px">What you get</h2>
+<div class="card">Five AI-cycle sectors (memory/storage, physical AI, energy, crypto) with cycle-stage positioning; specific entry/exit levels and stop lines (Pro); real-time trigger alerts via Telegram.</div>
+${CTA_EN}
+<p class="meta">Research framework only, not investment advice. Prices/valuations are verified with dates; specific levels and trigger lines are Pro content.</p>
+</div></body></html>`;
+}
+
+// 英文战绩页 /en/track-record(命中率 + 每条判断日期/徽章/忠实英文摘要)
+export function renderTrackRecordEN(forecasts) {
+  const V = { hit: "✅ Hit", miss: "❌ Miss", partial: "🟡 Partial", pending: "⏳ Pending" };
+  const scored = forecasts.filter((f) => f.verdict !== "pending");
+  const hits = scored.filter((f) => f.verdict === "hit").length;
+  const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
+  const rows = forecastSlugs(forecasts).map(({ id, f }) => {
+    const en = FORECAST_EN[id];
+    return `<div class="card"><b>${f.date}</b> · <b>${V[f.verdict] || f.verdict}</b>${en ? `<div style="margin-top:4px">${escS(en)}</div>` : ""}</div>`;
+  }).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SunWatch Pro — public track record (hits & misses)</title>
+<meta name="description" content="Every SunWatch Pro market call logged in the open: ${scored.length} scored, ${hits} hits (${rate}%). Hits and misses shown side by side.">
+<meta property="og:title" content="SunWatch Pro public track record: ${scored.length} calls, ${hits} hits">
+<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
+<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
+<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
+<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/track-record"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/track-record">中文</a> · English · <a href="/en">← SunWatch Pro (EN)</a></p>
+<h1>📊 Public track record</h1>
+<p>Every explicit judgment is logged in the open, hits and misses shown side by side (misses carry the lesson). Currently <b>${scored.length}</b> scored, <b>${hits}</b> hits${scored.length ? `, hit rate <b>${rate}%</b>` : ""}.</p>
+${rows}
+${CTA_EN}
+<p class="meta">Research record, not investment advice. Full rationale and price levels are in the Chinese archive and Pro content.</p>
+</div></body></html>`;
+}
+
 // FAQ 页(FAQPage schema 富结果)
 export function renderFaq() {
   const QA = [
@@ -205,6 +276,9 @@ export function renderDashboard() {
 <meta property="og:url" content="https://sunwatch.tuoqiantu.workers.dev/">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/">
+<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/">
+<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en">
+<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/">
 <style>
   :root{
     --bg:#f6f7f9; --card:#ffffff; --ink:#1a202c; --muted:#64748b;
