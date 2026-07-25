@@ -136,3 +136,14 @@
 4. allUrls 纳入 /en 与 /en/track-record → sitemap/IndexNow。
 **红线**:英文摘要必须忠实于已建档中文判断,不新增/不夸大;数字沿用已核实值。
 **验收**:dry-run 通过;/en 与 /en/track-record 200、含 canonical+hreflang;英文页无中文正文;sitemap 含两页。BACKLOG 勾销 #9(首页 SPA 全量 i18n 留作后续)。
+
+## 2026-07-25 · 每日优化循环 #8(BACKLOG #10:免费预告 A/B 文案轮换 + 点击归因)
+
+**数据核实(铁律#1)**:SKHY 7/24 收 $159.50(未破 $149,反从 7/21 $151 回升,破发压力本周缓解);清仓触发①未成立,底仓判定不变——仅日报记录,无新明确判断入库。
+**目标(BACKLOG #10,转化向)**:免费 TG 预告的升级 CTA 做 A/B 文案轮换,并按变体归因点击,用数据找出最能转化的文案。
+**范围(可评审,加法)**:
+1. TEASER_CTA_VARIANTS(3 条升级文案变体);pickTeaserVariant() 按 UTC 年内天数确定性轮换(无随机,可复现)。
+2. buildTeaser 升级行改用当日变体,链接走 /go/pro?v=<id>。
+3. 新增 /go/pro 路由:bump growth.proClicks 与 growth[`proClick_<id>`],302 跳 /#pricing。
+4. growthLine(仅站长)追加各变体点击对比。
+**验收**:dry-run 通过;/go/pro?v=a 302 到 /#pricing 且计数;buildTeaser 含 /go/pro 链接;简报增长行含变体对比。BACKLOG 勾销 #10。

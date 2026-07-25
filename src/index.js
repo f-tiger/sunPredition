@@ -301,6 +301,13 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         ctx.waitUntil(bumpGrowth(env, "tgClicks"));
         return Response.redirect("https://t.me/sunwatchBot", 302);
       }
+      // Pro 升级点击归因(免费预告 A/B 文案分变体计数):/go/pro?v=<变体id>
+      case "/go/pro": {
+        const v = (url.searchParams.get("v") || "").slice(0, 2).replace(/[^a-z0-9]/gi, "");
+        ctx.waitUntil(bumpGrowth(env, "proClicks"));
+        if (v) ctx.waitUntil(bumpGrowth(env, `proClick_${v}`));
+        return Response.redirect(SITE + "/#pricing", 302);
+      }
       case "/api/growth": {
         const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
         const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
@@ -514,7 +521,9 @@ async function growthLine(env) {
   const proBound = Object.values(lic).filter((l) => l.chatId).length;
   const idx = (await env.SUNWATCH_KV.get("indexnow-status", "json")) || null;
   const idxTxt = idx ? (idx.ok ? ` | 收录✅${idx.status}(${idx.at.slice(5, 10)})` : ` | 收录⚠️${idx.status || "网络失败"}×${idx.attempts}`) : "";
-  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${idxTxt}`;
+  const ab = ["a", "b", "c"].map((v) => `${v}:${g[`proClick_${v}`] || 0}`).join("/");
+  const abTxt = (g.proClicks || 0) ? ` | Pro点击 ${g.proClicks}(A/B ${ab})` : "";
+  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${idxTxt}`;
 }
 
 // IndexNow 提交(429/5xx/网络错误退避重试 ≤2 次),最近状态写 KV `indexnow-status` 供简报健康度展示
@@ -600,6 +609,7 @@ function buildTeaser(quotes) {
   const movers = (quotes || []).filter((q) => Math.abs(q.changePct) >= 3).slice(0, 3)
     .map((q) => `• ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct}%`);
   const lockedCount = CORE_SIGNALS.length + WATCHLIST.reduce((n, w) => n + w.levels.length, 0);
+  const v = pickTeaserVariant(lockedCount);
   return [
     `🔭 <b>SunWatch 每日预告</b> ${new Date().toISOString().slice(0, 10)}`,
     ``,
@@ -608,9 +618,22 @@ function buildTeaser(quotes) {
     ...(movers.length ? [``, `💹 今日异动:`, ...movers] : []),
     ``,
     `🔒 今日 <b>${lockedCount}</b> 条核心信号与触发线状态为 Pro 内容(具体买卖价位/止损/仓位/实时报警)`,
-    `升级 Pro:https://sunwatch.tuoqiantu.workers.dev/#pricing`,
-    `公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record`,
+    `${v.text}${SITE}/go/pro?v=${v.id}`,
+    `公开战绩:${SITE}/track-record`,
   ].join("\n");
+}
+
+// 免费预告升级 CTA 的 A/B 文案变体(按 UTC 年内天数确定性轮换,便于分变体归因点击)
+const TEASER_CTA_VARIANTS = [
+  { id: "a", text: (n) => `升级 Pro 解锁具体买卖价位与实时触发报警 → ` },
+  { id: "b", text: (n) => `别在触发点错过一秒:Pro 价格穿线即时秒报 → ` },
+  { id: "c", text: (n) => `今日 ${n} 条触发线已在盯守,升级 Pro 看具体价位 → ` },
+];
+function pickTeaserVariant(lockedCount) {
+  const now = new Date();
+  const doy = Math.floor((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000);
+  const v = TEASER_CTA_VARIANTS[doy % TEASER_CTA_VARIANTS.length];
+  return { id: v.id, text: v.text(lockedCount) };
 }
 
 // ---- 监控结论摘要 ----
