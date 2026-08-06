@@ -188,17 +188,26 @@ export default {
           // 付款回执:买家把 BSC 交易哈希发进来。**不自动发码**——没有上链核对就发码,
           // 等于任何人贴一串 64 位十六进制就能白嫖。这里只做"转交 + 留痕"。
           if (TXID_RE.test((msg.text || "").trim())) {
-            const tx = msg.text.trim();
+            const tx = msg.text.trim().toLowerCase();
             ctx.waitUntil(bumpGrowth(env, "payClaims"));
+            // 交易哈希是公开数据:任何人都能从链上抄一条别人的转账贴过来。
+            // 所以记下每个哈希首次由谁提交,重复出现时直接给站长打红旗。
+            const seen = (await env.SUNWATCH_KV.get("paid-tx", "json")) || {};
+            const dup = seen[tx] && String(seen[tx].chatId) !== String(msg.chat.id);
+            if (!seen[tx]) {
+              seen[tx] = { chatId: msg.chat.id, at: new Date().toISOString() };
+              await env.SUNWATCH_KV.put("paid-tx", JSON.stringify(seen));
+            }
             await tgSend({ token: cfg.token, chatId: msg.chat.id },
               "📩 收到你的交易哈希,站长会上链核对后把激活码发到这里。\n"
               + "核对通常很快;若超过一天没回,直接在这里追问一句即可。", "HTML");
             const who2 = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
             await tgSend({ token: cfg.token, chatId: cfg.chatId },
-              `🧾 <b>付款回执待核对</b>\n对方:${escHtml(who2 || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n`
+              `🧾 <b>付款回执待核对</b>${dup ? "\n🚩 <b>这个哈希此前已由别人提交过——大概率是抄的链上公开交易,核对前先看这一条</b>" : ""}\n`
+              + `对方:${escHtml(who2 || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n`
               + `TxID:<code>${escHtml(tx)}</code>\n`
               + `链上核对:https://bscscan.com/tx/${escHtml(tx)}\n\n`
-              + `请确认:① 收款地址是 ${USDT_ADDR} ② 金额 ≥ ${USDT_MONTH}(月)或 ${USDT_YEAR}(年) ③ 交易已确认。\n`
+              + `请确认:① 收款地址是 ${USDT_ADDR} ② 金额 ≥ ${USDT_MONTH}(月)或 ${USDT_YEAR}(年) ③ 交易已确认 ④ 这笔没被用过。\n`
               + `无误后用 /api/gen-code 生成激活码发给他。`, "HTML").catch(() => {});
             return new Response("ok");
           }
