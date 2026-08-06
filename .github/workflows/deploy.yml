@@ -40,6 +40,13 @@ jobs:
           curl -s -o /dev/null -w "%{redirect_url}\n" "$URL/go/buy" | grep -q "t.me/sunwatchBot" \
             && echo "buy -> telegram OK" || { echo "buy redirect target wrong"; exit 1; }
           curl -s "$URL/" | grep -q "/go/buy" || { echo "pricing card missing buy button"; exit 1; }
+          # 收款地址只能出现在 bot 私信里。一旦被渲染进公开页面,它会被抓取归档,
+          # 而链上余额与全部往来记录任何人都能查——这条断言就是防这个回归。
+          for path in "/" "/faq" "/track-record"; do
+            curl -s "$URL$path" | grep -qi "0xBc2a5eB" \
+              && { echo "LEAK: USDT address rendered on public page $path"; exit 1; } || true
+          done
+          echo "usdt address not on public pages OK"
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

@@ -6,6 +6,18 @@ const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
 // Telegram webhook 校验密钥(防伪造 webhook 调用;每日 cron 自愈重注册)
 const WEBHOOK_SECRET = "swhk-9d2f7c41e8b3a650c7d19e84f2b5a3c8";
 const SITE = "https://sunwatch.tuoqiantu.workers.dev";
+
+// USDT 收款(站长 2026-08-06 指定)。**只在 bot 私信里给出,不渲染到公开页面**——
+// 公开页上的地址会被抓取归档,且链上余额与全部往来记录任何人都能查。
+// 地址经两个独立来源逐字符核对(钱包截图 + 站长粘贴文本)。链错=资金不可找回,所以
+// 每次给地址都必须同时给出链名警告。
+const USDT_ADDR = "0xBc2a5eB76170DfE6d1A4FbFD966a27E5F2B93221";
+const USDT_CHAIN = "BNB Smart Chain (BEP20)";
+// 按 ¥199 / ¥1999 以约 7.15 折算取整,不借汇率换算悄悄涨价。改价改这里一处。
+const USDT_MONTH = 28;
+const USDT_YEAR = 280;
+// BSC 交易哈希:0x + 64 位十六进制。买家把它发给 bot → 转给站长人工核对后发码。
+const TXID_RE = /^0x[a-fA-F0-9]{64}$/;
 const TRACK_MATCHERS = {
   storage: (g) => /存储/.test(g || ""),
   "physical-ai": (g) => /物理AI|潜伏/.test(g || ""),
@@ -159,14 +171,35 @@ export default {
             }
             ctx.waitUntil(bumpGrowth(env, "buyRequests"));
             await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n\n"
+              "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n"
+              + `USDT 付款:<b>${USDT_MONTH} USDT / 月</b> · <b>${USDT_YEAR} USDT / 年</b>\n\n`
               + "包含:全部买入区间 / 止损线 / 仓位方案 · 价格穿越触发线秒推 · 每日双简报(北京 08:30 / 20:30) · 重要信号快讯\n\n"
-              + "站长会在这里私信你付款方式(微信 / 支付宝 / USDT)并发放激活码。\n"
-              + "拿到码后回来发送 <code>/start 激活码</code> 绑定实时信号。\n\n"
+              + `<b>收款地址</b>(点一下即可复制):\n<code>${USDT_ADDR}</code>\n`
+              + `⚠️ 只走 <b>${USDT_CHAIN}</b>。走错链的资金<b>无法找回</b>,转账前请务必核对网络。\n\n`
+              + "付完把<b>交易哈希(TxID)</b>直接发到这里,站长上链核对后给你激活码。\n"
+              + "拿到码后发送 <code>/start 激活码</code> 绑定实时信号。\n"
+              + "用微信 / 支付宝也可以——直接在这里说一声,站长会发收款码。\n\n"
               + "先看战绩再决定:" + SITE + "/track-record(命中与失误同等展示)", "HTML");
             const who = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
             await tgSend({ token: cfg.token, chatId: cfg.chatId },
-              `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n下一步:私信对方收款 → 用 /api/gen-code 生成激活码发给他。`, "HTML").catch(() => {});
+              `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n对方已拿到 USDT 地址(${USDT_MONTH}/月 · ${USDT_YEAR}/年);付款后他会把 TxID 发过来。\n若他要走微信/支付宝,私信发收款码。`, "HTML").catch(() => {});
+            return new Response("ok");
+          }
+          // 付款回执:买家把 BSC 交易哈希发进来。**不自动发码**——没有上链核对就发码,
+          // 等于任何人贴一串 64 位十六进制就能白嫖。这里只做"转交 + 留痕"。
+          if (TXID_RE.test((msg.text || "").trim())) {
+            const tx = msg.text.trim();
+            ctx.waitUntil(bumpGrowth(env, "payClaims"));
+            await tgSend({ token: cfg.token, chatId: msg.chat.id },
+              "📩 收到你的交易哈希,站长会上链核对后把激活码发到这里。\n"
+              + "核对通常很快;若超过一天没回,直接在这里追问一句即可。", "HTML");
+            const who2 = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
+            await tgSend({ token: cfg.token, chatId: cfg.chatId },
+              `🧾 <b>付款回执待核对</b>\n对方:${escHtml(who2 || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n`
+              + `TxID:<code>${escHtml(tx)}</code>\n`
+              + `链上核对:https://bscscan.com/tx/${escHtml(tx)}\n\n`
+              + `请确认:① 收款地址是 ${USDT_ADDR} ② 金额 ≥ ${USDT_MONTH}(月)或 ${USDT_YEAR}(年) ③ 交易已确认。\n`
+              + `无误后用 /api/gen-code 生成激活码发给他。`, "HTML").catch(() => {});
             return new Response("ok");
           }
           // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
@@ -552,7 +585,8 @@ async function growthLine(env) {
   const abTxt = (g.proClicks || 0) ? ` | Pro点击 ${g.proClicks}(A/B ${ab})` : "";
   // 购买按钮 vs 实际询价要分开看:结账断掉时两者会劈叉,而"零成交"再也不能被
   // 误读成"没需求"——这正是 2026-08-06 之前发生的事。
-  const buyTxt = (g.buyClicks || g.buyRequests) ? ` | 购买按钮 ${g.buyClicks || 0}→询价 ${g.buyRequests || 0}` : "";
+  const buyTxt = (g.buyClicks || g.buyRequests || g.payClaims)
+    ? ` | 购买按钮 ${g.buyClicks || 0}→询价 ${g.buyRequests || 0}→付款回执 ${g.payClaims || 0}` : "";
   return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${buyTxt}${idxTxt}`;
 }
 
