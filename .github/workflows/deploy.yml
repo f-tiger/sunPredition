@@ -25,9 +25,16 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/")
           echo "dashboard HTTP $code"
           test "$code" = "200"
-          # 结账路径必须每次部署都验一遍:它断过一次(定价页写"联系站长"但全站无联系方式),
+          # 结账路径必须每次部署都验一遍:它断过一次(定价页写"联系站长"但全站没有联系方式),
           # 而它断掉时的表现和"没人想买"完全一样,不会有任何报错。
-          buy=$(curl -s -o /dev/null -w "%{http_code}" "$URL/go/buy")
+          # 新版本传播需要时间,首次上线时 5 秒后断言会拿到旧版本的 404——所以重试而不是一击定生死。
+          buy=""
+          for i in 1 2 3 4 5 6; do
+            buy=$(curl -s -o /dev/null -w "%{http_code}" "$URL/go/buy")
+            [ "$buy" = "302" ] && break
+            echo "buy route not live yet (HTTP $buy), retry $i"
+            sleep 5
+          done
           echo "buy redirect HTTP $buy"
           test "$buy" = "302"
           curl -s -o /dev/null -w "%{redirect_url}\n" "$URL/go/buy" | grep -q "t.me/sunwatchBot" \
