@@ -182,7 +182,42 @@ export default {
               + "先看战绩再决定:" + SITE + "/track-record(命中与失误同等展示)", "HTML");
             const who = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
             await tgSend({ token: cfg.token, chatId: cfg.chatId },
-              `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n对方已拿到 USDT 地址(${USDT_MONTH}/月 · ${USDT_YEAR}/年);付款后他会把 TxID 发过来。\n若他要走微信/支付宝,私信发收款码。`, "HTML").catch(() => {});
+              `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n`
+              + `对方已拿到 USDT 地址(${USDT_MONTH}/月 · ${USDT_YEAR}/年);付款后他会把 TxID 发过来。\n`
+              + `核对无误后回一条 <code>/code ${msg.chat.id}</code> 即可发码。\n`
+              + `若他要走微信/支付宝,直接私信发收款码。`, "HTML").catch(() => {});
+            return new Response("ok");
+          }
+          // 站长发码:/code <chat_id> [年]。Telegram 不允许 bot 主动私信陌生人,而买家若没设
+          // 用户名,站长根本搜不到这个人——只有 bot 能回那个 chat_id。所以发码这一步交给 bot 代劳。
+          //
+          // 鉴权刻意做成 fail-closed:必须同时满足「私聊」且「chat.id 等于配置里的站长会话」。
+          // 若 TELEGRAM_CHAT_ID 指向的是群/频道,群里任何人的 chat.id 都等于群 id——那样
+          // 只判 id 就等于谁都能发码。加上 type === "private" 后,这种情形下本命令直接不生效,
+          // 宁可失效也不能误放行。
+          if (/^\/code\b/i.test(msg.text || "")
+              && msg.chat.type === "private"
+              && String(msg.chat.id) === String(cfg.chatId)) {
+            const parts = msg.text.trim().split(/\s+/);
+            const target = (parts[1] || "").replace(/[^0-9-]/g, "");
+            if (!target) {
+              await tgSend({ token: cfg.token, chatId: cfg.chatId },
+                "用法:<code>/code &lt;chat_id&gt; [年]</code>\n例:<code>/code 123456789</code> 或 <code>/code 123456789 年</code>\nchat_id 见「付款回执待核对」那条通知。", "HTML");
+              return new Response("ok");
+            }
+            const plan = /年|year/i.test(parts[2] || "") ? "年" : "月";
+            const code = "SW-" + Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
+            const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+            lic[code] = { createdAt: new Date().toISOString(), chatId: null, note: `${plan}付 · 发给 ${target}` };
+            await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
+            const sent = await tgSend({ token: cfg.token, chatId: target },
+              `✅ <b>收到款项,Pro 已开通(${plan}付)</b>\n\n你的激活码:<code>${code}</code>\n\n`
+              + `绑定实时信号:直接发送 <code>/start ${code}</code>\n`
+              + `解锁网站价位:在 ${SITE}/#pricing 底部输入同一个码。`, "HTML").catch(() => ({ ok: false }));
+            await tgSend({ token: cfg.token, chatId: cfg.chatId },
+              sent && sent.ok
+                ? `✅ 已生成并发给 <code>${escHtml(target)}</code>:<code>${code}</code>(${plan}付)`
+                : `⚠️ 码已生成:<code>${code}</code>(${plan}付),但<b>发送给 ${escHtml(target)} 失败</b>——对方可能从未与 bot 对话过。请手动转给他。`, "HTML");
             return new Response("ok");
           }
           // 付款回执:买家把 BSC 交易哈希发进来。**不自动发码**——没有上链核对就发码,
@@ -208,7 +243,7 @@ export default {
               + `TxID:<code>${escHtml(tx)}</code>\n`
               + `链上核对:https://bscscan.com/tx/${escHtml(tx)}\n\n`
               + `请确认:① 收款地址是 ${USDT_ADDR} ② 金额 ≥ ${USDT_MONTH}(月)或 ${USDT_YEAR}(年) ③ 交易已确认 ④ 这笔没被用过。\n`
-              + `无误后用 /api/gen-code 生成激活码发给他。`, "HTML").catch(() => {});
+              + `无误后直接回一条:<code>/code ${msg.chat.id}</code>(年付加个「年」),bot 会生成激活码并替你发给他。`, "HTML").catch(() => {});
             return new Response("ok");
           }
           // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
