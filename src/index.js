@@ -149,6 +149,26 @@ export default {
         const cfg = await getTgConfig(env);
         if (msg?.chat?.id && cfg) {
           const m = (msg.text || "").match(/\/start\s+(SW-[A-Z0-9]+)/i);
+          // 购买意向:/buy,或站点「立即购买」按钮带来的 /start buy。必须在免费订阅分支
+          // 之前拦截——否则 "/start buy" 会落进无码 /start,买家只收到一句欢迎语,意向就丢了。
+          if (/^\/buy\b/i.test(msg.text || "") || /^\/start\s+buy\b/i.test(msg.text || "")) {
+            const freeB = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+            if (!freeB.includes(msg.chat.id)) {
+              freeB.push(msg.chat.id);
+              await env.SUNWATCH_KV.put("free-subs", JSON.stringify(freeB));
+            }
+            ctx.waitUntil(bumpGrowth(env, "buyRequests"));
+            await tgSend({ token: cfg.token, chatId: msg.chat.id },
+              "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n\n"
+              + "包含:全部买入区间 / 止损线 / 仓位方案 · 价格穿越触发线秒推 · 每日双简报(北京 08:30 / 20:30) · 重要信号快讯\n\n"
+              + "站长会在这里私信你付款方式(微信 / 支付宝 / USDT)并发放激活码。\n"
+              + "拿到码后回来发送 <code>/start 激活码</code> 绑定实时信号。\n\n"
+              + "先看战绩再决定:" + SITE + "/track-record(命中与失误同等展示)", "HTML");
+            const who = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
+            await tgSend({ token: cfg.token, chatId: cfg.chatId },
+              `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n下一步:私信对方收款 → 用 /api/gen-code 生成激活码发给他。`, "HTML").catch(() => {});
+            return new Response("ok");
+          }
           // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
           if (!m && /^\/start/.test(msg.text || "")) {
             const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
@@ -157,7 +177,7 @@ export default {
               await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
             }
             await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 升级 Pro:https://sunwatch.tuoqiantu.workers.dev/#pricing\n公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record", null);
+              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 发送 /buy 了解 Pro(¥199/月)\n公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record", null);
             return new Response("ok");
           }
           if (!m && /^\/(status|help)/.test(msg.text || "")) {
@@ -170,12 +190,12 @@ export default {
               const txt = isProSub
                 ? "✨ 你是 Pro 会员:每日双简报 + 价格触发报警 + 重要信号快讯全量接收。"
                 : isFree
-                ? "🆓 你是免费订户:每晚收信号预告。升级 Pro 解锁具体价位与实时报警 → https://sunwatch.tuoqiantu.workers.dev/#pricing"
+                ? "🆓 你是免费订户:每晚收信号预告。升级 Pro 解锁具体价位与实时报警 → 发送 /buy"
                 : "你还未订阅。发送 /start 即可免费订阅每日信号预告。";
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, txt, null);
             } else {
               await tgSend({ token: cfg.token, chatId: msg.chat.id },
-                "可用命令:\n/start — 免费订阅每日预告\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://sunwatch.tuoqiantu.workers.dev", null);
+                "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://sunwatch.tuoqiantu.workers.dev", null);
             }
             return new Response("ok");
           }
@@ -188,7 +208,7 @@ export default {
               await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, "✅ Pro 已激活!你将收到:每日双简报(北京 08:30/20:30)、价格触发线报警、重要信号快讯。", null);
             } else {
-              await tgSend({ token: cfg.token, chatId: msg.chat.id }, "❌ 激活码无效或已被他人绑定。购买请联系站长。", null);
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, "❌ 激活码无效或已被他人绑定。\n\n要购买请发送 /buy,站长会私信你付款方式并发码。", null);
             }
           }
         }
@@ -300,6 +320,13 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       case "/go/tg": {
         ctx.waitUntil(bumpGrowth(env, "tgClicks"));
         return Response.redirect("https://t.me/sunwatchBot", 302);
+      }
+      // 购买入口。此前定价卡只写"联系站长付款",而全站没有任何联系方式——
+      // 买家走到这一步就断了,所以"零成交"从来不是需求证据。现在跳进 bot 的
+      // /start buy,由 bot 同时回复买家并通知站长。
+      case "/go/buy": {
+        ctx.waitUntil(bumpGrowth(env, "buyClicks"));
+        return Response.redirect("https://t.me/sunwatchBot?start=buy", 302);
       }
       // Pro 升级点击归因(免费预告 A/B 文案分变体计数):/go/pro?v=<变体id>
       case "/go/pro": {
@@ -523,7 +550,10 @@ async function growthLine(env) {
   const idxTxt = idx ? (idx.ok ? ` | 收录✅${idx.status}(${idx.at.slice(5, 10)})` : ` | 收录⚠️${idx.status || "网络失败"}×${idx.attempts}`) : "";
   const ab = ["a", "b", "c"].map((v) => `${v}:${g[`proClick_${v}`] || 0}`).join("/");
   const abTxt = (g.proClicks || 0) ? ` | Pro点击 ${g.proClicks}(A/B ${ab})` : "";
-  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${idxTxt}`;
+  // 购买按钮 vs 实际询价要分开看:结账断掉时两者会劈叉,而"零成交"再也不能被
+  // 误读成"没需求"——这正是 2026-08-06 之前发生的事。
+  const buyTxt = (g.buyClicks || g.buyRequests) ? ` | 购买按钮 ${g.buyClicks || 0}→询价 ${g.buyRequests || 0}` : "";
+  return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${buyTxt}${idxTxt}`;
 }
 
 // IndexNow 提交(429/5xx/网络错误退避重试 ≤2 次),最近状态写 KV `indexnow-status` 供简报健康度展示

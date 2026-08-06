@@ -25,6 +25,14 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/")
           echo "dashboard HTTP $code"
           test "$code" = "200"
+          # 结账路径必须每次部署都验一遍:它断过一次(定价页写"联系站长"但全站无联系方式),
+          # 而它断掉时的表现和"没人想买"完全一样,不会有任何报错。
+          buy=$(curl -s -o /dev/null -w "%{http_code}" "$URL/go/buy")
+          echo "buy redirect HTTP $buy"
+          test "$buy" = "302"
+          curl -s -o /dev/null -w "%{redirect_url}\n" "$URL/go/buy" | grep -q "t.me/sunwatchBot" \
+            && echo "buy -> telegram OK" || { echo "buy redirect target wrong"; exit 1; }
+          curl -s "$URL/" | grep -q "/go/buy" || { echo "pricing card missing buy button"; exit 1; }
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

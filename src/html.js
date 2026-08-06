@@ -242,7 +242,7 @@ export function renderFaq() {
   const QA = [
     ["什么是触发线?", "预先设定的价格条件,如『跌破 X 则减仓』『回落到 Y 区间则分批买入』。系统每 30 分钟核对实时行情,价格穿越触发线时通过 Telegram 即时报警——把判断变成可执行的纪律,而不是预测。"],
     ["信号多久更新一次?", "行情与触发线每 30 分钟自动核对;每日两次简报(北京 08:30 / 20:30);重要事件(如财报、上市、政策)实时推送。"],
-    ["如何订阅?", "免费版:向 Telegram 机器人 @sunwatchBot 发送 /start,每晚收到信号预告。Pro:联系站长获取激活码,在网站底部输入解锁全部价位,并向机器人发送 /start 激活码 绑定实时信号。"],
+    ["如何订阅?", "免费版:向 Telegram 机器人 @sunwatchBot 发送 /start,每晚收到信号预告。Pro:在定价区点「立即购买」,或直接向机器人发送 /buy——站长会在 Telegram 私信你付款方式并发激活码;拿到码后在网站底部输入解锁全部价位,并向机器人发送 /start 激活码 绑定实时信号。"],
     ["激活码规则是什么?", "一个激活码只能绑定一个 Telegram 账号(防转卖);网页端激活后浏览器本地记住,换设备重新输入即可。"],
     ["数据来源是什么?", "行情来自 Yahoo Finance;新闻来自 Google News、Bing News、Cointelegraph 等公开信源;关键事实经多源交叉核验并标注日期。"],
     ["这和荐股有什么区别?", "本站不承诺收益、不代客理财,提供的是研究框架与触发线纪律工具;所有判断公开建档(含失误),命中率可在公开战绩页查证。所有内容不构成投资建议。"],
@@ -367,7 +367,8 @@ export function renderDashboard() {
     <div style="font-size:14px">✅ 五大赛道深度分析与周期定位<br>✅ 实时行情与新闻监控流<br>✅ 孙宇晨预判档案 + 系统预测记录<br>🔒 具体买卖价位与触发线<br>🔒 操盘纪律与仓位方案<br>🔒 Telegram 实时信号</div></div>
   <div class="card" style="border-color:var(--accent)"><b>Pro 会员</b> <span class="tag">推荐</span><div style="font-size:22px;font-weight:700;margin:4px 0">¥199/月 <span class="meta" style="font-size:13px">或 ¥1999/年</span></div>
     <div style="font-size:14px">✅ 免费版全部内容<br>✅ <b>全部买入区间 / 止损线 / 仓位方案</b><br>✅ <b>实时触发线报警(价格穿越秒推 TG)</b><br>✅ 每日双简报(北京 08:30 / 20:30)<br>✅ 重要信号快讯(SKHY/宇树/Optimus/合约价拐点等)</div>
-    <div class="meta" style="margin-top:6px">购买:联系站长付款(微信/支付宝/USDT)获取激活码 → 下方输入激活;TG 信号:向 @sunwatchBot 发送 /start 激活码</div></div>
+    <div style="margin-top:8px"><a href="/go/buy" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:700;text-decoration:none">立即购买 →</a></div>
+    <div class="meta" style="margin-top:6px">点击后在 Telegram 里完成:站长私信你付款方式(微信/支付宝/USDT)并发激活码 → 向 @sunwatchBot 发送 <code>/start 激活码</code> 绑定信号,或在下方输入解锁网站价位</div></div>
 </div>
 <div class="card" style="margin-top:10px"><b>激活 Pro</b>
   <div style="margin-top:6px"><input id="proKey" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px">
