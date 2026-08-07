@@ -583,10 +583,12 @@ async function refreshQuotes(env) {
 }
 
 async function fetchQuote(w) {
-  // range=1y:52 周高低点从年线自算(v8 meta 不带 fiftyTwoWeek 字段,2026-08-07 实测为空)。
-  // 周线粒度足够定位"涨没涨过一波",且 24 个符号每 30 分钟拉取时载荷可控。
+  // interval=1d & range=1y:一次调用同时拿到 ①真昨收(倒数第二根日线收盘)
+  // ②52 周高低点(v8 meta 不带 fiftyTwoWeek 字段,2026-08-07 实测为空,须自算)。
+  // 教训链:range=5d 时代的 chartPreviousClose 是 5 天前收盘,"日涨幅"虚高;
+  // 改 1wk 后 meta 又没有昨收字段,全表 0%——日线全年是唯一两全的粒度。
   const resp = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(w.symbol)}?interval=1wk&range=1y`,
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(w.symbol)}?interval=1d&range=1y`,
     { headers: { "user-agent": "Mozilla/5.0 (sunwatch)" } }
   );
   if (!resp.ok) return null;
@@ -594,17 +596,20 @@ async function fetchQuote(w) {
   const meta = result?.meta;
   if (!meta || !meta.regularMarketPrice) return null;
   const price = meta.regularMarketPrice;
-  // 旧代码用 chartPreviousClose——那是"区间起点前一天"的收盘(range=5d 时约等于 5 天前),
-  // 展示成"日涨幅"是一直存在的隐藏偏差。regularMarketPreviousClose 才是昨收。
-  const prevClose = meta.regularMarketPreviousClose || meta.previousClose || price;
+  let prevClose = meta.regularMarketPreviousClose || null;
   let hi52 = null, lo52 = null;
   try {
     const q = result.indicators.quote[0];
+    const closes = (q.close || []).filter((v) => v != null);
+    // 最后一根日线是今天(盘中=现价),昨收取倒数第二根;停牌等边缘情况回退到最后一根。
+    if (!prevClose && closes.length >= 2) prevClose = closes[closes.length - 2];
+    if (!prevClose && closes.length) prevClose = closes[closes.length - 1];
     const his = (q.high || []).filter((v) => v != null);
-    const los = (q.low || []).filter((v) => v != null);
+    const los = (q.low || []).filter((v) => v != null && v > 0);
     if (his.length) hi52 = Math.max(...his, price);
-    if (los.length) lo52 = Math.min(...los.filter((v) => v > 0), price);
+    if (los.length) lo52 = Math.min(...los, price);
   } catch (e) {}
+  if (!prevClose) prevClose = price;
   return {
     symbol: w.symbol,
     name: w.name,
