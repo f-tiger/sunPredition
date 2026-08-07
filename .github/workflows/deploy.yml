@@ -53,6 +53,19 @@ jobs:
           echo "quotes:"
           curl -s "$URL/api/refresh-quotes" || true
           echo
+          # 每次部署把全部报价打进日志:沙箱直连 workers.dev 403,这里是会话能读到
+          # 实时行情的唯一通道;顺带每次部署留一份行情快照存档。
+          echo "quote snapshot:"
+          curl -s "$URL/api/quotes" | python3 -c "
+          import json,sys
+          try: q=json.load(sys.stdin).get('quotes',[])
+          except Exception: q=[]
+          for x in q:
+              fl=x.get('fromLowPct'); oh=x.get('offHighPct')
+              extra=(' 距52周低+'+str(fl)+'%') if fl is not None else ''
+              extra+=(' 距高'+str(oh)+'%') if oh is not None else ''
+              print(f\"{x.get('symbol','?'):12} {x.get('name','?'):8} {x.get('price')}{x.get('currency','')} 日{x.get('changePct')}%{extra}\")
+          " || true
           curl -sf "$URL/api/feed" | head -c 400
           echo
       - name: Bootstrap Pro (webhook + first code, idempotent)

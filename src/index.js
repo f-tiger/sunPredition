@@ -592,12 +592,18 @@ async function fetchQuote(w) {
   if (!meta || !meta.regularMarketPrice) return null;
   const price = meta.regularMarketPrice;
   const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+  // 52 周区间直接回答"这只是不是已经涨了一波":距 52 周低点的涨幅 = 已走了多远,
+  // 距 52 周高点的回撤 = 现在处于波段的什么位置。潜伏池"买前核共识度"从此有了量化读数。
+  const hi52 = meta.fiftyTwoWeekHigh || null;
+  const lo52 = meta.fiftyTwoWeekLow || null;
   return {
     symbol: w.symbol,
     name: w.name,
     group: w.group,
     price,
     changePct: prevClose ? Math.round(((price - prevClose) / prevClose) * 1000) / 10 : 0,
+    fromLowPct: lo52 ? Math.round(((price - lo52) / lo52) * 100) : null,
+    offHighPct: hi52 ? Math.round(((price - hi52) / hi52) * 100) : null,
     currency: meta.currency || "",
     at: new Date().toISOString(),
   };
