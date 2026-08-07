@@ -583,19 +583,28 @@ async function refreshQuotes(env) {
 }
 
 async function fetchQuote(w) {
+  // range=1y:52 周高低点从年线自算(v8 meta 不带 fiftyTwoWeek 字段,2026-08-07 实测为空)。
+  // 周线粒度足够定位"涨没涨过一波",且 24 个符号每 30 分钟拉取时载荷可控。
   const resp = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(w.symbol)}?interval=1d&range=5d`,
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(w.symbol)}?interval=1wk&range=1y`,
     { headers: { "user-agent": "Mozilla/5.0 (sunwatch)" } }
   );
   if (!resp.ok) return null;
-  const meta = (await resp.json())?.chart?.result?.[0]?.meta;
+  const result = (await resp.json())?.chart?.result?.[0];
+  const meta = result?.meta;
   if (!meta || !meta.regularMarketPrice) return null;
   const price = meta.regularMarketPrice;
-  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
-  // 52 周区间直接回答"这只是不是已经涨了一波":距 52 周低点的涨幅 = 已走了多远,
-  // 距 52 周高点的回撤 = 现在处于波段的什么位置。潜伏池"买前核共识度"从此有了量化读数。
-  const hi52 = meta.fiftyTwoWeekHigh || null;
-  const lo52 = meta.fiftyTwoWeekLow || null;
+  // 旧代码用 chartPreviousClose——那是"区间起点前一天"的收盘(range=5d 时约等于 5 天前),
+  // 展示成"日涨幅"是一直存在的隐藏偏差。regularMarketPreviousClose 才是昨收。
+  const prevClose = meta.regularMarketPreviousClose || meta.previousClose || price;
+  let hi52 = null, lo52 = null;
+  try {
+    const q = result.indicators.quote[0];
+    const his = (q.high || []).filter((v) => v != null);
+    const los = (q.low || []).filter((v) => v != null);
+    if (his.length) hi52 = Math.max(...his, price);
+    if (los.length) lo52 = Math.min(...los.filter((v) => v > 0), price);
+  } catch (e) {}
   return {
     symbol: w.symbol,
     name: w.name,
