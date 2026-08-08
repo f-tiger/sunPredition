@@ -474,3 +474,15 @@ $133.11 距证伪线 1.4%,Q2 营收 +92%/Terafab/Argus 上调);触发①已响�
 修正:①push-summary 固定用 SITE;②摘要尾部新增地址组(战绩/方法论/同网络两站);
 ③IndexNow host 参数切 invest.agiscorecard.com(协议要求与 urlList 同域);
 ④webhook 注册统一用 SITE;⑤CLAUDE.md 线上地址更新。旧 workers.dev 地址继续可用。
+
+## 2026-08-08 · 子站每日自动刷新加固(站长指令:"不要依赖我每次的手动或者你每天自动化任务")
+
+**sunwatch 侧**:已有 30 分钟行情 cron + 每日双简报 + /daily 内容飞轮 + IndexNow + webhook
+自愈,判定足够强;补上台账 7-13 miss 条目明文要求却一直没落实的**心跳检查**——简报里若
+行情快照落后 >2.5h,置顶 ⚠️ 心跳异常(静默断链和"无新信号"在读者眼里一模一样)。
+**aistock 侧**(诊断:每日自动化 7-25 起死锁——@claude issue 无人执行+自限流不再开新任务):
+①新增 daily-refresh.yml:每日拉 Yahoo 行情 → market-snapshot.json → 构建守门 → bot 提交
+main → workflow_dispatch 触发部署(GITHUB_TOKEN push 不触发 workflow,dispatch 是官方例外);
+②/market 页新增 MarketPulse 每日行情表(快照空则整块不渲染),sitemap /market lastmod 跟快照;
+③daily-optimize 防死锁:>3 天未执行的旧任务自动关闭;④每日 bot 提交顺带解决 GitHub
+60 天不活跃停 cron 的隐患。内容型优化仍走 @claude issue,但降级为可选增强,数据新鲜度不再等它。

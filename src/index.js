@@ -817,9 +817,18 @@ function buildSummary(items, origin, label, quotes) {
     }
   }
   near.sort((a, b) => a.dist - b.dist);
+  // 心跳检查(7-17~19 循环中断 3 天的教训,台账 2026-07-13 miss 条目明文要求):
+  // 行情由 30 分钟 cron 持续刷新,快照最新时间落后 >2.5h = 抓取循环大概率断了,
+  // 静默的断链和"没有新信号"在读者眼里一模一样——所以必须在简报里喊出来。
+  const newestAt = Math.max(0, ...(quotes || []).map((q) => Date.parse(q.at || "") || 0));
+  const staleH = newestAt ? (Date.now() - newestAt) / 3600000 : Infinity;
+  const heartbeat = staleH > 2.5
+    ? [`⚠️ <b>心跳异常</b>:行情数据${isFinite(staleH) ? `已 ${staleH.toFixed(1)} 小时未刷新` : "为空"},抓取循环可能中断——检查 Cloudflare cron 与 Actions`, ``]
+    : [];
   return [
     `🔭 <b>SunWatch</b> ${today}${label ? " · " + label.replace(/(简报|[()·]|美股隔夜复盘|A\/H 开盘前|A\/H 收盘复盘|执行提醒|\s)/g, "") : ""}`,
     ``,
+    ...heartbeat,
     `📌 <b>今日要做</b>`,
     ...(actions.length ? actions : ["今日无必做动作,持仓按兵不动"]),
     ``,
