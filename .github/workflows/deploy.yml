@@ -62,6 +62,9 @@ jobs:
           # 中文浏览器不该被赶去英文页
           zh=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0" -H "accept-language: zh-CN,zh;q=0.9" "$URL/")
           test "$zh" = "200" && echo "zh direct 200 OK" || { echo "zh visitor redirected wrongly"; exit 1; }
+          # 方法论页(2026-08-08 上线)中英都必须渲染
+          curl -s "$URL/method" | grep -q "七层纪律" && echo "method zh OK" || { echo "method zh broken"; exit 1; }
+          curl -s "$URL/en/method" | grep -q "seven layers" && echo "method en OK" || { echo "method en broken"; exit 1; }
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

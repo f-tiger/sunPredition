@@ -228,7 +228,7 @@ export function renderLandingEN(forecasts) {
 <div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
-<div class="card">Cycle-stage maps for five AI sectors · the "Project 10x" framework (why most hot themes can't 10x, and where the structure might) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — seven layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
 <div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
@@ -288,6 +288,89 @@ export function renderFaq() {
 <script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › FAQ</p><h1>❓ 常见问题</h1>
 ${body}${CTA}
+</div></body></html>`;
+}
+
+// 方法论页:业界方法 → 本系统机制的逐条映射。每一层给出处、给落地、给可核对的页面。
+// 这页存在的意义:让"可审计"从战绩台账扩展到方法本身——规则先于行情写死,执行才谈得上纪律。
+const METHOD_LAYERS = [
+  ["第 0 层 · 目标与基础比率", "出处:Mauboussin 基础比率思维 / Kahneman 外部视角",
+   "1-2 年 10 倍的基础比率极低,历史上反复做到的只有一种结构:周期底部买入的高纯度弹性标的(本系统亲证样本:闪迪约 50 倍)。所以系统猎的是<b>周期窗口</b>,不是股票代码。诚实前提写在最前面:能 10 倍的结构同样能 -70%(样本:7709 十倍后单段 -37.8%;SA 基金 439% 后单月 -67%)。"],
+  ["第 1 层 · 资本结构:杠铃", "出处:Taleb《反脆弱》杠铃策略",
+   "压舱石 ≥80%(NVDA/CEG 型现金流资产,不参与十倍狩猎)+ 卫星池 ≤20%。单个卫星标的按<b>归零可承受</b>定尺寸:归零损失 ≤3% 总资产。压舱石的作用不是收益,是让卫星池 -50% 的日子里还能执行纪律。"],
+  ["第 2 层 · 买什么:五要素 + 期望投资", "出处:Mauboussin《期望投资》/ 本系统闪迪复盘",
+   "闪迪五要素:纯度 × 稀缺 × 低市值 × 周期起点 × 经营杠杆,五项齐才是十倍结构。叠加期望投资的第一问:<b>现价已经计入了什么?</b>——52 周位置读数(距低/距高)是本系统的粗测仪表,距低 +600% 的『机会』先默认是已定价的故事。低共识优先:被券商点名的那天,纯度溢价已被收走。"],
+  ["第 3 层 · 何时买:周期时钟 + 触发-执行", "出处:Howard Marks《周期》/ 本系统顶区六项清单",
+   "顶区六项清单(龙头数倍后再创新高 / 天量成交 / 散户口号成型 / sold-out 叙事 / <b>天量 IPO</b> / 二线补涨)已三次验证:SKHY→存储顶、SPCX→太空顶、中际港股 IPO→光通信顶。反着用即底区清单:合约价环比转负 → 减产/资本开支下修公告 → PS≈1x 且价格周线企稳。全部写成<b>预登记触发器</b>:响了照单执行,没响不动手——预测是娱乐,触发是纪律。"],
+  ["第 4 层 · 仓位:分数凯利", "出处:Kelly 公式(≤1/4 分数执行)/ Thorp 实践",
+   "满仓凯利在估错概率时毁灭账户,所以只用 ≤1/4 凯利,并简化为可执行档位:高确信 = 卫星池的 1/3,中确信 = 1/5,低确信 = 只入观察位拿读数不动钱。买点纪律:恐慌日(-5%+)分 3 批、批间 ≥10% 回调或 ≥4 周;涨停日与禁买窗(如宇树挂牌周)不买。<b>永不向下摊平亏损仓</b>(Druckenmiller / 利弗莫尔共同的那条命):加仓只加给已证明自己的仓位。"],
+  ["第 5 层 · 何时卖:预登记派发", "出处:利弗莫尔派发纪律 / 本系统 SKHY 上市周实操",
+   "卖出规则在买入前写死:事件顶(天量 IPO / 挂牌周)机械分批派发至底仓,把筹码卖给刚转多的人;证伪线到 = 当日执行,不讲故事、不等更好价位。分析师集体转多与目标价上调,在本系统里登记为<b>派发对手盘信号</b>而非确认信号。"],
+  ["第 6 层 · 熔断与复盘", "出处:Tetlock《超预测》预登记 + 校准",
+   "卫星池整体回撤 30% → 熔断:停止一切新买入,全面复盘框架本身(而不是补仓摊平)。每条判断入公开台账,带日期、原文、证伪条件与复查日;命中与失误同等展示,失误附教训。两套计划冲突时(如 7 月买区 vs 8 月共识判定),<b>以新框架为准并把冲突本身建档</b>——被悄悄覆盖的规则等于没有规则。"],
+];
+
+export function renderMethod() {
+  const cards = METHOD_LAYERS.map(([t, src, body]) =>
+    `<div class="card"><b>${t}</b><div class="meta" style="margin-top:2px">${src}</div><div style="margin-top:6px">${body}</div></div>`).join("");
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "十倍工程方法论 v2:七层纪律", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>十倍工程方法论 v2:七层纪律 | SunWatch Pro</title>
+<meta name="description" content="杠铃资本结构、闪迪五要素、周期时钟、分数凯利仓位、预登记派发、回撤熔断——业界方法论逐条落到可审计的触发-执行系统。">
+<meta property="og:title" content="十倍工程方法论 v2:七层纪律">
+<meta property="og:description" content="规则先于行情写死,执行才谈得上纪律。每一层给出处、给落地、给可核对的页面。">
+<link rel="canonical" href="https://invest.agiscorecard.com/method">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/method">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/method">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/method">
+<script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › 方法论 · <a href="/en/method">English</a></p>
+<h1>🧭 十倍工程方法论 v2:七层纪律</h1>
+<p>业界最好的投资方法不是秘密——杠铃、五要素、周期时钟、分数凯利、预登记、熔断,书里都有。稀缺的是<b>把它们写死成规则并接受公开审计</b>。本页每一层:出处 → 本系统的落地 → 可核对的页面(<a href="/track-record">战绩台账</a> / <a href="/forecast">判断复盘</a> / 各标的页的 52 周读数)。</p>
+${cards}
+<div class="card"><b>方法论如何被审计</b><div style="margin-top:4px">每条判断先建档后见结果(<a href="/track-record">公开战绩</a>);触发线由机器每 30 分钟盯守;证伪条件与复查日和判断一起预登记。方法论若改版,旧版规则与冲突判定留档——这页本身也在台账里。</div></div>
+${CTA}
+<p class="meta">研究框架,非投资建议。具体买卖价位、止损线与仓位方案为 Pro 内容。</p>
+</div></body></html>`;
+}
+
+export function renderMethodEN() {
+  const L = [
+    ["Layer 0 · Goal & base rates", "Source: Mauboussin's base-rate thinking / Kahneman's outside view",
+     "The base rate of a 10x in 1–2 years is tiny. The only structure that has done it repeatedly is a high-purity, high-leverage name bought at a cycle bottom (our own audited sample: SanDisk, ~50x). So the system hunts <b>cycle windows</b>, not tickers. The honest premise comes first: any structure that can 10x can also drop 70%."],
+    ["Layer 1 · Capital structure: the barbell", "Source: Taleb, Antifragile",
+     "Ballast ≥80% (cash-flow compounders like NVDA/CEG — never used for 10x hunting) + a satellite pool ≤20%. Each satellite is sized so that a total wipe-out costs ≤3% of assets. The ballast exists so the rules can still be followed on the days the satellites are down 50%."],
+    ["Layer 2 · What to buy: five factors + expectations", "Source: Mauboussin, Expectations Investing / our SanDisk post-mortem",
+     "Purity × scarcity × small cap × cycle-bottom start × operating leverage — all five, or it is not a 10x structure. Then the expectations question: <b>what is already priced in?</b> Our 52-week positioning readout is the crude gauge; anything +600% off its low is presumed already-priced until proven otherwise. Low consensus first: the day sell-side names a stock, the purity premium is gone."],
+    ["Layer 3 · When to buy: cycle clock + triggers", "Source: Howard Marks, Mastering the Market Cycle",
+     "Our six-item top-zone checklist (leader making new highs after a multi-bagger run / record volume / retail slogans / sold-out narrative / <b>mega-IPO</b> / second-tier catch-up rally) has verified three times: SKHY→memory top, SPCX→space top, Innolight's HK IPO→optics top. Inverted, it is the bottom checklist: contract prices turning negative → capacity-cut announcements → PS≈1x with weekly price stabilization. Everything is a <b>pre-registered trigger</b>: it fires, you execute; it doesn't, you sit."],
+    ["Layer 4 · Position sizing: fractional Kelly", "Source: Kelly criterion at ≤1/4 fraction / Thorp's practice",
+     "Full Kelly destroys accounts when probabilities are misjudged, so ≤1/4 Kelly, simplified into executable notches: high conviction = 1/3 of the satellite pool, medium = 1/5, low = watchlist only. Buys happen on panic days (−5%+), in 3 batches, ≥10% pullback or ≥4 weeks apart; never on limit-up days or inside pre-declared no-buy windows. <b>Never average down a loser</b> (Druckenmiller's and Livermore's shared rule): add only to positions that have proven themselves."],
+    ["Layer 5 · When to sell: pre-registered distribution", "Source: Livermore's distribution discipline / our SKHY IPO-week execution",
+     "Exit rules are written before entry: at event tops (mega-IPO, listing week) distribute mechanically down to a core stub — sell to the people who just turned bullish. Sell-side upgrades during a run are logged as <b>distribution counterparty signals</b>, not confirmation."],
+    ["Layer 6 · Circuit breaker & review", "Source: Tetlock, Superforecasting — pre-registration and calibration",
+     "Satellite pool down 30% → circuit breaker: all new buying stops and the framework itself gets reviewed (not averaged into). Every call enters the public ledger with date, original wording, falsification condition and review date; misses stay published with their lesson. When two plans conflict, the newer framework wins and the conflict itself is logged — a silently overridden rule is no rule."],
+  ];
+  const cards = L.map(([t, src, body]) =>
+    `<div class="card"><b>${t}</b><div class="meta" style="margin-top:2px">${src}</div><div style="margin-top:6px">${body}</div></div>`).join("");
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "The Project-10x Method: seven layers of discipline", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Project-10x Method: seven layers of discipline | SunWatch</title>
+<meta name="description" content="Barbell allocation, five-factor screens, cycle clocks, fractional Kelly sizing, pre-registered exits and a drawdown circuit breaker — classic methodology wired into an auditable trigger system.">
+<meta property="og:title" content="The Project-10x Method: seven layers of discipline">
+<meta property="og:description" content="The methods are public — Taleb, Marks, Mauboussin, Kelly, Tetlock. What's scarce is writing them down as rules and accepting a public audit.">
+<link rel="canonical" href="https://invest.agiscorecard.com/en/method">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/method">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/method">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/method">
+<script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">Invest</a> › Method · <a href="/method">中文</a> · <b>English</b></p>
+<h1>🧭 The Project-10x Method: seven layers of discipline</h1>
+<p>The best investing methodology is not a secret — the barbell, cycle clocks, expectations analysis, fractional Kelly, pre-registration are all in books. What is scarce is <b>writing them down as binding rules and accepting a public audit</b>. Each layer below: the source → how this system operationalizes it → where to verify (<a href="/en/track-record">track record</a>, per-stock 52-week readouts).</p>
+${cards}
+<div class="card"><b>How the method itself is audited</b><div style="margin-top:4px">Every call is logged before the outcome (<a href="/en/track-record">public track record</a>); trigger lines are machine-watched every 30 minutes; falsification conditions and review dates are registered together with the call. When the method is revised, the old rules and the conflict ruling stay on file — this page is part of the ledger too.</div></div>
+${CTA_EN}
+<p class="meta">Research framework, not investment advice. Specific levels, stops and sizing are Pro content.</p>
 </div></body></html>`;
 }
 
@@ -354,7 +437,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>
