@@ -52,6 +52,16 @@ jobs:
           inv=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "https://invest.agiscorecard.com/" || echo 000)
           echo "invest.agiscorecard.com HTTP $inv"
           [ "$inv" = "200" ] && echo "custom domain OK" || echo "custom domain not ready yet (non-blocking)"
+          # 多语言:①/en 必须真的渲染英文落地页;②带英文 Accept-Language 的浏览器 UA
+          # 打 / 必须 302 到 /en。语言协商是并域改造的核心,断了和"没做"看起来一样。
+          curl -s "$URL/en" | grep -q "Market calls you can audit" \
+            && echo "EN landing OK" || { echo "EN landing broken"; exit 1; }
+          loc=$(curl -s -o /dev/null -w "%{redirect_url}" -A "Mozilla/5.0" -H "accept-language: en-US,en;q=0.9" "$URL/")
+          echo "negotiation redirect -> $loc"
+          echo "$loc" | grep -q "/en" && echo "lang negotiation OK" || { echo "lang negotiation broken"; exit 1; }
+          # 中文浏览器不该被赶去英文页
+          zh=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0" -H "accept-language: zh-CN,zh;q=0.9" "$URL/")
+          test "$zh" = "200" && echo "zh direct 200 OK" || { echo "zh visitor redirected wrongly"; exit 1; }
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo
