@@ -320,7 +320,7 @@ export default {
         if (!cfg) return json({ ok: false, error: "未配置 Telegram" });
         const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
         if (Object.keys(lic).length) return json({ ok: true, already: true, note: "已初始化过,不再重复" });
-        const wh = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(url.origin + "/tg-webhook")}`).then((r) => r.json()).catch(() => ({}));
+        const wh = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}`).then((r) => r.json()).catch(() => ({}));
         const code = "SW-" + Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
         lic[code] = { createdAt: new Date().toISOString(), chatId: null, note: "首个激活码(自举生成)" };
         await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
@@ -331,7 +331,7 @@ export default {
         const cfg = await getTgConfig(env);
         if (!cfg || url.searchParams.get("token") !== cfg.token)
           return json({ ok: false, error: "鉴权失败" });
-        const r = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(url.origin + "/tg-webhook")}`);
+        const r = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}`);
         return json(await r.json().catch(() => ({})));
       }
       case "/api/quotes": {
@@ -385,7 +385,8 @@ export default {
         const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
         await refreshQuotes(env).catch(() => null);
         const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
-        const r = await sendTelegram(cfg, buildSummary(items, url.origin, null, q.quotes));
+        // 固定用 SITE:此接口由部署流程经 workers.dev 调用,url.origin 会把旧域名写进推送(站长 8-8 指出)
+        const r = await sendTelegram(cfg, buildSummary(items, SITE, null, q.quotes));
         return json(r);
       }
       case "/faq":
@@ -679,7 +680,8 @@ async function growthLine(env) {
 
 // IndexNow 提交(429/5xx/网络错误退避重试 ≤2 次),最近状态写 KV `indexnow-status` 供简报健康度展示
 async function pingIndexNow(env, urlList) {
-  const payload = JSON.stringify({ host: "sunwatch.tuoqiantu.workers.dev", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList });
+  // host 必须与 urlList 的域一致(IndexNow 协议),2026-08-08 随并域改造切新域
+  const payload = JSON.stringify({ host: "invest.agiscorecard.com", key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList });
   let status = 0;
   let attempts = 0;
   for (const wait of [0, 1000, 3000]) {
@@ -826,6 +828,8 @@ function buildSummary(items, origin, label, quotes) {
     ...(near.length ? [``, `🎯 <b>最近触发线</b>`, ...near.slice(0, 3).map((n) => n.line)] : []),
     ``,
     `详情与全部信号:${origin}`,
+    `📊 战绩:${origin}/track-record · 🧭 方法论:${origin}/method`,
+    `🌐 同网络:agiscorecard.com(AGI 证据层) · compass.agiscorecard.com(13F 罗盘)`,
   ].join("\n");
 }
 

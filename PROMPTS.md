@@ -467,3 +467,10 @@ Brier 校准**。
 **对抗输出**:六条在档判断幸存概率 52-65%,太空顶部 60%→52% 下调(SPCX 8-7 +15.8% 至
 $133.11 距证伪线 1.4%,Q2 营收 +92%/Terafab/Argus 上调);触发①已响→底仓再减一档入行动
 队列;系统级绊线:三顶部判断共享『AI capex 是周期』前提,任两个证伪即停用顶区清单复盘框架。
+
+## 2026-08-08 · TG 推送地址修正(站长指出推送消息里带 workers.dev)
+
+根因:/api/push-summary 由部署流程经 workers.dev 调用,消息尾部用了 url.origin。
+修正:①push-summary 固定用 SITE;②摘要尾部新增地址组(战绩/方法论/同网络两站);
+③IndexNow host 参数切 invest.agiscorecard.com(协议要求与 urlList 同域);
+④webhook 注册统一用 SITE;⑤CLAUDE.md 线上地址更新。旧 workers.dev 地址继续可用。

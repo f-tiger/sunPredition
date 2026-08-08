@@ -11,7 +11,7 @@
 ## 项目是什么
 
 SunWatch:孙宇晨预判监控 + 跨市场(美/港/A)投资执行系统。
-- 线上地址:https://sunwatch.tuoqiantu.workers.dev(Cloudflare Worker,名称 `sunwatch`)
+- 线上地址:https://invest.agiscorecard.com(Cloudflare Worker `sunwatch`;旧地址 sunwatch.tuoqiantu.workers.dev 继续可用)
 - 部署:推送到分支 `claude/sun-yuchen-investment-research-yzz9mx` 自动触发 GitHub Actions 部署(secret `CLOUDFLARE_API_TOKEN` 已配置),部署后自动推送 TG 摘要(兼部署通知)
 - 数据层:`src/data.js`(PREDICTIONS 孙宇晨档案 / STOCKS 标的卡 / PLAYBOOK 操盘框架 / CORE_SIGNALS 核心信号 / IMPORTANT_RULES 快讯规则 / WATCHLIST 实时行情触发线 / FORECASTS 自我预测档案)
 - 行情:Yahoo Finance 每 30 分钟刷新,价格穿越 WATCHLIST 触发线 → TG 秒报
