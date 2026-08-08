@@ -228,7 +228,7 @@ export function renderLandingEN(forecasts) {
 <div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
-<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — seven layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
 <div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
@@ -308,16 +308,18 @@ const METHOD_LAYERS = [
    "卖出规则在买入前写死:事件顶(天量 IPO / 挂牌周)机械分批派发至底仓,把筹码卖给刚转多的人;证伪线到 = 当日执行,不讲故事、不等更好价位。分析师集体转多与目标价上调,在本系统里登记为<b>派发对手盘信号</b>而非确认信号。"],
   ["第 6 层 · 熔断与复盘", "出处:Tetlock《超预测》预登记 + 校准",
    "卫星池整体回撤 30% → 熔断:停止一切新买入,全面复盘框架本身(而不是补仓摊平)。每条判断入公开台账,带日期、原文、证伪条件与复查日;命中与失误同等展示,失误附教训。两套计划冲突时(如 7 月买区 vs 8 月共识判定),<b>以新框架为准并把冲突本身建档</b>——被悄悄覆盖的规则等于没有规则。"],
+  ["第 7 层 · 对抗审查(红队)", "出处:Kahneman 对抗性合作 / CIA 结构化分析(Heuer ACH)/ Klein 事前验尸 / 桥水异议文化 / 芒格反演",
+   "重大判断入台账前必须先活过<b>多轮多空对抗</b>:多头全力证伪空头论点,空头全力证伪多头论点,裁判给出幸存概率——低于 50% 的判断不入档或降级为观察。在档判断遇重大反证(如证伪线被逼近)当日复审并公开下调信心。<b>系统级绊线</b>防相关性错误:多个顶部判断共享同一宏观前提时,任两个被证伪即整体停用该模式并复盘框架,而不是逐条零敲碎打地认错。台账胜率只能来自诚实结案——删失误等于烧掉全部资产。"],
 ];
 
 export function renderMethod() {
   const cards = METHOD_LAYERS.map(([t, src, body]) =>
     `<div class="card"><b>${t}</b><div class="meta" style="margin-top:2px">${src}</div><div style="margin-top:6px">${body}</div></div>`).join("");
-  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "十倍工程方法论 v2:七层纪律", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "十倍工程方法论 v2.1:八层纪律", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>十倍工程方法论 v2:七层纪律 | SunWatch Pro</title>
+<title>十倍工程方法论 v2.1:八层纪律 | SunWatch Pro</title>
 <meta name="description" content="杠铃资本结构、闪迪五要素、周期时钟、分数凯利仓位、预登记派发、回撤熔断——业界方法论逐条落到可审计的触发-执行系统。">
-<meta property="og:title" content="十倍工程方法论 v2:七层纪律">
+<meta property="og:title" content="十倍工程方法论 v2.1:八层纪律">
 <meta property="og:description" content="规则先于行情写死,执行才谈得上纪律。每一层给出处、给落地、给可核对的页面。">
 <link rel="canonical" href="https://invest.agiscorecard.com/method">
 <link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/method">
@@ -325,7 +327,7 @@ export function renderMethod() {
 <link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/method">
 <script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › 方法论 · <a href="/en/method">English</a></p>
-<h1>🧭 十倍工程方法论 v2:七层纪律</h1>
+<h1>🧭 十倍工程方法论 v2.1:八层纪律</h1>
 <p>业界最好的投资方法不是秘密——杠铃、五要素、周期时钟、分数凯利、预登记、熔断,书里都有。稀缺的是<b>把它们写死成规则并接受公开审计</b>。本页每一层:出处 → 本系统的落地 → 可核对的页面(<a href="/track-record">战绩台账</a> / <a href="/forecast">判断复盘</a> / 各标的页的 52 周读数)。</p>
 ${cards}
 <div class="card"><b>方法论如何被审计</b><div style="margin-top:4px">每条判断先建档后见结果(<a href="/track-record">公开战绩</a>);触发线由机器每 30 分钟盯守;证伪条件与复查日和判断一起预登记。方法论若改版,旧版规则与冲突判定留档——这页本身也在台账里。</div></div>
@@ -350,14 +352,16 @@ export function renderMethodEN() {
      "Exit rules are written before entry: at event tops (mega-IPO, listing week) distribute mechanically down to a core stub — sell to the people who just turned bullish. Sell-side upgrades during a run are logged as <b>distribution counterparty signals</b>, not confirmation."],
     ["Layer 6 · Circuit breaker & review", "Source: Tetlock, Superforecasting — pre-registration and calibration",
      "Satellite pool down 30% → circuit breaker: all new buying stops and the framework itself gets reviewed (not averaged into). Every call enters the public ledger with date, original wording, falsification condition and review date; misses stay published with their lesson. When two plans conflict, the newer framework wins and the conflict itself is logged — a silently overridden rule is no rule."],
+    ["Layer 7 · Adversarial review (red team)", "Source: Kahneman's adversarial collaboration / CIA structured analytic techniques (Heuer's ACH) / Klein's pre-mortem / Bridgewater's dissent culture / Munger's inversion",
+     "Before a major call enters the ledger it must survive <b>multiple bull-vs-bear rounds</b>: each side attacks the other's thesis at full strength, and a referee assigns survival odds — anything under 50% is rejected or downgraded to watch-only. Open calls get re-reviewed the day material counter-evidence appears (e.g. price approaching a falsification line), with confidence cuts published. A <b>system-level tripwire</b> guards against correlated error: when several top calls share one macro premise, any two falsifications suspend the whole pattern for framework review instead of piecemeal apologies. The ledger's hit rate can only come from honest grading — deleting misses burns the entire asset."],
   ];
   const cards = L.map(([t, src, body]) =>
     `<div class="card"><b>${t}</b><div class="meta" style="margin-top:2px">${src}</div><div style="margin-top:6px">${body}</div></div>`).join("");
-  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "The Project-10x Method: seven layers of discipline", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: "The Project-10x Method: eight layers of discipline", author: { "@type": "Organization", name: "SunWatch Pro" }, dateModified: "2026-08-08" });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Project-10x Method: seven layers of discipline | SunWatch</title>
+<title>The Project-10x Method: eight layers of discipline | SunWatch</title>
 <meta name="description" content="Barbell allocation, five-factor screens, cycle clocks, fractional Kelly sizing, pre-registered exits and a drawdown circuit breaker — classic methodology wired into an auditable trigger system.">
-<meta property="og:title" content="The Project-10x Method: seven layers of discipline">
+<meta property="og:title" content="The Project-10x Method: eight layers of discipline">
 <meta property="og:description" content="The methods are public — Taleb, Marks, Mauboussin, Kelly, Tetlock. What's scarce is writing them down as rules and accepting a public audit.">
 <link rel="canonical" href="https://invest.agiscorecard.com/en/method">
 <link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/method">
@@ -365,7 +369,7 @@ export function renderMethodEN() {
 <link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/method">
 <script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">Invest</a> › Method · <a href="/method">中文</a> · <b>English</b></p>
-<h1>🧭 The Project-10x Method: seven layers of discipline</h1>
+<h1>🧭 The Project-10x Method: eight layers of discipline</h1>
 <p>The best investing methodology is not a secret — the barbell, cycle clocks, expectations analysis, fractional Kelly, pre-registration are all in books. What is scarce is <b>writing them down as binding rules and accepting a public audit</b>. Each layer below: the source → how this system operationalizes it → where to verify (<a href="/en/track-record">track record</a>, per-stock 52-week readouts).</p>
 ${cards}
 <div class="card"><b>How the method itself is audited</b><div style="margin-top:4px">Every call is logged before the outcome (<a href="/en/track-record">public track record</a>); trigger lines are machine-watched every 30 minutes; falsification conditions and review dates are registered together with the call. When the method is revised, the old rules and the conflict ruling stay on file — this page is part of the ledger too.</div></div>
