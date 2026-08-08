@@ -64,8 +64,9 @@ jobs:
           test "$zh" = "200" && echo "zh direct 200 OK" || { echo "zh visitor redirected wrongly"; exit 1; }
           # 方法论页(2026-08-08 上线)中英都必须渲染。首次上线时 zh 命中新版本、
           # 50ms 后的 en 命中旧版本(传播中途)——所以和 /go/buy 一样用重试而非一击定生死。
+          # 传播窗实测可超 30s(5671273 那次 6×5s 全部落空),放宽到 60s
           mok=""
-          for i in 1 2 3 4 5 6; do
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
             curl -s "$URL/method" | grep -q "层纪律" && curl -s "$URL/en/method" | grep -q "layers of discipline" \
               && curl -s "$URL/red-team" | grep -q "对抗审查台" && curl -s "$URL/en/red-team" | grep -q "survival odds" && { mok=1; break; }
             echo "method pages not fully live yet, retry $i"; sleep 5
