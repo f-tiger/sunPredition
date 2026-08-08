@@ -190,6 +190,9 @@ export default {
         const cfg = await getTgConfig(env);
         if (msg?.chat?.id && cfg) {
           const m = (msg.text || "").match(/\/start\s+(SW-[A-Z0-9]+)/i);
+          // 欧美改造(站长 2026-08-08):按 Telegram language_code 双语回复。
+          // 未知语言默认中文(存量用户全是中文);站长侧通知永远中文。
+          const EN_U = !!(msg.from && msg.from.language_code) && !/^zh/i.test(msg.from.language_code);
           // 购买意向:/buy,或站点「立即购买」按钮带来的 /start buy。必须在免费订阅分支
           // 之前拦截——否则 "/start buy" 会落进无码 /start,买家只收到一句欢迎语,意向就丢了。
           if (/^\/buy\b/i.test(msg.text || "") || /^\/start\s+buy\b/i.test(msg.text || "")) {
@@ -199,8 +202,15 @@ export default {
               await env.SUNWATCH_KV.put("free-subs", JSON.stringify(freeB));
             }
             ctx.waitUntil(bumpGrowth(env, "buyRequests"));
-            await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n"
+            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+              ? "🧾 <b>SunWatch Pro</b> — <b>" + USDT_MONTH + " USDT / month</b> · <b>" + USDT_YEAR + " USDT / year</b>\n\n"
+                + "Includes: every entry zone / stop line / sizing plan · instant alerts when price crosses a trigger · two daily briefs · breaking-signal pushes\n\n"
+                + `<b>USDT address</b> (tap to copy):\n<code>${USDT_ADDR}</code>\n`
+                + `⚠️ <b>${USDT_CHAIN} only.</b> Funds sent on the wrong chain are <b>unrecoverable</b> — double-check the network before sending.\n\n`
+                + "After paying, send the <b>transaction hash (TxID)</b> right here; the operator verifies it on-chain and sends your activation code.\n"
+                + "Then send <code>/start YOURCODE</code> to bind real-time signals.\n\n"
+                + "Check the record before you decide: " + SITE + "/en/track-record (hits and misses side by side)"
+              : "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n"
               + `USDT 付款:<b>${USDT_MONTH} USDT / 月</b> · <b>${USDT_YEAR} USDT / 年</b>\n\n`
               + "包含:全部买入区间 / 止损线 / 仓位方案 · 价格穿越触发线秒推 · 每日双简报(北京 08:30 / 20:30) · 重要信号快讯\n\n"
               + `<b>收款地址</b>(点一下即可复制):\n<code>${USDT_ADDR}</code>\n`
@@ -262,8 +272,9 @@ export default {
               seen[tx] = { chatId: msg.chat.id, at: new Date().toISOString() };
               await env.SUNWATCH_KV.put("paid-tx", JSON.stringify(seen));
             }
-            await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "📩 收到你的交易哈希,站长会上链核对后把激活码发到这里。\n"
+            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+              ? "📩 Got your transaction hash. The operator will verify it on-chain and send your activation code here.\nVerification is usually quick; if you hear nothing within a day, just ping this chat."
+              : "📩 收到你的交易哈希,站长会上链核对后把激活码发到这里。\n"
               + "核对通常很快;若超过一天没回,直接在这里追问一句即可。", "HTML");
             const who2 = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
             await tgSend({ token: cfg.token, chatId: cfg.chatId },
@@ -282,8 +293,9 @@ export default {
               free.push(msg.chat.id);
               await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
             }
-            await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 发送 /buy 了解 Pro(¥199/月)\n公开战绩:https://invest.agiscorecard.com/track-record", null);
+            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+              ? "👋 Welcome! You are subscribed to the free SunWatch daily preview (cycle-stage map + how many trigger lines fired).\n\nThe full version adds specific entry/exit levels, stop lines and real-time trigger alerts → send /buy for Pro (28 USDT/mo)\nPublic track record: https://invest.agiscorecard.com/en/track-record"
+              : "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 发送 /buy 了解 Pro(¥199/月)\n公开战绩:https://invest.agiscorecard.com/track-record", null);
             return new Response("ok");
           }
           if (!m && /^\/(status|help)/.test(msg.text || "")) {
@@ -294,14 +306,15 @@ export default {
               const free0 = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
               const isFree = free0.includes(msg.chat.id);
               const txt = isProSub
-                ? "✨ 你是 Pro 会员:每日双简报 + 价格触发报警 + 重要信号快讯全量接收。"
+                ? (EN_U ? "✨ You are a Pro member: two daily briefs + trigger-line alerts + breaking signals, all included." : "✨ 你是 Pro 会员:每日双简报 + 价格触发报警 + 重要信号快讯全量接收。")
                 : isFree
-                ? "🆓 你是免费订户:每晚收信号预告。升级 Pro 解锁具体价位与实时报警 → 发送 /buy"
-                : "你还未订阅。发送 /start 即可免费订阅每日信号预告。";
+                ? (EN_U ? "🆓 Free subscriber: you get the nightly preview. Upgrade to Pro for specific levels and real-time alerts → send /buy" : "🆓 你是免费订户:每晚收信号预告。升级 Pro 解锁具体价位与实时报警 → 发送 /buy")
+                : (EN_U ? "Not subscribed yet. Send /start for the free daily preview." : "你还未订阅。发送 /start 即可免费订阅每日信号预告。");
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, txt, null);
             } else {
-              await tgSend({ token: cfg.token, chatId: msg.chat.id },
-                "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://invest.agiscorecard.com", null);
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+                ? "Commands:\n/start — free daily preview\n/buy — get Pro (payment details in reply)\n/start CODE — bind Pro signals\n/status — subscription status\n/help — this message\nSite: https://invest.agiscorecard.com/en"
+                : "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://invest.agiscorecard.com", null);
             }
             return new Response("ok");
           }
@@ -314,7 +327,9 @@ export default {
               await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, "✅ Pro 已激活!你将收到:每日双简报(北京 08:30/20:30)、价格触发线报警、重要信号快讯。", null);
             } else {
-              await tgSend({ token: cfg.token, chatId: msg.chat.id }, "❌ 激活码无效或已被他人绑定。\n\n要购买请发送 /buy,站长会私信你付款方式并发码。", null);
+              await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+                ? "❌ Invalid activation code, or already bound to another account.\n\nTo buy, send /buy — you'll get payment details and a code."
+                : "❌ 激活码无效或已被他人绑定。\n\n要购买请发送 /buy,站长会私信你付款方式并发码。", null);
             }
           }
         }

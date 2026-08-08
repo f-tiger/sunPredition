@@ -510,3 +510,13 @@ FORECASTS 加 odds/attack 结构化字段);订阅钩子「订阅对抗结果而�
 加速 ③网站需求(agiscorecard 新增 /api/trends 聚合端点:7 天热搜/零结果/翻倍页面,
 纯聚合无 PII)。**输出**:每日简报「📡 趋势雷达 → 行动」区(≤3 条)+ 强信号即时推
 (5日|±18%|或突破+12%,≤2 条/次)。冒烟加 trends 端点探针(非阻塞)。
+
+## 2026-08-08 · 欧美面改造(站长指令:"针对欧美英文的也是对应策略改造,而不是纯中文")
+
+**缺口盘点**:主站与全部战略页(MCP/calibration/resolution/odds/changelog)本就英文
+优先 ✅;缺口在 SunWatch——EN 仅 4 页,40+ pSEO 页与 TG bot 全中文,西方用户到付费
+环节即断。**本次落地**:bot 按 Telegram language_code 双语(未知默认中文,存量不扰;
+站长侧通知恒中文)——/buy 报价改 USDT-first(28/mo,不提 ¥)、/start 欢迎、TxID 回执、
+/status、/help、无效码提示全套 EN;EN 链接一律指 /en/ 面。**排产**(strategy E4):
+SunWatch pSEO 页 EN 化按每 run 2-3 页节奏(忠实翻译既有 zh 分析,FORECAST_EN 模式扩展),
+odds-vs-evidence 周更本就面向英文预测市场读者。
