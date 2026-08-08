@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2026-06-01"
 workers_dev = true
 
+# 合并进 agiscorecard 域(站长指令 2026-08-08):同账号 zone,wrangler 部署时自动注册
+# DNS 与证书;workers.dev 原地址保留,历史链接与 TG 旧消息不断。
+routes = [
+  { pattern = "invest.agiscorecard.com", custom_domain = true }
+]
+
 # 每 30 分钟抓取(仅命中重要信号时推送)
 # 每日两次完整摘要,卡在决策时点前:北京 08:30(美股收盘后/A·H开盘前)与 20:30(美股开盘前)
 [triggers]
