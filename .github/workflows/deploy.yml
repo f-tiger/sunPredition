@@ -72,6 +72,11 @@ jobs:
             echo "method pages not fully live yet, retry $i"; sleep 5
           done
           [ -n "$mok" ] && echo "method zh+en OK" || { echo "method pages broken"; exit 1; }
+          # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
+          # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)
+          tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)
+          echo "site trends probe: $tr"
+          echo "$tr" | grep -q "searches" && echo "trends endpoint OK" || echo "trends endpoint not ready (non-blocking)"
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

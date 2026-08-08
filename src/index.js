@@ -484,11 +484,29 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       "30 0 * * *": "🌅 早盘简报(美股隔夜复盘 · A/H 开盘前)",
       "30 12 * * *": "🌇 美股开盘前简报(A/H 收盘复盘 · 执行提醒)",
     };
+    // 趋势雷达·即时档:强动量/20日突破(48h 冷却,≤2 条,静默降级)
+    if (quoteResult) {
+      try {
+        const strong = quoteTrends((await env.SUNWATCH_KV.get("quotes", "json"))?.quotes).filter((t) => t.strong);
+        const picked = await pickTrends(env, strong, { limit: 2, cooldownSec: 172800, prefix: "talert" });
+        if (picked.length) {
+          const t = `📡 <b>趋势雷达</b>\n\n${picked.map((x) => "• " + x.text).join("\n")}\n\n行动项均为已预登记纪律,非新决策。`;
+          await sendTelegram(cfg, t).catch(() => {});
+          await broadcastPro(env, t).catch(() => {});
+        }
+      } catch (e) {}
+    }
     if (DAILY[event.cron]) {
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
       const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
       const gLine = await growthLine(env).catch(() => "");
-      const text = buildSummary(items, "https://invest.agiscorecard.com", DAILY[event.cron], q.quotes);
+      // 趋势雷达·简报档:三源合并,20h 冷却(两场简报不重复),≤3 条
+      let trendLines = [];
+      try {
+        const cands = [...quoteTrends(q.quotes), ...feedTrends(items), ...(await siteTrends())];
+        trendLines = (await pickTrends(env, cands, { limit: 3, cooldownSec: 72000, prefix: "tbrief" })).map((x) => "• " + x.text);
+      } catch (e) {}
+      const text = buildSummary(items, "https://invest.agiscorecard.com", DAILY[event.cron], q.quotes, trendLines);
       await sendTelegram(cfg, text + (gLine ? `\n\n${gLine}` : "")).catch(() => {}); // 站长版含增长数据
       await broadcastPro(env, text).catch(() => {}); // 订户版不含
       // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)
@@ -627,7 +645,7 @@ async function fetchQuote(w) {
   if (!meta || !meta.regularMarketPrice) return null;
   const price = meta.regularMarketPrice;
   let prevClose = meta.regularMarketPreviousClose || null;
-  let hi52 = null, lo52 = null;
+  let hi52 = null, lo52 = null, chg5dPct = null, newHigh20 = false, newLow20 = false;
   try {
     const q = result.indicators.quote[0];
     const closes = (q.close || []).filter((v) => v != null);
@@ -638,6 +656,16 @@ async function fetchQuote(w) {
     const los = (q.low || []).filter((v) => v != null && v > 0);
     if (his.length) hi52 = Math.max(...his, price);
     if (los.length) lo52 = Math.min(...los, price);
+    // 趋势雷达用:5 日动量 + 20 日突破(今天以外的最近 20 根收盘为基准)
+    if (closes.length >= 7) {
+      const base5 = closes[closes.length - 6];
+      if (base5) chg5dPct = Math.round(((price - base5) / base5) * 1000) / 10;
+    }
+    if (closes.length >= 21) {
+      const win = closes.slice(-21, -1);
+      newHigh20 = price > Math.max(...win);
+      newLow20 = price < Math.min(...win);
+    }
   } catch (e) {}
   if (!prevClose) prevClose = price;
   return {
@@ -648,9 +676,86 @@ async function fetchQuote(w) {
     changePct: prevClose ? Math.round(((price - prevClose) / prevClose) * 1000) / 10 : 0,
     fromLowPct: lo52 ? Math.round(((price - lo52) / lo52) * 100) : null,
     offHighPct: hi52 ? Math.round(((price - hi52) / hi52) * 100) : null,
+    chg5dPct, newHigh20, newLow20,
     currency: meta.currency || "",
     at: new Date().toISOString(),
   };
+}
+
+// ---- 趋势雷达(涌现引擎,2026-08-08 站长指令) ----
+// 三个信号源:①行情动量(5日/20日突破) ②新闻标签加速 ③网站需求(agiscorecard D1 聚合)。
+// 铁规:行动项只引用已预登记的纪律,趋势永远不发明新交易;每条趋势 KV 冷却去重防轰炸;
+// 任一信号源失败静默降级,绝不打断简报。
+const TREND_ACTIONS = [
+  [/存储|光通信/, "顶区纪律:不追;持有者反弹分批派发;若涉证伪线由触发系统另行报警"],
+  [/潜伏|机器人/, "恐慌日分批小仓纪律(涨停禁买);8-19 前宇树禁买窗生效"],
+  [/太空/, "顶部回避判定(信心52%):不追;SPCX $135 周线线由系统盯守"],
+  [/加密|孙宇晨/, "事件窗口短线纪律;杠杆品仅事件窗,严禁长持"],
+];
+const trendAction = (group) => (TREND_ACTIONS.find(([re]) => re.test(group || "")) || [null, "观察位:只拿读数,无预登记动作,不动钱"])[1];
+
+function quoteTrends(quotes) {
+  const out = [];
+  for (const q of quotes || []) {
+    const parts = [];
+    if (q.chg5dPct != null && Math.abs(q.chg5dPct) >= 12) parts.push(`5日${q.chg5dPct > 0 ? "+" : ""}${q.chg5dPct}%`);
+    if (q.newHigh20) parts.push("创20日新高");
+    if (q.newLow20) parts.push("创20日新低");
+    if (!parts.length) continue;
+    const strong = Math.abs(q.chg5dPct || 0) >= 18 || ((q.newHigh20 || q.newLow20) && Math.abs(q.chg5dPct || 0) >= 12);
+    out.push({ key: `q-${q.symbol}-${q.newLow20 ? "lo" : q.newHigh20 ? "hi" : "mo"}`, strong,
+      text: `[市场] ${q.name} ${parts.join("·")} → ${trendAction(q.group)}` });
+  }
+  return out;
+}
+
+function feedTrends(items) {
+  // 标签热度加速:近 24h 条数 ≥3 且 > 前 6 天日均 2 倍(自检:样本太小不叫趋势)
+  const now = Date.now(), day = 86400000;
+  const n24 = {}, n7 = {};
+  for (const i of items || []) {
+    const t = Date.parse(i.published || "") || 0;
+    if (!t || now - t > 7 * day) continue;
+    for (const tag of i.tags || []) {
+      if (tag === "其他") continue;
+      if (now - t <= day) n24[tag] = (n24[tag] || 0) + 1;
+      else n7[tag] = (n7[tag] || 0) + 1;
+    }
+  }
+  return Object.entries(n24)
+    .filter(([tag, n]) => n >= 3 && n > 2 * ((n7[tag] || 0) / 6))
+    .slice(0, 2)
+    .map(([tag, n]) => ({ key: `f-${tag}`, strong: false,
+      text: `[新闻] 「${tag}」24h 内 ${n} 条,热度加速 → 读要闻;若触及在档判断的证伪条件,当日红队复审(第7层)` }));
+}
+
+async function siteTrends() {
+  try {
+    const r = await fetch("https://agiscorecard.com/api/trends", { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return [];
+    const d = await r.json();
+    const out = [];
+    for (const z of (d.zeroResults || []).slice(0, 2))
+      out.push({ key: `s-zero-${z.label}`, strong: false,
+        text: `[网站] 搜索「${escHtml(z.label)}」零结果 ×${z.n} → 产品缺口已捕捉,内容机器排产(选题一级种子)` });
+    for (const p of (d.risingPages || []).slice(0, 2))
+      out.push({ key: `s-rise-${p.path}`, strong: false,
+        text: `[网站] ${escHtml(p.path)} 周流量 ${p.prev}→${p.h} 翻倍 → 检查该页工具漏斗与订阅钩子是否到位` });
+    return out;
+  } catch (e) { return []; }
+}
+
+// dedupe: 简报 20h 冷却(两场简报不重复喊同一条),即时警报 48h 冷却
+async function pickTrends(env, cands, { limit, cooldownSec, prefix }) {
+  const out = [];
+  for (const c of cands) {
+    if (out.length >= limit) break;
+    const key = `${prefix}-${c.key}`;
+    if (await env.SUNWATCH_KV.get(key)) continue;
+    await env.SUNWATCH_KV.put(key, "1", { expirationTtl: cooldownSec });
+    out.push(c);
+  }
+  return out;
 }
 
 // 重要信号即时推送
@@ -797,7 +902,7 @@ function pickTeaserVariant(lockedCount) {
 
 // ---- 监控结论摘要 ----
 
-function buildSummary(items, origin, label, quotes) {
+function buildSummary(items, origin, label, quotes, trendLines) {
   const today = new Date().toISOString().slice(0, 10);
   // 【今日要做】来自 ACTION_QUEUE(过期自动隐藏)
   const actions = ACTION_QUEUE.filter((a) => a.until >= today).slice(0, 3).map((a, i) => `${i + 1}. ${escHtml(a.text)}`);
@@ -865,6 +970,7 @@ function buildSummary(items, origin, label, quotes) {
     ...(actions.length ? actions : ["今日无必做动作,持仓按兵不动"]),
     ``,
     `🚦 ${lights}`,
+    ...((trendLines && trendLines.length) ? [``, `📡 <b>趋势雷达 → 行动</b>(行动项=已预登记纪律)`, ...trendLines] : []),
     ...(movers.length ? [``, `💹 <b>异动</b>`, ...movers] : []),
     ...(near.length ? [``, `⏳ <b>最近触发线(未穿越,继续等)</b>`, ...near.slice(0, 3).map((n) => n.line)] : []),
     ``,
