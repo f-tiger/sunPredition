@@ -429,3 +429,15 @@ SKHY 正主(本轮新增美股直买通道),三触发器(合约价转负→减�
 光通信的十倍窗口在它自己的周期底,比存储的 2027 更远。执行:不追;持有者照抄存储派发纪律。
 **交付**:CORE_SIGNALS 推 TG、FORECASTS 建档(带双证伪条件)、光通信观察位 5 只
 (AAOI/中际/新易盛/天孚/源杰)入行情盯守。非投资建议。
+
+## 2026-08-08 · 并入 agiscorecard 域 + 英文本地化(站长指令:"把我的股票网站合并到这个agi域名下…配置多语言版本…更加符合欧美本地习惯")
+
+**方案**:自定义域(非路径代理)——同账号 zone,`wrangler.toml` routes 挂
+`invest.agiscorecard.com`,部署即自动注册 DNS/证书;workers.dev 原地址保留,历史链接与
+TG 旧消息不断。第一步已验证:部署日志 `invest.agiscorecard.com HTTP 200 / custom domain OK`。
+**第二步(本次)**:①SITE 与全部 26 处硬编码 URL 切到 invest.agiscorecard.com;
+②`/` 按 Accept-Language 协商——非中文浏览器 302 → /en,爬虫豁免(保 zh 索引),
+`?lang=zh` 设 cookie 可退出;③/en 落地页按欧美惯例重写(价值主张先行 hero、stats band、
+月名日期、How-it-works、风险披露、FAQ、AGI Scorecard 网络卡);④中英页面互挂面包屑
+(zh 头部 + 🇬🇧 English + 🏠 AGI 记分牌)。
+**交付**:sunwatch 侧本 commit;agiscorecard 侧首页/invest 互链另行走该仓 ship 流程。

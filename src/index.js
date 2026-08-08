@@ -5,7 +5,7 @@ import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, r
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
 // Telegram webhook 校验密钥(防伪造 webhook 调用;每日 cron 自愈重注册)
 const WEBHOOK_SECRET = "swhk-9d2f7c41e8b3a650c7d19e84f2b5a3c8";
-const SITE = "https://sunwatch.tuoqiantu.workers.dev";
+const SITE = "https://invest.agiscorecard.com";
 
 // USDT 收款(站长 2026-08-06 指定)。**只在 bot 私信里给出,不渲染到公开页面**——
 // 公开页上的地址会被抓取归档,且链上余额与全部往来记录任何人都能查。
@@ -94,10 +94,27 @@ export default {
       return new Response(renderTrackPage(t, PLAYBOOK.filter((p) => m(p.theme)), STOCKS.filter((s) => m(s.theme))), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
     }
     switch (url.pathname) {
-      case "/":
+      case "/": {
+        // 语言协商(站长指令 2026-08-08:配置多语言,符合欧美习惯):
+        // Accept-Language 首选非中文的真人访客 302 到 /en;点"中文"带 ?lang=zh 落回
+        // 并记一年 cookie,此后不再跳。爬虫一律豁免——把 Googlebot 重定向走会直接
+        // 毁掉中文版的索引,这比任何本地化收益都贵。
+        const ua = request.headers.get("user-agent") || "";
+        const isBot = /bot|crawler|spider|slurp|preview|fetch|curl|python/i.test(ua);
+        const cookie = request.headers.get("cookie") || "";
+        if (url.searchParams.get("lang") === "zh") {
+          return new Response(renderDashboard(), {
+            headers: { "content-type": "text/html; charset=utf-8",
+                       "set-cookie": "lang=zh; Path=/; Max-Age=31536000; SameSite=Lax" } });
+        }
+        const first = ((request.headers.get("accept-language") || "").split(",")[0] || "").toLowerCase();
+        if (!isBot && first && !first.startsWith("zh") && !/(?:^|;\s*)lang=zh(?:;|$)/.test(cookie)) {
+          return Response.redirect(SITE + "/en", 302);
+        }
         return new Response(renderDashboard(), {
           headers: { "content-type": "text/html; charset=utf-8" },
         });
+      }
       case "/api/feed": {
         const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
         return json({ count: items.length, items });
@@ -254,7 +271,7 @@ export default {
               await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
             }
             await tgSend({ token: cfg.token, chatId: msg.chat.id },
-              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 发送 /buy 了解 Pro(¥199/月)\n公开战绩:https://sunwatch.tuoqiantu.workers.dev/track-record", null);
+              "👋 欢迎!你已订阅 SunWatch 免费信号预告(每日一条:赛道周期定位 + 当日触发信号数量)。\n\n完整版包含具体买卖价位、止损线、实时触发报警 → 发送 /buy 了解 Pro(¥199/月)\n公开战绩:https://invest.agiscorecard.com/track-record", null);
             return new Response("ok");
           }
           if (!m && /^\/(status|help)/.test(msg.text || "")) {
@@ -272,7 +289,7 @@ export default {
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, txt, null);
             } else {
               await tgSend({ token: cfg.token, chatId: msg.chat.id },
-                "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://sunwatch.tuoqiantu.workers.dev", null);
+                "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://invest.agiscorecard.com", null);
             }
             return new Response("ok");
           }
@@ -387,7 +404,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         return json(rec);
       }
       case "/robots.txt":
-        return new Response("User-agent: *\nAllow: /\nSitemap: https://sunwatch.tuoqiantu.workers.dev/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
+        return new Response("User-agent: *\nAllow: /\nSitemap: https://invest.agiscorecard.com/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
       case "/sitemap.xml": {
         const list = await env.SUNWATCH_KV.list({ prefix: "daily-" }).catch(() => ({ keys: [] }));
         const dailies = list.keys.map((k) => `${SITE}/daily/${k.name.slice(6)}`).slice(-30);
@@ -458,7 +475,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
       const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
       const gLine = await growthLine(env).catch(() => "");
-      const text = buildSummary(items, "https://sunwatch.tuoqiantu.workers.dev", DAILY[event.cron], q.quotes);
+      const text = buildSummary(items, "https://invest.agiscorecard.com", DAILY[event.cron], q.quotes);
       await sendTelegram(cfg, text + (gLine ? `\n\n${gLine}` : "")).catch(() => {}); // 站长版含增长数据
       await broadcastPro(env, text).catch(() => {}); // 订户版不含
       // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)

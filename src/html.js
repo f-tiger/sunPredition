@@ -20,10 +20,10 @@ export function renderTrackRecord(forecasts, predictions) {
 <meta name="description" content="SunWatch Pro 的每一次市场判断公开建档:命中与失误同等展示。当前可评分 ${scored.length} 条,命中 ${hits} 条。">
 <meta property="og:title" content="SunWatch Pro 公开战绩:${scored.length} 条判断,命中 ${hits} 条">
 <meta property="og:description" content="包括 2026-07 存储板块见顶判定、SKHY 上市派发窗口等。命中与失误同等公开。">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
-<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
-<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
-<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
+<link rel="canonical" href="https://invest.agiscorecard.com/track-record">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/track-record">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/track-record">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/track-record">
 <style>:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--accent:#2563eb}
 @media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#171e26;--ink:#e6edf3;--muted:#8b98a5;--line:#2a3441;--accent:#60a5fa}}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system,"PingFang SC",system-ui,sans-serif}
@@ -59,9 +59,9 @@ export function renderStockPage(s, quote, related, news) {
 <title>${escS(title)} | SunWatch Pro</title>
 <meta name="description" content="${escS(s.name + " " + s.ticker + " " + s.theme + "赛道:" + (s.logic || "").slice(0, 80))}">
 <meta property="og:title" content="${escS(title)}"><meta property="og:description" content="${escS((s.logic || "").slice(0, 100))}">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/stock/${slugify(s.ticker)}">
+<link rel="canonical" href="https://invest.agiscorecard.com/stock/${slugify(s.ticker)}">
 <script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch Pro"},about:s.name})}</script>
-<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"SunWatch Pro",item:"https://sunwatch.tuoqiantu.workers.dev/"},{"@type":"ListItem",position:2,name:s.market},{"@type":"ListItem",position:3,name:s.name}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"SunWatch Pro",item:"https://invest.agiscorecard.com/"},{"@type":"ListItem",position:2,name:s.market},{"@type":"ListItem",position:3,name:s.name}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › ${escS(s.market)} › ${escS(s.theme)}</p>
 <h1>${escS(s.name)} <span class="tag">${escS(s.ticker)}</span> <span class="tag">${escS(s.market)}</span></h1>
 ${q}<div class="card">${rows}</div>
@@ -84,7 +84,7 @@ export function renderTrackPage(track, playbooks, stocks) {
 <title>${escS(title)} | SunWatch Pro</title>
 <meta name="description" content="${escS(track.name)}赛道深度分析:周期阶段判定与依据、A股/港股/美股标的映射。">
 <meta property="og:title" content="${escS(title)}">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/track/${track.id}">
+<link rel="canonical" href="https://invest.agiscorecard.com/track/${track.id}">
 <script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch Pro"}})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › 赛道</p><h1>${escS(title)}</h1>
 ${pb}<div class="card"><b>本赛道标的</b><div style="margin-top:6px">${st || "—"}</div></div>${CTA}
@@ -103,7 +103,7 @@ export function renderDailyPage(snap) {
 <title>${escS(title)} | SunWatch Pro</title>
 <meta name="description" content="${snap.date} 存储/物理AI/能源/加密赛道周期定位复盘与当日市场异动。">
 <meta property="og:title" content="${escS(title)}">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/daily/${snap.date}">
+<link rel="canonical" href="https://invest.agiscorecard.com/daily/${snap.date}">
 <script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › <a href="/daily">每日复盘</a> › ${snap.date}</p>
 <h1>${escS(title)}</h1>
@@ -119,7 +119,7 @@ export function renderDailyIndex(dates) {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 赛道每日复盘归档 | SunWatch Pro</title>
 <meta name="description" content="存储/物理AI/能源/加密赛道每日周期定位复盘归档,每天自动更新。">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/daily"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<link rel="canonical" href="https://invest.agiscorecard.com/daily"><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › 每日复盘</p><h1>📅 每日复盘归档</h1>
 ${items || '<div class="card meta">首篇复盘将于明日北京时间 08:30 自动生成。</div>'}${CTA}
 </div></body></html>`;
@@ -133,9 +133,9 @@ export function renderForecastPage(f, id, related) {
   const short = String(f.call || "").slice(0, 28);
   const title = `复盘 ${f.date}:${short}${f.call && f.call.length > 28 ? "…" : ""} — ${verdict.replace(/[✅❌🟡⏳]\s*/, "")}`;
   const desc = `SunWatch Pro 判断建档(${f.date}):${String(f.call || "").slice(0, 60)}。结果:${String(f.outcome || "").slice(0, 70)}。命中与失误同等公开。`;
-  const url = `https://sunwatch.tuoqiantu.workers.dev/forecast/${id}`;
+  const url = `https://invest.agiscorecard.com/forecast/${id}`;
   const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: title, datePublished: f.date, author: { "@type": "Organization", name: "SunWatch Pro" }, publisher: { "@type": "Organization", name: "SunWatch Pro" }, mainEntityOfPage: url });
-  const bc = JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "SunWatch Pro", item: "https://sunwatch.tuoqiantu.workers.dev/" }, { "@type": "ListItem", position: 2, name: "公开战绩", item: "https://sunwatch.tuoqiantu.workers.dev/track-record" }, { "@type": "ListItem", position: 3, name: f.date }] });
+  const bc = JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "SunWatch Pro", item: "https://invest.agiscorecard.com/" }, { "@type": "ListItem", position: 2, name: "公开战绩", item: "https://invest.agiscorecard.com/track-record" }, { "@type": "ListItem", position: 3, name: f.date }] });
   const relCards = (related || []).map(({ id: rid, f: rf }) => `<div class="card"><a href="/forecast/${rid}"><b>${rf.date}</b> · ${V[rf.verdict] || rf.verdict}</a><div class="meta" style="margin-top:3px">${escS(String(rf.call || "").slice(0, 40))}…</div></div>`).join("");
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escS(title)} | SunWatch Pro</title>
@@ -163,7 +163,7 @@ export function renderForecastIndex(items) {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>判断复盘归档 · 每条建档单独成页 | SunWatch Pro</title>
 <meta name="description" content="SunWatch Pro 每一次市场判断的独立复盘页归档:可评分 ${scored.length} 条,命中 ${hits} 条。命中与失误同等公开。">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/forecast"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<link rel="canonical" href="https://invest.agiscorecard.com/forecast"><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › <a href="/track-record">公开战绩</a> › 复盘归档</p>
 <h1>🗂️ 判断复盘归档</h1>
 <p>每一次明确判断单独成页,命中与失误同等展示。当前可评分 <b>${scored.length}</b> 条,命中 <b>${hits}</b> 条${scored.length ? `,命中率 <b>${Math.round((hits / scored.length) * 100)}%</b>` : ""}。</p>
@@ -185,28 +185,58 @@ const FORECAST_EN = {
 };
 
 // 英文着陆页 /en(英文获客入口:孙宇晨预判监控 + 跨市场执行;可验证命中率)
+// Western-audience landing. Conventions deliberately different from the zh dashboard:
+// value proposition before brand, stats as a band, MMM D YYYY dates, prominent risk
+// disclosure (US readers expect it), and a visible bridge to the AGI Scorecard network.
+const fmtEN = (iso) => {
+  const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const [y, m, d] = String(iso).split("-").map(Number);
+  return m ? `${M[m - 1]} ${d}, ${y}` : iso;
+};
 export function renderLandingEN(forecasts) {
   const scored = forecasts.filter((f) => f.verdict !== "pending");
   const hits = scored.filter((f) => f.verdict === "hit").length;
   const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
+  const latest = forecasts[0] ? fmtEN(forecasts[0].date) : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SunWatch Pro — Justin Sun prediction monitor & cross-market execution</title>
-<meta name="description" content="SunWatch Pro tracks Justin Sun's calls and turns market judgments into executable triggers across US, HK and A-share markets. Public track record: ${scored.length} scored calls, ${hits} hits (${rate}%). Research, not investment advice.">
-<meta property="og:title" content="SunWatch Pro — Justin Sun prediction monitor & trigger-based execution">
-<meta property="og:description" content="Turn judgments into price triggers, not predictions. Public hit/miss record, ${rate}% hit rate.">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/en">
-<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en">
-<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/">
-<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/"><style>${PAGE_CSS}</style></head><body><div class="wrap">
-<p class="meta"><a href="/">中文</a> · English</p>
-<h1>SunWatch Pro</h1>
-<p>A monitoring system that tracks <b>Justin Sun's</b> public calls and, more importantly, turns market judgments into <b>executable price triggers</b> across US, Hong Kong and mainland-China (A-share) markets — "if price crosses X, do Y", watched by machine 24/7, pushed to Telegram.</p>
-<div class="card"><b>Not predictions — triggers.</b><div class="meta" style="margin-top:4px">Every judgment is written as a falsifiable price condition and logged. Hits and misses are shown side by side (misses carry the lesson).</div></div>
-<div class="card"><b>Public track record</b><div style="margin-top:4px">Scored calls: <b>${scored.length}</b> · Hits: <b>${hits}</b>${scored.length ? ` · Hit rate <b>${rate}%</b>` : ""}</div><div class="meta" style="margin-top:4px"><a href="/en/track-record">See the full English track record →</a></div></div>
-<h2 style="font-size:17px">What you get</h2>
-<div class="card">Five AI-cycle sectors (memory/storage, physical AI, energy, crypto) with cycle-stage positioning; specific entry/exit levels and stop lines (Pro); real-time trigger alerts via Telegram.</div>
+<title>SunWatch — AI-cycle investing, on the record | AGI Scorecard Invest</title>
+<meta name="description" content="Market judgments written as falsifiable price triggers, watched by machine, logged in public: ${scored.length} scored calls, ${rate}% hit rate. Hits and misses side by side. Not investment advice.">
+<meta property="og:title" content="SunWatch — every market call on the record (${rate}% hit rate)">
+<meta property="og:description" content="Triggers, not predictions. Public track record across US, HK and China A-shares. Part of the AGI Scorecard network.">
+<link rel="canonical" href="https://invest.agiscorecard.com/en">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en"><style>${PAGE_CSS}
+.band{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.band .card{flex:1 1 140px;text-align:center;margin:0}
+.band b{display:block;font-size:26px}
+.band span{font-size:12px;color:var(--muted)}
+.btnp{display:inline-block;background:var(--accent);color:#fff;padding:10px 20px;border-radius:9px;font-weight:600;text-decoration:none}
+.hero{margin:8px 0 4px;font-size:27px;line-height:1.25}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › Invest · <a href="/?lang=zh">中文</a> · <b>English</b></p>
+<h1 class="hero">Market calls you can audit.<br>Triggers, not vibes.</h1>
+<p>SunWatch turns judgments about the AI cycle — memory, robotics, space, energy, crypto — into <b>falsifiable price triggers</b> across US, Hong Kong and China A-share markets. A machine watches the lines 24/7. Every call is logged <b>before</b> the outcome, and misses stay on the page next to the hits.</p>
+<div class="band">
+<div class="card"><b>${scored.length}</b><span>scored calls</span></div>
+<div class="card"><b>${rate}%</b><span>hit rate</span></div>
+<div class="card"><b>${forecasts.length - scored.length}</b><span>open &amp; pending</span></div>
+<div class="card"><b>${latest}</b><span>latest call</span></div>
+</div>
+<p><a class="btnp" href="/en/track-record">See the full track record →</a></p>
+<h2 style="font-size:18px">How it works</h2>
+<div class="card"><b>1 · Registered before the outcome.</b><div class="meta" style="margin-top:3px">Each judgment is written as "if price crosses X, do Y" with a dated entry in the public log — no after-the-fact narratives.</div></div>
+<div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
+<div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
+<h2 style="font-size:18px">What's inside</h2>
+<div class="card">Cycle-stage maps for five AI sectors · the "Project 10x" framework (why most hot themes can't 10x, and where the structure might) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
-<p class="meta">Research framework only, not investment advice. Prices/valuations are verified with dates; specific levels and trigger lines are Pro content.</p>
+<div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
+<h2 style="font-size:18px">FAQ</h2>
+<div class="card"><b>Is this investment advice?</b><div class="meta" style="margin-top:3px">No. It is a research framework with a public score. Nothing here is a recommendation to buy or sell any security; consult a licensed professional before acting.</div></div>
+<div class="card"><b>Why should I trust the hit rate?</b><div class="meta" style="margin-top:3px">Don't trust it — audit it. Every scored call links to its dated entry, original wording and outcome, including the losers.</div></div>
+<div class="card"><b>What is AGI Scorecard?</b><div class="meta" style="margin-top:3px">An independent site grading the "AGI by 2027" predictions with pre-registered flip conditions — the evidence layer this console trades against. <a href="https://agiscorecard.com">agiscorecard.com →</a></div></div>
+<p class="meta" style="margin-top:18px"><b>Risk disclosure:</b> research and education only; not investment, legal or tax advice. Markets involve risk of loss. Past performance of any logged call does not guarantee future results. Prices verified against dated sources; errors are corrected in the open log.</p>
 </div></body></html>`;
 }
 
@@ -218,17 +248,17 @@ export function renderTrackRecordEN(forecasts) {
   const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
   const rows = forecastSlugs(forecasts).map(({ id, f }) => {
     const en = FORECAST_EN[id];
-    return `<div class="card"><b>${f.date}</b> · <b>${V[f.verdict] || f.verdict}</b>${en ? `<div style="margin-top:4px">${escS(en)}</div>` : ""}</div>`;
+    return `<div class="card"><b>${fmtEN(f.date)}</b> · <b>${V[f.verdict] || f.verdict}</b>${en ? `<div style="margin-top:4px">${escS(en)}</div>` : ""}</div>`;
   }).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SunWatch Pro — public track record (hits & misses)</title>
 <meta name="description" content="Every SunWatch Pro market call logged in the open: ${scored.length} scored, ${hits} hits (${rate}%). Hits and misses shown side by side.">
 <meta property="og:title" content="SunWatch Pro public track record: ${scored.length} calls, ${hits} hits">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
-<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en/track-record">
-<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/track-record">
-<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/track-record"><style>${PAGE_CSS}</style></head><body><div class="wrap">
-<p class="meta"><a href="/track-record">中文</a> · English · <a href="/en">← SunWatch Pro (EN)</a></p>
+<link rel="canonical" href="https://invest.agiscorecard.com/en/track-record">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/track-record">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/track-record">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/track-record"><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">Invest</a> › Track record · <a href="/track-record">中文</a> · <b>English</b></p>
 <h1>📊 Public track record</h1>
 <p>Every explicit judgment is logged in the open, hits and misses shown side by side (misses carry the lesson). Currently <b>${scored.length}</b> scored, <b>${hits}</b> hits${scored.length ? `, hit rate <b>${rate}%</b>` : ""}.</p>
 ${rows}
@@ -254,7 +284,7 @@ export function renderFaq() {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>常见问题 FAQ | SunWatch Pro</title>
 <meta name="description" content="SunWatch Pro 常见问题:触发线是什么、信号频率、订阅方式、激活码规则、数据来源、与荐股的区别。">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/faq">
+<link rel="canonical" href="https://invest.agiscorecard.com/faq">
 <script type="application/ld+json">${ld}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="/">SunWatch Pro</a> › FAQ</p><h1>❓ 常见问题</h1>
 ${body}${CTA}
@@ -273,12 +303,12 @@ export function renderDashboard() {
 <meta property="og:title" content="SunWatch Pro · AI 热点赛道投资罗盘">
 <meta property="og:description" content="五大AI赛道深度分析 × 三市场推荐 × 实时触发线信号。免费查看赛道分析与公开战绩。">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://sunwatch.tuoqiantu.workers.dev/">
+<meta property="og:url" content="https://invest.agiscorecard.com/">
 <meta name="twitter:card" content="summary">
-<link rel="canonical" href="https://sunwatch.tuoqiantu.workers.dev/">
-<link rel="alternate" hreflang="zh-CN" href="https://sunwatch.tuoqiantu.workers.dev/">
-<link rel="alternate" hreflang="en" href="https://sunwatch.tuoqiantu.workers.dev/en">
-<link rel="alternate" hreflang="x-default" href="https://sunwatch.tuoqiantu.workers.dev/">
+<link rel="canonical" href="https://invest.agiscorecard.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/">
 <style>
   :root{
     --bg:#f6f7f9; --card:#ffffff; --ink:#1a202c; --muted:#64748b;
@@ -324,7 +354,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>
