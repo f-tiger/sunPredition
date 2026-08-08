@@ -66,7 +66,8 @@ jobs:
           # 50ms 后的 en 命中旧版本(传播中途)——所以和 /go/buy 一样用重试而非一击定生死。
           mok=""
           for i in 1 2 3 4 5 6; do
-            curl -s "$URL/method" | grep -q "层纪律" && curl -s "$URL/en/method" | grep -q "layers of discipline" && { mok=1; break; }
+            curl -s "$URL/method" | grep -q "层纪律" && curl -s "$URL/en/method" | grep -q "layers of discipline" \
+              && curl -s "$URL/red-team" | grep -q "对抗审查台" && curl -s "$URL/en/red-team" | grep -q "survival odds" && { mok=1; break; }
             echo "method pages not fully live yet, retry $i"; sleep 5
           done
           [ -n "$mok" ] && echo "method zh+en OK" || { echo "method pages broken"; exit 1; }

@@ -43,8 +43,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .wrap{max-width:820px;margin:0 auto;padding:24px 16px 64px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div></div>`;
-const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div></div>`;
+const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
+const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
 
 // pSEO:单只标的页
 export function renderStockPage(s, quote, related, news) {
@@ -182,6 +182,12 @@ const FORECAST_EN = {
   "2026-07-13-1": "Weekly-check aside: 'trend is up this week, lower-high not confirmed.' Missed — SNDK fell 12.6% that same day and the downtrend was confirmed by 7/17. Lesson: in a discipline week, execute the plan, don't editorialize on direction.",
   "2026-07-20-1": "Storage downtrend confirmed: lower-lows in place (SNDK $1,354 / MU $849); SKHY break-issue below $149 raised to the base case.",
   "2026-07-20-2": "Weekly check #3: 0 of 3 liquidation triggers; hold the 1/3 core unchanged; buy-back clause suspended — a -37.8% drawdown is a trend break, not a healthy dip.",
+  "2026-08-07-1": "Sector-wide scan: spatial computing / AI glasses is the second open window (one notch weaker than robotics); low-altitude economy a half-window; solid-state batteries only via second-tier equipment names; seven other tracks closed.",
+  "2026-08-07-2": "Project-10x stock ranking: tier 1 = Wuzhou Xinchun (screws+bearings, lowest PS, un-named) and Keli Sensing (six-axis force); tier 2 = Moons' (Unitree's sole coreless-motor supplier) and Orbbec; equipment layer (grinders = 46% of a screw line's capex) added outside the pool.",
+  "2026-08-07-3": "Space theme topped in May–June: SPCX (history's largest IPO, $1.75T) broke issue and sits ~45% off highs — same structure as SKHY at the memory top. Chasing here = paying up in the consensus phase. Falsified if SPCX reclaims $135 weekly AND makes new highs.",
+  "2026-08-07-4": "Robotics is the only track in early-mid cycle; any 10x structure lives in low-cap bottleneck-component pure plays, not humanoid leaders. Unitree lists ~Aug 19: no chasing for the first month, by rule.",
+  "2026-08-08-1": "Optical-transceiver top forming in Jul–Aug 2026: all six top-zone checklist items lit (record volume, retail slogans, sold-out narrative, Innolight's mega HK IPO — the same pattern that marked the memory and space tops). No 10x from here; optics' real window is its own next cycle bottom.",
+  "2026-08-08-2": "Memory's next 10x window projected for late 2027: pre-registered shopping list (SNDK / MU / SKHY) executes only when three triggers fire — contract prices turning negative, capacity-cut announcements, PS≈1x with price stabilization. Leveraged ETFs banned.",
 };
 
 // 英文着陆页 /en(英文获客入口:孙宇晨预判监控 + 跨市场执行;可验证命中率)
@@ -228,7 +234,7 @@ export function renderLandingEN(forecasts) {
 <div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
-<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
 <div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
@@ -378,6 +384,65 @@ ${CTA_EN}
 </div></body></html>`;
 }
 
+// 对抗审查台:方法论第 7 层的公开产品面——每条在档判断的幸存概率、最强反方攻击、
+// 证伪条件。这是订阅钩子所在:「信心变动/触发器响/结案——当天一封邮件」。
+// 幸存概率只来自建档的对抗复核(CORE_SIGNALS 2026-08-08),这里只渲染不新编。
+const oddsBar = (odds) =>
+  `<div style="display:flex;align-items:center;gap:10px;margin:6px 0 2px"><div style="flex:1;height:8px;background:color-mix(in srgb,var(--muted) 18%,transparent);border-radius:99px;overflow:hidden"><div style="width:${odds}%;height:100%;background:${odds >= 60 ? "#16803c" : odds >= 50 ? "#b7791f" : "#b42318"}"></div></div><b style="font-size:15px">${odds}%</b></div>`;
+
+export function renderRedTeam(forecasts) {
+  const items = forecastSlugs(forecasts).filter(({ f }) => f.verdict === "pending" && f.odds != null);
+  const cards = items.map(({ id, f }) =>
+    `<div class="card"><b>${f.date}</b> · <span class="tag">幸存概率</span>${oddsBar(f.odds)}
+<div style="margin-top:6px">${escS(f.call.split(":")[0])}</div>
+<div class="meta" style="margin-top:6px"><b>⚔️ 最强反方:</b>${escS(f.attack)}</div>
+<div class="meta" style="margin-top:5px"><b>🧾 证伪条件与验证窗口:</b>${escS((f.outcome || "").slice(0, 200))}${(f.outcome || "").length > 200 ? "…" : ""} <a href="/forecast/${id}">全文 →</a></div></div>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>对抗审查台:每条在档判断的幸存概率 | SunWatch Pro</title>
+<meta name="description" content="方法论第 7 层的公开产品面:每条在档判断先经多轮多空对抗,幸存概率、最强反方攻击、证伪条件全部公开。信心变动当天邮件通知。">
+<meta property="og:title" content="对抗审查台:我们先攻击自己的判断,再让你订阅结果">
+<link rel="canonical" href="https://invest.agiscorecard.com/red-team">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/red-team">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/red-team">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/red-team">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:"对抗审查台:每条在档判断的幸存概率",author:{"@type":"Organization",name:"SunWatch Pro"},dateModified:"2026-08-08"})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="/">SunWatch Pro</a> › 对抗审查 · <a href="/en/red-team">English</a></p>
+<h1>🛡 对抗审查台</h1>
+<p>每条重大判断入台账前,先经<b>多轮多空对抗</b>(<a href="/method">方法论第 7 层</a>):多头全力证伪空头,空头全力证伪多头,裁判给幸存概率——低于 50% 不入档。在档判断遇重大反证<b>当日复审并公开下调信心</b>(例:太空顶部 60%→52%,2026-08-08)。下面是当前全部在档判断的攻防现场。</p>
+<div class="card" style="border-left:3px solid var(--accent)"><b>📮 订阅对抗结果,而不是订阅观点</b><div class="meta" style="margin-top:4px">信心上调或下调、证伪线被触发、判断结案——<b>当天一封邮件,其余时候不写</b>。这是可以被检验的承诺:每封邮件对应台账里一次真实变动。</div><div style="margin-top:8px"><a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=red_team" target="_blank" rel="noopener" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:600">免费订阅 →</a> <a href="/#pricing" style="margin-left:10px">要具体价位与实时报警?Pro →</a></div></div>
+${cards}
+<div class="card"><b>🚨 系统级绊线(防相关性错误)</b><div class="meta" style="margin-top:4px">存储/太空/光通信三个顶部判断共享同一前提「AI capex 是周期而非结构」。任两个被证伪,顶区清单整体停用并复盘框架——不逐条零敲碎打认错。</div></div>
+<p class="meta">幸存概率是编辑性评估,非市场赔率;n 小,校准分随样本公开。研究框架,非投资建议。</p>
+${CTA}
+</div></body></html>`;
+}
+
+export function renderRedTeamEN(forecasts) {
+  const items = forecastSlugs(forecasts).filter(({ f }) => f.verdict === "pending" && f.odds != null);
+  const cards = items.map(({ id, f }) =>
+    `<div class="card"><b>${fmtEN(f.date)}</b> · <span class="tag">survival odds</span>${oddsBar(f.odds)}
+<div style="margin-top:6px">${escS(FORECAST_EN[id] || f.call.split(":")[0])}</div>
+<div class="meta" style="margin-top:6px"><b>⚔️ Strongest counter-case:</b> ${escS(f.attackEn || "see the Chinese ledger for the full bull-vs-bear round")} <a href="/forecast/${id}">details →</a></div></div>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red-team desk: survival odds for every open call | SunWatch</title>
+<meta name="description" content="Every open market call survives multiple bull-vs-bear rounds before entering the ledger. Survival odds, strongest counter-case and falsification lines — all public. One email when confidence moves.">
+<meta property="og:title" content="We attack our own calls first. Subscribe to the results.">
+<link rel="canonical" href="https://invest.agiscorecard.com/en/red-team">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/red-team">
+<link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/red-team">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/red-team">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:"Red-team desk: survival odds for every open call",author:{"@type":"Organization",name:"SunWatch Pro"},dateModified:"2026-08-08"})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">Invest</a> › Red team · <a href="/red-team">中文</a> · <b>English</b></p>
+<h1>🛡 Red-team desk</h1>
+<p>Before a call enters the public ledger it survives <b>multiple bull-vs-bear rounds</b> (<a href="/en/method">Layer 7 of the method</a>): each side attacks at full strength, a referee assigns survival odds, and anything under 50% is rejected. When material counter-evidence lands, confidence cuts are published the same day (e.g. the space-top call, 60% → 52% on Aug 8, 2026). Below: the live attack-and-defense state of every open call.</p>
+<div class="card" style="border-left:3px solid var(--accent)"><b>📮 Subscribe to the outcomes, not the opinions</b><div class="meta" style="margin-top:4px">One email when confidence moves, a falsification line is hit, or a call is graded — <b>and not otherwise</b>. A checkable promise: every email maps to a real ledger change.</div><div style="margin-top:8px"><a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=red_team_en" target="_blank" rel="noopener" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:600">Subscribe free →</a> <a href="/#pricing" style="margin-left:10px">Need levels &amp; real-time alerts? Pro →</a></div></div>
+${cards}
+<div class="card"><b>🚨 System-level tripwire</b><div class="meta" style="margin-top:4px">The memory, space and optics top calls share one macro premise — "AI capex is a cycle, not a new structure". Any two falsifications suspend the whole top-zone pattern for framework review.</div></div>
+<p class="meta">Survival odds are editorial estimates, not market odds; sample is small and calibration will be published as it grows. Research framework, not investment advice.</p>
+${CTA_EN}
+</div></body></html>`;
+}
+
 // 仪表盘:单文件 HTML,数据由 /api/feed 与 /api/archive 提供
 export function renderDashboard() {
   return `<!doctype html>
@@ -441,7 +506,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/red-team">🛡 对抗审查</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>

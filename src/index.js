@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -25,7 +25,7 @@ const TRACK_MATCHERS = {
   crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
 };
 function allUrls() {
-  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/method", SITE + "/en/method"];
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
   for (const { id } of forecastSlugs(FORECASTS)) urls.push(`${SITE}/forecast/${id}`);
@@ -68,6 +68,12 @@ export default {
       const snap = await env.SUNWATCH_KV.get(`daily-${d}`, "json");
       if (!snap) return new Response("Not found", { status: 404 });
       return new Response(renderDailyPage(snap), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
+    }
+    if (url.pathname === "/red-team") {
+      return new Response(renderRedTeam(FORECASTS), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname === "/en/red-team") {
+      return new Response(renderRedTeamEN(FORECASTS), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
     }
     if (url.pathname === "/method") {
       return new Response(renderMethod(), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
@@ -803,20 +809,43 @@ function buildSummary(items, origin, label, quotes) {
   const movers = (quotes || []).filter((q) => Math.abs(q.changePct) >= 3)
     .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 5)
     .map((q) => `• ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct}%`);
-  // 【下一触发】距离最近的买/卖触发线(含新机会买点)
+  // 【今日操作】按市场分组(站长 8-8:必须明确"今天能不能买/卖、买卖什么、为什么",
+  // 且美/港/A 股开盘时间不同——早简报是 A/H/韩的盘前,晚简报是美股的盘前)。
+  // "可执行" = 价格已穿越预登记触发线(act 字段就是为什么);没穿越就明说"不动"。
   const qm = Object.fromEntries((quotes || []).map((x) => [x.symbol, x]));
+  const marketOf = (s) => /\.S[SZ]$/.test(s) ? "A股" : /\.HK$/.test(s) ? "港股" : /\.KS$/.test(s) ? "韩股" : "美股";
+  const OPEN_NOTE = { "A股": "09:30 开盘", "港股": "09:30 开盘", "韩股": "08:00 开盘", "美股": "21:30 开盘(夏令)" };
+  const actByMkt = { "A股": [], "港股": [], "韩股": [], "美股": [] };
   const near = [];
   for (const w of WATCHLIST) {
     const q = qm[w.symbol];
     if (!q) continue;
     for (const lv of w.levels) {
       const crossed = (lv.dir === "below" && q.price <= lv.price) || (lv.dir === "above" && q.price >= lv.price);
-      if (crossed) continue;
+      if (crossed) {
+        actByMkt[marketOf(w.symbol)].push(`• ${w.name} ${fmtPrice(q.price)} 已${lv.dir === "below" ? "跌破" : "站上"}${escHtml(lv.label)} ${fmtPrice(lv.price)} → <b>${escHtml(lv.act || "按预登记纪律执行")}</b>`);
+        continue;
+      }
       const dist = Math.abs((lv.price - q.price) / q.price) * 100;
       near.push({ dist, line: `• ${w.name} ${fmtPrice(q.price)} → ${escHtml(lv.label)} ${fmtPrice(lv.price)}(差${dist.toFixed(1)}%)` });
     }
   }
   near.sort((a, b) => a.dist - b.dist);
+  // 场次感知:早简报(北京 08:30)先讲 A/H/韩的今天,美股给预告;晚简报(20:30)反过来。
+  const isMorning = /早盘/.test(label || "");
+  const isEvening = /美股开盘前/.test(label || "");
+  const sessionMkts = isMorning ? ["韩股", "A股", "港股"] : isEvening ? ["美股"] : ["A股", "港股", "韩股", "美股"];
+  const laterMkts = isMorning ? ["美股"] : isEvening ? ["A股", "港股", "韩股"] : [];
+  const opsLines = [];
+  for (const m of sessionMkts) {
+    opsLines.push(`【${m} · ${OPEN_NOTE[m]}】`);
+    if (actByMkt[m].length) opsLines.push(...actByMkt[m]);
+    else opsLines.push("• 无触发线穿越 → <b>今天不动</b>(买卖只在预登记触发响起时发生)");
+  }
+  for (const m of laterMkts) {
+    const n = actByMkt[m].length;
+    opsLines.push(`【${m} · ${OPEN_NOTE[m]}】${n ? `已有 ${n} 条触发待执行,详见${isMorning ? "今晚 20:30" : "明晨 08:30"}简报` : `无触发,${isMorning ? "今晚 20:30" : "明晨 08:30"}简报确认`}`);
+  }
   // 心跳检查(7-17~19 循环中断 3 天的教训,台账 2026-07-13 miss 条目明文要求):
   // 行情由 30 分钟 cron 持续刷新,快照最新时间落后 >2.5h = 抓取循环大概率断了,
   // 静默的断链和"没有新信号"在读者眼里一模一样——所以必须在简报里喊出来。
@@ -829,12 +858,15 @@ function buildSummary(items, origin, label, quotes) {
     `🔭 <b>SunWatch</b> ${today}${label ? " · " + label.replace(/(简报|[()·]|美股隔夜复盘|A\/H 开盘前|A\/H 收盘复盘|执行提醒|\s)/g, "") : ""}`,
     ``,
     ...heartbeat,
+    `🎯 <b>今日操作</b>(能不能买卖、买卖什么、为什么)`,
+    ...opsLines,
+    ``,
     `📌 <b>今日要做</b>`,
     ...(actions.length ? actions : ["今日无必做动作,持仓按兵不动"]),
     ``,
     `🚦 ${lights}`,
     ...(movers.length ? [``, `💹 <b>异动</b>`, ...movers] : []),
-    ...(near.length ? [``, `🎯 <b>最近触发线</b>`, ...near.slice(0, 3).map((n) => n.line)] : []),
+    ...(near.length ? [``, `⏳ <b>最近触发线(未穿越,继续等)</b>`, ...near.slice(0, 3).map((n) => n.line)] : []),
     ``,
     `详情与全部信号:${origin}`,
     `📊 战绩:${origin}/track-record · 🧭 方法论:${origin}/method`,
