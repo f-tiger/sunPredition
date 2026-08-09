@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -28,6 +28,7 @@ function allUrls() {
   const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
+  for (const s of STOCKS) if (s.en) urls.push(`${SITE}/en/stock/${slugify(s.ticker)}`);
   for (const { id } of forecastSlugs(FORECASTS)) urls.push(`${SITE}/forecast/${id}`);
   return urls;
 }
@@ -41,6 +42,21 @@ export default {
     // pSEO 动态路由(含 PV 计数)
     if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast") || url.pathname.startsWith("/en")) {
       ctx.waitUntil(bumpGrowth(env, "pv"));
+    }
+    // EN 标的页(E4):只服务已有忠实英译的标的,其余 404 而不是回退中文页
+    if (url.pathname.startsWith("/en/stock/")) {
+      const slug = url.pathname.slice(10);
+      const s = STOCKS.find((x) => slugify(x.ticker) === slug && x.en);
+      if (!s) return new Response("Not found", { status: 404 });
+      const q = ((await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] }).quotes.find((x) => x.symbol && slugify(x.symbol) === slug || x.name === s.name);
+      const related = STOCKS.filter((x) => x.theme === s.theme && x.ticker !== s.ticker).slice(0, 6);
+      const feed = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
+      const tickerCore = s.ticker.replace(/\.(SH|SZ|HK|KS)$/i, "").replace(/[^A-Za-z0-9]/g, "");
+      const news = feed.filter((i) => {
+        const t = (i.title || "");
+        return (tickerCore.length >= 3 && t.toUpperCase().includes(tickerCore.toUpperCase())) || (s.name.length >= 3 && t.includes(s.name));
+      }).slice(0, 5);
+      return new Response(renderStockPageEN(s, q, related, news), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
     }
     if (url.pathname.startsWith("/stock/")) {
       const slug = url.pathname.slice(7);

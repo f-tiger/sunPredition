@@ -520,3 +520,14 @@ FORECASTS 加 odds/attack 结构化字段);订阅钩子「订阅对抗结果而�
 /status、/help、无效码提示全套 EN;EN 链接一律指 /en/ 面。**排产**(strategy E4):
 SunWatch pSEO 页 EN 化按每 run 2-3 页节奏(忠实翻译既有 zh 分析,FORECAST_EN 模式扩展),
 odds-vs-evidence 周更本就面向英文预测市场读者。
+
+## 2026-08-09 · 每日运行(E4 欧美面第 1 批):/en/stock/* 上线
+
+**spec**:Phase 清单当日无到期项(13F 待 8-14、赔率对照周一),执行 E4 常设节奏
+「pSEO 页 EN 化每 run 2-3 页」。选 3 只欧美读者可直接买的美股(SNDK/MU/SPCX)。
+**实现**:data.js 加 `en` 字段(忠实翻译既有 zh 判断,零新增结论/数字);
+html.js 新增 renderStockPageEN;index.js 加 /en/stock/<slug> 路由——**未英译标的一律
+404,绝不静默回退中文页**(半中半英会同时毁掉 hreflang 与信任);zh 页补反向 hreflang
+与 English 面包屑链接(单向 hreflang 无效);sitemap/IndexNow 自动纳入。
+**验证**:三页本地渲染无中文残留、hreflang 双向各 3 条;冒烟加两条断言(EN 页渲染 +
+未英译 404)。后续 run 继续按此模式扩展 en 字段。
