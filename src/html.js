@@ -78,7 +78,10 @@ ${rel ? `<p class="meta">同赛道标的:${rel}</p>` : ""}
 // 没有忠实英译就不出页(宁可少一页,不出机翻腔或半中半英的页面)。
 export function renderStockPageEN(s, quote, related, news) {
   const e = s.en;
-  const title = `${s.name} (${s.ticker}) — cycle position & pre-registered trigger levels`;
+  // 显示名优先用 en.name:港股/A股标的的 name 是中文,直接渲染会把中文漏进英文页
+  // (SKHY「SK海力士 ADR」就这样漏过一次)。没有 en.name 的按原名(本就是英文)。
+  const nm = e.name || s.name;
+  const title = `${nm} (${s.ticker}) — cycle position & pre-registered trigger levels`;
   const q = quote ? `<div class="card"><b>Live quote</b><div style="font-size:22px;font-weight:700">${quote.price.toLocaleString()} <span style="font-size:14px;color:${quote.changePct >= 0 ? "#16803c" : "#b42318"}">${quote.changePct > 0 ? "+" : ""}${quote.changePct}%</span></div><div class="meta">${(quote.at || "").replace("T", " ").slice(0, 16)} UTC · Yahoo Finance${quote.fromLowPct != null ? ` · +${quote.fromLowPct}% off the 52-week low` : ""}${quote.offHighPct != null ? ` · ${quote.offHighPct}% off the high` : ""}</div></div>` : "";
   const rows = [["Investment case", e.logic], ["Size / market cap", e.mcap], ["Scarcity / moat", e.moat], ["Competition", e.comp], ["Risk", e.risk]]
     .filter(([, v]) => v && v !== "—")
@@ -86,16 +89,16 @@ export function renderStockPageEN(s, quote, related, news) {
   const rel = (related || []).filter((r) => r.en).map((r) => `<a href="/en/stock/${slugify(r.ticker)}">${escS(r.name)}</a>`).join(" · ");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escS(title)} | SunWatch</title>
-<meta name="description" content="${escS(s.name + " (" + s.ticker + "): " + (e.logic || "").slice(0, 110))}">
+<meta name="description" content="${escS(nm + " (" + s.ticker + "): " + (e.logic || "").slice(0, 110))}">
 <meta property="og:title" content="${escS(title)}"><meta property="og:description" content="${escS((e.logic || "").slice(0, 120))}">
 <link rel="canonical" href="https://invest.agiscorecard.com/en/stock/${slugify(s.ticker)}">
 <link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/stock/${slugify(s.ticker)}">
 <link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/stock/${slugify(s.ticker)}">
 <link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en/stock/${slugify(s.ticker)}">
-<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch"},about:s.name})}</script>
-<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"AGI Scorecard",item:"https://agiscorecard.com/"},{"@type":"ListItem",position:2,name:"SunWatch",item:"https://invest.agiscorecard.com/en"},{"@type":"ListItem",position:3,name:s.name}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch"},about:nm})}</script>
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"AGI Scorecard",item:"https://agiscorecard.com/"},{"@type":"ListItem",position:2,name:"SunWatch",item:"https://invest.agiscorecard.com/en"},{"@type":"ListItem",position:3,name:nm}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">SunWatch</a> › ${escS(s.ticker)} · <a href="/stock/${slugify(s.ticker)}">中文</a></p>
-<h1>${escS(s.name)} <span class="tag">${escS(s.ticker)}</span></h1>
+<h1>${escS(nm)} <span class="tag">${escS(s.ticker)}</span></h1>
 ${q}<div class="card">${rows}</div>
 ${(news && news.length) ? `<div class="card"><b>Latest coverage</b><ul style="margin:6px 0 0 18px;padding:0">${news.map((n) => `<li style="margin:3px 0"><a href="${escS(n.link)}" rel="nofollow">${escS(n.title)}</a>${n.published ? ` <span class="meta">${n.published.slice(0, 10)}</span>` : ""}</li>`).join("")}</ul></div>` : ""}
 <div class="card"><b>How this name is traded here</b><div class="meta" style="margin-top:4px">Entry zones, stop lines and sizing are <b>pre-registered before the outcome</b> and executed only when price crosses them — see the <a href="/en/method">eight-layer method</a> and the <a href="/en/red-team">red-team desk</a> where every open call carries survival odds. Past calls, hits and misses alike: <a href="/en/track-record">public track record</a>.</div></div>
