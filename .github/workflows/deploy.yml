@@ -80,9 +80,15 @@ jobs:
           [ "$uen" = "404" ] && echo "untranslated EN stock 404 OK" || { echo "untranslated EN stock should 404, got $uen"; exit 1; }
           # EN 页不得漏中文(标的 name 是中文时曾漏进标题,SKHY 踩过)。允许「中文」
           # 二字——那是切换语言的链接文案本身。
+          # 用 python3 判定:runner 的 C locale 下 grep 的 [一-龥] 区间报
+          # "Invalid collation character",第一版断言就是这样自己把自己弄红的。
           for sp in SNDK SKHY RKLB; do
-            leak=$(curl -s "$URL/en/stock/$sp" | sed 's/中文//g' | grep -c '[一-龥]' || true)
-            [ "$leak" = "0" ] && echo "EN $sp no zh leak OK" || { echo "EN $sp leaks Chinese"; exit 1; }
+            leak=$(curl -s "$URL/en/stock/$sp" | python3 -c "
+          import sys,re
+          h=sys.stdin.read().replace('中文','')
+          print(len(re.findall(r'[一-龥]', h)))
+          ")
+            [ "$leak" = "0" ] && echo "EN $sp no zh leak OK" || { echo "EN $sp leaks Chinese ($leak chars)"; exit 1; }
           done
           # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
           # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)
