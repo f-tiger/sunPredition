@@ -82,13 +82,20 @@ jobs:
           # 二字——那是切换语言的链接文案本身。
           # 用 python3 判定:runner 的 C locale 下 grep 的 [一-龥] 区间报
           # "Invalid collation character",第一版断言就是这样自己把自己弄红的。
+          # 打印泄漏的字符本身:第一版只报数量,定位靠猜(实际是 related 链接里
+          # SKHY 的「海力士」)。也加传播重试——断言可能跑在旧版本上。
           for sp in SNDK SKHY RKLB; do
-            leak=$(curl -s "$URL/en/stock/$sp" | python3 -c "
+            leak=""
+            for i in 1 2 3 4 5 6 7 8; do
+              leak=$(curl -s "$URL/en/stock/$sp" | python3 -c "
           import sys,re
           h=sys.stdin.read().replace('中文','')
-          print(len(re.findall(r'[一-龥]', h)))
+          print(''.join(sorted(set(re.findall(r'[一-龥]', h)))))
           ")
-            [ "$leak" = "0" ] && echo "EN $sp no zh leak OK" || { echo "EN $sp leaks Chinese ($leak chars)"; exit 1; }
+              [ -z "$leak" ] && break
+              sleep 5
+            done
+            [ -z "$leak" ] && echo "EN $sp no zh leak OK" || { echo "EN $sp leaks Chinese: $leak"; exit 1; }
           done
           # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
           # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)

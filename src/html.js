@@ -86,7 +86,9 @@ export function renderStockPageEN(s, quote, related, news) {
   const rows = [["Investment case", e.logic], ["Size / market cap", e.mcap], ["Scarcity / moat", e.moat], ["Competition", e.comp], ["Risk", e.risk]]
     .filter(([, v]) => v && v !== "—")
     .map(([k, v]) => `<div style="margin-top:6px"><b style="color:var(--muted);font-size:13px">${k}</b><div>${escS(v)}</div></div>`).join("");
-  const rel = (related || []).filter((r) => r.en).map((r) => `<a href="/en/stock/${slugify(r.ticker)}">${escS(r.name)}</a>`).join(" · ");
+  // 同样走 en.name:related 里若有中文名标的(如 SKHY「SK海力士 ADR」),
+  // 用 r.name 会把中文漏进英文页——冒烟 2026-08-11 抓到的正是这 3 个字。
+  const rel = (related || []).filter((r) => r.en).map((r) => `<a href="/en/stock/${slugify(r.ticker)}">${escS(r.en.name || r.name)}</a>`).join(" · ");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escS(title)} | SunWatch</title>
 <meta name="description" content="${escS(nm + " (" + s.ticker + "): " + (e.logic || "").slice(0, 110))}">
