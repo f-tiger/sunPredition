@@ -54,6 +54,9 @@ export default {
       const tickerCore = s.ticker.replace(/\.(SH|SZ|HK|KS)$/i, "").replace(/[^A-Za-z0-9]/g, "");
       const news = feed.filter((i) => {
         const t = (i.title || "");
+        // 中文标题的报道不上英文页:信源池是中英混合的,不过滤就会把中文标题
+        // 直接注进英文页面(2026-08-11 冒烟抓到,本地测试因传空 news 数组漏过)。
+        if (/[一-龥]/.test(t)) return false;
         return (tickerCore.length >= 3 && t.toUpperCase().includes(tickerCore.toUpperCase())) || (s.name.length >= 3 && t.includes(s.name));
       }).slice(0, 5);
       return new Response(renderStockPageEN(s, q, related, news), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
