@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN, renderStockIndexEN } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -25,7 +25,7 @@ const TRACK_MATCHERS = {
   crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
 };
 function allUrls() {
-  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team"];
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/en/stocks", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
   for (const s of STOCKS) if (s.en) urls.push(`${SITE}/en/stock/${slugify(s.ticker)}`);
@@ -99,6 +99,9 @@ export default {
     }
     if (url.pathname === "/en/method") {
       return new Response(renderMethodEN(), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
+    }
+    if (url.pathname === "/en/stocks") {
+      return new Response(renderStockIndexEN(STOCKS), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });
     }
     if (url.pathname === "/en") {
       return new Response(renderLandingEN(FORECASTS), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800" } });

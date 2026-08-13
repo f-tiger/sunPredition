@@ -98,8 +98,8 @@ export function renderStockPageEN(s, quote, related, news) {
 <link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/stock/${slugify(s.ticker)}">
 <link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en/stock/${slugify(s.ticker)}">
 <script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"Article",headline:title,author:{"@type":"Organization",name:"SunWatch"},about:nm})}</script>
-<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"AGI Scorecard",item:"https://agiscorecard.com/"},{"@type":"ListItem",position:2,name:"SunWatch",item:"https://invest.agiscorecard.com/en"},{"@type":"ListItem",position:3,name:nm}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
-<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">SunWatch</a> › ${escS(s.ticker)} · <a href="/stock/${slugify(s.ticker)}">中文</a></p>
+<script type="application/ld+json">${JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"AGI Scorecard",item:"https://agiscorecard.com/"},{"@type":"ListItem",position:2,name:"SunWatch",item:"https://invest.agiscorecard.com/en"},{"@type":"ListItem",position:3,name:"Stock coverage",item:"https://invest.agiscorecard.com/en/stocks"},{"@type":"ListItem",position:4,name:nm}]})}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">SunWatch</a> › <a href="/en/stocks">Coverage</a> › ${escS(s.ticker)} · <a href="/stock/${slugify(s.ticker)}">中文</a></p>
 <h1>${escS(nm)} <span class="tag">${escS(s.ticker)}</span></h1>
 ${q}<div class="card">${rows}</div>
 ${(news && news.length) ? `<div class="card"><b>Latest coverage</b><ul style="margin:6px 0 0 18px;padding:0">${news.map((n) => `<li style="margin:3px 0"><a href="${escS(n.link)}" rel="nofollow">${escS(n.title)}</a>${n.published ? ` <span class="meta">${n.published.slice(0, 10)}</span>` : ""}</li>`).join("")}</ul></div>` : ""}
@@ -268,12 +268,13 @@ export function renderLandingEN(forecasts) {
 <div class="card"><b>${latest}</b><span>latest call</span></div>
 </div>
 <p><a class="btnp" href="/en/track-record">See the full track record →</a></p>
+<p class="meta" style="margin-top:-6px"><a href="/en/stocks">Browse stock coverage in English →</a> · <a href="/en/method">the eight-layer method</a> · <a href="/en/red-team">red-team desk</a></p>
 <h2 style="font-size:18px">How it works</h2>
 <div class="card"><b>1 · Registered before the outcome.</b><div class="meta" style="margin-top:3px">Each judgment is written as "if price crosses X, do Y" with a dated entry in the public log — no after-the-fact narratives.</div></div>
 <div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
-<div class="card">Cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card"><a href="/en/stocks">Per-ticker coverage in English</a> · cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
 <div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
@@ -286,6 +287,58 @@ ${CTA_EN}
 }
 
 // 英文战绩页 /en/track-record(命中率 + 每条判断日期/徽章/忠实英文摘要)
+// 英文标的索引 /en/stocks
+// Why this page exists: the per-ticker English pages shipped before anything linked to
+// them, so they were reachable only from the sitemap, from the Chinese page's "English"
+// link, and from each other. An English reader arriving at /en had no way in. The page
+// also states plainly which names are Chinese-only, rather than quietly showing a
+// shorter list than the Chinese side and letting the reader assume that is all there is.
+export function renderStockIndexEN(stocks) {
+  const withEn = stocks.filter((s) => s.en);
+  const themes = [];
+  for (const s of withEn) if (!themes.includes(s.theme)) themes.push(s.theme);
+  const THEME_EN = { "\u76f4\u63a5\u8f7d\u4f53": "Direct vehicle", "\u5b58\u50a8": "Memory", "\u7269\u7406AI": "Physical AI",
+    "\u592a\u7a7a": "Space", "\u80fd\u6e90": "Energy", "\u7a33\u5b9a\u5e01": "Stablecoins",
+    "\u52a0\u5bc6Beta": "Crypto beta", "\u5e01\u5e93\u80a1": "Coin-treasury equities",
+    "\u7279\u6717\u666e\u6982\u5ff5": "Trump-adjacent" };
+  const groups = themes.map((t) => {
+    const rows = withEn.filter((s) => s.theme === t).map((s) => {
+      const nm = s.en.name || s.name;
+      return `<div style="margin-top:8px"><a href="/en/stock/${slugify(s.ticker)}"><b>${escS(nm)}</b></a> <span class="tag">${escS(s.ticker)}</span><div class="meta" style="margin-top:2px">${escS(s.en.logic || "")}</div></div>`;
+    }).join("");
+    return `<div class="card"><b>${escS(THEME_EN[t] || t)}</b>${rows}</div>`;
+  }).join("");
+  // An English page must never print a Chinese ticker string. Anything without an
+  // ASCII-safe label is dropped from the list AND from the count, so the number shown
+  // always equals the number of links shown (2026-08-13: 宇树(待上市) was caught by the
+  // render lint doing exactly this).
+  const ascii = (s) => { const l = s.enLabel || s.ticker; return /^[\x20-\x7E]+$/.test(l) ? l : null; };
+  const zhOnly = stocks.filter((s) => !s.en && ascii(s));
+  const byMarket = {};
+  for (const s of zhOnly) (byMarket[s.market] = byMarket[s.market] || []).push(s);
+  const MKT = { "\u6e2f\u80a1": "Hong Kong", "A\u80a1": "China A-shares", "\u7f8e\u80a1": "US" };
+  const zhList = Object.keys(byMarket).map((m) => `<div style="margin-top:6px"><b style="font-size:13px;color:var(--muted)">${escS(MKT[m] || m)} (${byMarket[m].length})</b><div class="meta">${byMarket[m].map((s) => `<a href="/stock/${slugify(s.ticker)}">${escS(ascii(s))}</a>`).join(" \u00b7 ")}</div></div>`).join("");
+  const title = `AI-cycle stock coverage \u2014 ${withEn.length} names in English | SunWatch`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escS(title)}</title>
+<meta name="description" content="Every US-listed name SunWatch tracks across memory, physical AI, space, energy and crypto \u2014 ${withEn.length} English pages with the investment case, the risk and the competition. Not investment advice.">
+<meta property="og:title" content="${escS(title)}">
+<link rel="canonical" href="https://invest.agiscorecard.com/en/stocks">
+<link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en/stocks">
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en/stocks">
+<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "CollectionPage", name: title, isPartOf: { "@type": "WebSite", name: "SunWatch", url: "https://invest.agiscorecard.com/en" }, hasPart: withEn.map((s) => ({ "@type": "Article", headline: `${s.en.name || s.name} (${s.ticker})`, url: `https://invest.agiscorecard.com/en/stock/${slugify(s.ticker)}` })) })}</script>
+<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "AGI Scorecard", item: "https://agiscorecard.com/" }, { "@type": "ListItem", position: 2, name: "SunWatch", item: "https://invest.agiscorecard.com/en" }, { "@type": "ListItem", position: 3, name: "Stock coverage" }] })}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
+<p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> \u203a <a href="/en">SunWatch</a> \u203a Coverage</p>
+<h1>Stock coverage, in English</h1>
+<p>${withEn.length} names, grouped by the part of the AI cycle they belong to. Each page carries the investment case, the size, what actually protects the business, who it competes with, and the risk that would end the thesis \u2014 plus the live quote. Entry zones, stop lines and sizing are pre-registered before the outcome and are <a href="/#pricing">Pro</a> content; the <a href="/en/track-record">public record</a> shows how the calls turned out, losers included.</p>
+${groups}
+${zhList ? `<div class="card"><b>Chinese-only for now (${zhOnly.length})</b><div class="meta" style="margin-top:3px">These are tracked on the Chinese side and have no English page yet. The links work, the pages are in Chinese \u2014 said plainly rather than showing a shorter list without explanation.</div>${zhList}</div>` : ""}
+<div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score a basket of these tickers against the eight graded AGI-2027 predictions \u2014 free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check \u2192</a></div></div>
+${CTA_EN}
+<p class="meta">Research framework, not investment advice. Markets involve risk of loss.</p>
+</div></body></html>`;
+}
+
 export function renderTrackRecordEN(forecasts) {
   const V = { hit: "✅ Hit", miss: "❌ Miss", partial: "🟡 Partial", pending: "⏳ Pending" };
   const scored = forecasts.filter((f) => f.verdict !== "pending");

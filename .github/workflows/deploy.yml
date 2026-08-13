@@ -84,7 +84,25 @@ jobs:
           # "Invalid collation character",第一版断言就是这样自己把自己弄红的。
           # 打印泄漏的字符本身:第一版只报数量,定位靠猜(实际是 related 链接里
           # SKHY 的「海力士」)。也加传播重试——断言可能跑在旧版本上。
-          for sp in SNDK SKHY RKLB; do
+          # 英文标的索引 /en/stocks(2026-08-13):英文页此前是孤儿——只能从
+          # sitemap / 中文页的 English 链接 / 彼此的 related 进入,/en 上没有入口。
+          idx=$(curl -s "$URL/en/stocks")
+          echo "$idx" | grep -q "Stock coverage, in English" \
+            || { echo "/en/stocks broken"; exit 1; }
+          n=$(echo "$idx" | grep -o 'href="/en/stock/' | wc -l)
+          [ "$n" -ge 18 ] && echo "/en/stocks lists $n EN tickers OK" \
+            || { echo "/en/stocks lists only $n EN tickers (expected >=18)"; exit 1; }
+          curl -s "$URL/en" | grep -q '/en/stocks' \
+            && echo "/en links to coverage index OK" || { echo "/en has no link to /en/stocks"; exit 1; }
+          # 索引页同样不得漏中文:zh-only 名单里有一个标的的 ticker 本身就是中文
+          # (宇树(待上市)),渲染 lint 当场抓到——线上也必须守住。
+          ileak=$(echo "$idx" | python3 -c "
+          import sys,re
+          h=sys.stdin.read().replace('中文','')
+          print(''.join(sorted(set(re.findall(r'[一-龥]', h)))))
+          ")
+          [ -z "$ileak" ] && echo "/en/stocks no zh leak OK" || { echo "/en/stocks leaks Chinese: $ileak"; exit 1; }
+          for sp in SNDK SKHY RKLB TSLA DXYZ TRON; do
             leak=""
             for i in 1 2 3 4 5 6 7 8; do
               leak=$(curl -s "$URL/en/stock/$sp" | python3 -c "
