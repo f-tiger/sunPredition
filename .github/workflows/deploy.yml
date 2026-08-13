@@ -86,7 +86,15 @@ jobs:
           # SKHY 的「海力士」)。也加传播重试——断言可能跑在旧版本上。
           # 英文标的索引 /en/stocks(2026-08-13):英文页此前是孤儿——只能从
           # sitemap / 中文页的 English 链接 / 彼此的 related 进入,/en 上没有入口。
-          idx=$(curl -s "$URL/en/stocks")
+          # 传播重试:新路由的断言必须等 Cloudflare 传播完(本仓库 2026-08-11 已经
+          # 踩过一次,method/red-team 那段就是因此加的重试)。2026-08-13 我在加这段
+          # 时忘了照做,部署后 7 秒断言就跑,直接红了——同一个坑第二次。
+          idx=""
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            idx=$(curl -s "$URL/en/stocks")
+            echo "$idx" | grep -q "Stock coverage, in English" && break
+            sleep 5
+          done
           echo "$idx" | grep -q "Stock coverage, in English" \
             || { echo "/en/stocks broken"; exit 1; }
           n=$(echo "$idx" | grep -o 'href="/en/stock/' | wc -l)
