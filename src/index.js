@@ -308,6 +308,41 @@ export default {
               + `无误后直接回一条:<code>/code ${msg.chat.id}</code>(年付加个「年」),bot 会生成激活码并替你发给他。`, "HTML").catch(() => {});
             return new Response("ok");
           }
+          // 网站组合绑定:/start b_NVDA-AMD-TSM(来自 agiscorecard.com/ai-stock-exposure
+          // 的「盯住这个组合」按钮)。这是全站唯一一个真正在用的「注册」——Telegram 提供
+          // 身份与推送通道,读者只需一次点击,不需要邮箱、密码或验证邮件(而验证邮件目前
+          // 根本发不出去:BEEHIIV_API_KEY 未配置)。
+          // 承诺必须可兑现:这里只答应两件真的会发生的事——每日免费预告,以及追踪指数
+          // 分数变动那天的通知(见 scheduled 里的 notifyBaskets)。不多答应一个字。
+          const bm = (msg.text || "").match(/^\/start\s+b_([A-Za-z0-9-]{1,62})\b/);
+          if (!m && bm) {
+            const tickers = bm[1].toUpperCase().split("-").filter(Boolean).slice(0, 17);
+            const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+            if (!free.includes(msg.chat.id)) {
+              free.push(msg.chat.id);
+              await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
+            }
+            const baskets = (await env.SUNWATCH_KV.get("baskets", "json")) || {};
+            baskets[msg.chat.id] = { t: tickers, at: new Date().toISOString(), en: EN_U };
+            await env.SUNWATCH_KV.put("baskets", JSON.stringify(baskets));
+            const link = "https://agiscorecard.com/ai-stock-exposure?b=" + tickers.join("-");
+            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+              ? `\u2705 <b>Watching your basket:</b> ${escHtml(tickers.join(" \u00b7 "))}\n\n`
+                + "Two things will actually reach you, and nothing else:\n"
+                + "\u2022 the free daily preview (cycle-stage map + how many trigger lines fired)\n"
+                + "\u2022 a message the day the AGI-2027 Thesis Tracker score moves \u2014 that is the day every basket on that tool re-scores, yours included\n\n"
+                + `Your basket: ${link}\n`
+                + "Specific entry/stop levels and real-time trigger alerts are Pro \u2192 /buy"
+              : `\u2705 <b>已盯住你的组合:</b>${escHtml(tickers.join(" \u00b7 "))}\n\n`
+                + "只有两件事会真的发给你,不会有别的:\n"
+                + "\u2022 每日免费信号预告(赛道周期定位 + 当日触发信号数量)\n"
+                + "\u2022 AGI-2027 追踪指数分数变动那天的一条消息——那一天该工具上所有组合都会重新计分,包括你的\n\n"
+                + `你的组合:${link}\n`
+                + "具体买卖价位与实时触发报警属 Pro \u2192 /buy", "HTML");
+            await tgSend({ token: cfg.token, chatId: cfg.chatId },
+              `\ud83e\uddfa <b>有人从网站绑定了组合</b>\n${escHtml(tickers.join(" \u00b7 "))}`, "HTML").catch(() => {});
+            return new Response("ok");
+          }
           // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
           if (!m && /^\/start/.test(msg.text || "")) {
             const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
@@ -550,6 +585,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       if (event.cron === "30 12 * * *") {
         await broadcastFree(env, buildTeaser(q.quotes)).catch(() => {});
       }
+      // 组合绑定者:只在追踪指数分数真的变了那天发一条(承诺兑现路径)
+      await notifyBaskets(env, cfg).catch(() => {});
       // 早间:保存每日复盘快照(内容飞轮:站点每天自动+1个可收录页面)
       if (event.cron === "30 0 * * *") {
         const today = new Date().toISOString().slice(0, 10);
@@ -764,6 +801,55 @@ function feedTrends(items) {
     .slice(0, 2)
     .map(([tag, n]) => ({ key: `f-${tag}`, strong: false,
       text: `[新闻] 「${tag}」24h 内 ${n} 条,热度加速 → 读要闻;若触及在档判断的证伪条件,当日红队复审(第7层)` }));
+}
+
+// 绑定组合的通知:只在 agiscorecard 追踪指数分数真的变化时才发。
+//
+// 这是「/start b_<组合>」那句承诺的兑现路径——先有这段代码,才有资格在绑定时说
+// 「分数变动那天你会收到一条」。没有它,那句话就是又一个做不到的承诺(本周已经删过
+// 两个)。分数来自 index-history.json(站点自己重算并落盘的权威值),不在这里重新
+// 实现权重算法——重复实现必然漂移。
+// 这里刻意不宣称「你的组合分数变了 X」:某条判定翻转不一定影响每一个组合,而组合
+// 权重映射在另一个仓库。只说真话:指数动了,该工具上的组合会重新计分,并给回他自己
+// 的永久链接让他自己看。
+async function notifyBaskets(env, cfg) {
+  const baskets = (await env.SUNWATCH_KV.get("baskets", "json")) || {};
+  const ids = Object.keys(baskets);
+  if (!ids.length) return;
+  let score = null, asOf = null;
+  try {
+    const r = await fetch("https://agiscorecard.com/index-history.json", { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return;
+    const h = await r.json();
+    const arr = Array.isArray(h) ? h : (h.history || h.entries || []);
+    const last = arr[arr.length - 1];
+    if (!last) return;
+    score = Number(last.score);
+    asOf = last.date || last.asOf || null;
+  } catch (e) { return; }
+  if (!Number.isFinite(score)) return;
+  const prev = await env.SUNWATCH_KV.get("agi-score-last");
+  await env.SUNWATCH_KV.put("agi-score-last", String(score));
+  // 第一次运行只是建立基线,不发消息——否则每个新部署都会诈一次。
+  if (prev === null || prev === undefined) return;
+  const before = Number(prev);
+  if (!Number.isFinite(before) || before === score) return;
+  const dir = score > before ? "\u2191" : "\u2193";
+  for (const id of ids) {
+    const b = baskets[id] || {};
+    const t = Array.isArray(b.t) ? b.t : [];
+    const link = "https://agiscorecard.com/ai-stock-exposure?b=" + t.join("-");
+    const txt = b.en
+      ? `\ud83d\udcca <b>The AGI-2027 Thesis Tracker moved</b> ${before} ${dir} ${score}${asOf ? ` (as of ${escHtml(String(asOf))})` : ""}\n\n`
+        + "A verdict changed, so every basket on the exposure tool re-scores \u2014 open yours to see where it lands now.\n\n"
+        + `${escHtml(t.join(" \u00b7 "))}\n${link}`
+      : `\ud83d\udcca <b>AGI-2027 \u8ffd\u8e2a\u6307\u6570\u53d8\u4e86</b>${before} ${dir} ${score}${asOf ? `(\u622a\u81f3 ${escHtml(String(asOf))})` : ""}\n\n`
+        + "\u6709\u4e00\u6761\u5224\u5b9a\u53d1\u751f\u4e86\u53d8\u5316\uff0c\u56e0\u6b64\u66b4\u9732\u5ea6\u5de5\u5177\u4e0a\u7684\u6bcf\u4e2a\u7ec4\u5408\u90fd\u4f1a\u91cd\u65b0\u8ba1\u5206\u2014\u2014\u6253\u5f00\u4f60\u7684\u770b\u73b0\u5728\u843d\u5728\u54ea\u91cc\u3002\n\n"
+        + `${escHtml(t.join(" \u00b7 "))}\n${link}`;
+    await tgSend({ token: cfg.token, chatId: id }, txt, "HTML").catch(() => {});
+  }
+  await tgSend({ token: cfg.token, chatId: cfg.chatId },
+    `\ud83d\udcca \u8ffd\u8e2a\u6307\u6570 ${before} \u2192 ${score}\uff0c\u5df2\u901a\u77e5 ${ids.length} \u4f4d\u7ec4\u5408\u7ed1\u5b9a\u8005\u3002`, "HTML").catch(() => {});
 }
 
 async function siteTrends() {
