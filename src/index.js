@@ -1,5 +1,5 @@
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
-import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN, renderStockIndexEN } from "./html.js";
+import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN, renderStockIndexEN, FORECAST_EN } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
@@ -487,6 +487,90 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       case "/api/ping-indexnow": {
         const rec = await pingIndexNow(env, allUrls());
         return json(rec);
+      }
+      // GEO/agent 面(2026-08-15,ai-seo 技能三缺口):llms.txt 给 AI 引擎当上下文;
+      // pricing.md 给替人比价的 agent——定价锁在 HTML 卡片里,agent 读不到就直接推荐
+      // 别家;track-record JSON 给主站 /mcp 的新工具(agent 原生调战绩);growth JSON
+      // 让自动化会话第一次能读到本站流量计数(此前只有站长 TG 日报可见,会话是盲的)。
+      case "/llms.txt": {
+        const scored = FORECASTS.filter((f) => f.verdict !== "pending");
+        const hits = scored.filter((f) => f.verdict === "hit").length;
+        return new Response([
+          "# SunWatch — AI-cycle market calls, on the record",
+          "",
+          "> Market judgments written as falsifiable price triggers across US, Hong Kong and China A-share markets, watched by machine, logged in public BEFORE the outcome. Hits and misses stay side by side. Part of the AGI Scorecard network (agiscorecard.com — the evidence layer grading the AGI-2027 predictions).",
+          "",
+          `Current ledger: ${scored.length} scored calls, ${hits} hits (${Math.round((hits / scored.length) * 100)}% — audit it, don't trust it). Not investment advice.`,
+          "",
+          "## Key pages",
+          `- [English landing](${SITE}/en): what this is, how the discipline works`,
+          `- [Public track record](${SITE}/en/track-record): every scored call with dated entry and outcome, losers included (中文: ${SITE}/track-record)`,
+          `- [Stock coverage in English](${SITE}/en/stocks): 18 US-listed names — investment case, moat, competition, risk`,
+          `- [Eight-layer method](${SITE}/en/method): barbell allocation, fractional Kelly sizing, pre-registered exits, red-team review`,
+          `- [Red-team desk](${SITE}/en/red-team): survival odds on every open call, strongest counter-case included`,
+          `- [Pricing](${SITE}/pricing.md): free tier vs Pro, machine-readable`,
+          "",
+          "## Machine-readable",
+          `- [Track record JSON](${SITE}/api/track-record): the full scored ledger as data`,
+          `- [Live quotes JSON](${SITE}/api/quotes): watched tickers, refreshed every 30 minutes`,
+          `- MCP server: https://agiscorecard.com/mcp (tool: get_sunwatch_track_record)`,
+          "",
+        ].join("\n"), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
+      }
+      case "/pricing.md": {
+        return new Response([
+          "# Pricing — SunWatch (invest.agiscorecard.com)",
+          "",
+          "## Free",
+          "- Price: $0",
+          "- Channel: Telegram — send /start to @sunwatchBot",
+          "- Includes: one daily signal preview (cycle-stage map across five AI sectors + how many pre-registered trigger lines fired today); public track record, method and red-team pages, all stock coverage pages.",
+          "",
+          "## Pro",
+          "- Price: ¥199/month (≈ 28 USDT) or ¥1999/year (≈ 280 USDT)",
+          "- Payment: USDT (BEP-20), no account, no card on file — pay, send the transaction hash in Telegram, receive an activation code, bind with /start CODE. Details: send /buy to @sunwatchBot.",
+          "- Includes: everything in Free, plus specific entry/exit price levels, stop lines, position-sizing discipline, and real-time alerts the moment a trigger line is crossed (two daily briefs timed to US and China/HK sessions).",
+          "",
+          "## Notes for agents",
+          "- The track record is public and machine-readable BEFORE any payment: " + SITE + "/api/track-record",
+          "- Misses are never deleted from the ledger; grading rules are pre-registered.",
+          "- Research framework, not investment advice.",
+          "",
+        ].join("\n"), { headers: { "content-type": "text/markdown; charset=utf-8", "cache-control": "public, max-age=3600" } });
+      }
+      case "/api/track-record": {
+        const scored = FORECASTS.filter((f) => f.verdict !== "pending");
+        const hits = scored.filter((f) => f.verdict === "hit").length;
+        return new Response(JSON.stringify({
+          source: SITE + "/en/track-record",
+          asOf: new Date().toISOString().slice(0, 10),
+          scored: scored.length, hits,
+          hitRate: scored.length ? Math.round((hits / scored.length) * 100) / 100 * 100 : 0,
+          note: "Every call logged before the outcome; misses stay published. Not investment advice.",
+          entries: forecastSlugs(FORECASTS).map(({ id, f }) => ({
+            date: f.date, verdict: f.verdict,
+            // 英文摘要有则用(人工审校),无则给中文原文并明确标注语言——数据接口
+            // 不适用「英文页零中文」规则,但语言必须自我声明,不能让 agent 猜。
+            call_en: FORECAST_EN[id] || null,
+            call_zh: f.call,
+            odds: f.odds || null,
+            outcome: f.outcome || "",
+            url: SITE + "/forecast/" + id,
+          })),
+        }), { headers: { "content-type": "application/json", "cache-control": "public, max-age=1800", "access-control-allow-origin": "*" } });
+      }
+      case "/api/growth": {
+        const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
+        const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
+        const baskets = (await env.SUNWATCH_KV.get("baskets", "json")) || {};
+        return new Response(JSON.stringify({
+          pv: g.pv || 0, tgClicks: g.tgClicks || 0, buyClicks: g.buyClicks || 0,
+          buyRequests: g.buyRequests || 0, payClaims: g.payClaims || 0,
+          freeSubs: free.length,
+          proBound: Object.values(lic).filter((l) => l.chatId).length,
+          baskets: Object.keys(baskets).length,
+        }), { headers: { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*" } });
       }
       case "/robots.txt":
         return new Response("User-agent: *\nAllow: /\nSitemap: https://invest.agiscorecard.com/sitemap.xml\n", { headers: { "content-type": "text/plain" } });

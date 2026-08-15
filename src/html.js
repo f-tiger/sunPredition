@@ -211,7 +211,7 @@ ${cards}${CTA}
 }
 
 // 英文战绩摘要(忠实于已建档中文判断,人工审校;键=forecastSlugs 的 id)。缺失则英文页仅显示日期+徽章,绝不显示中文。
-const FORECAST_EN = {
+export const FORECAST_EN = {
   "2026-07-05-1": "Storage sector in the late stage of its peak zone: risk outweighs opportunity — distribute.",
   "2026-07-05-2": "IPO-week base case (40%): peers spike before listing, distribute into the spike. Missed — the crash had already happened; I cited stale June-peak data and mis-weighted the scenario.",
   "2026-07-05-3": "Cold-reception scenario (25%): pricing discount widens, break-issue (below IPO price) risk rises.",

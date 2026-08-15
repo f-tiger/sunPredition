@@ -123,6 +123,17 @@ jobs:
             done
             [ -z "$leak" ] && echo "EN $sp no zh leak OK" || { echo "EN $sp leaks Chinese: $leak"; exit 1; }
           done
+          # GEO/agent 面探针(2026-08-15):四条新路由,任一 404 即红
+          curl -s "$URL/llms.txt" | grep -q "SunWatch" || { echo "llms.txt broken"; exit 1; }
+          curl -s "$URL/pricing.md" | grep -q "199" || { echo "pricing.md broken"; exit 1; }
+          curl -s "$URL/api/track-record" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          assert d['scored']>=8 and d['entries'], 'track-record json bad'
+          assert all(e.get('call_en') or e.get('call_zh') for e in d['entries'])
+          print('track-record json OK:',d['scored'],'scored,',d['hits'],'hits')
+          " || { echo "api/track-record broken"; exit 1; }
+          curl -s "$URL/api/growth" | grep -q '"pv"' || { echo "api/growth broken"; exit 1; }
           # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
           # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)
           tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)
