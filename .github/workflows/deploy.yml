@@ -139,6 +139,19 @@ jobs:
           tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)
           echo "site trends probe: $tr"
           echo "$tr" | grep -q "searches" && echo "trends endpoint OK" || echo "trends endpoint not ready (non-blocking)"
+          # 重大信息通道端到端(2026-08-16):真的走一遍「拉判定 → 发站长 TG」,不是探活。
+          # cron 每 30 分钟才跑,而「通道通没通」不该等半小时、更不该靠猜——每次部署实测一次。
+          # 密钥从源码取,不在此重复一份:同一个值写两处早晚漂移。
+          ak=$(grep -oE 'AGI_ALERT_KEY = "[a-f0-9]{32}"' src/index.js | grep -oE '[a-f0-9]{32}')
+          [ -n "$ak" ] || { echo "alert key not found in src"; exit 1; }
+          arun=""
+          for i in 1 2 3 4 5 6; do
+            arun=$(curl -s --max-time 25 "$URL/api/agi-alerts-run?k=$ak")
+            echo "$arun" | grep -q '"ok":true' && break
+            echo "alert channel not live yet ($arun), retry $i"; sleep 5
+          done
+          echo "owner alert run: $arun"
+          echo "$arun" | grep -q '"ok":true' || { echo "owner alert channel broken"; exit 1; }
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

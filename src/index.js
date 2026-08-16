@@ -158,6 +158,21 @@ export default {
         const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro, actions: ACTION_QUEUE, coreSignals: CORE_SIGNALS };
         return json(pro ? full : redact(full));
       }
+      // 手动触发一次 agiscorecard 重大信息推送(部署冒烟用,以 feed 密钥鉴权)。
+      // 存在的理由:cron 每 30 分钟才跑一次,而「通道到底通没通」不该等半小时才知道,
+      // 更不该靠猜——每次部署都真发一次,断了立刻红。
+      // 天然幂等:告警在对面按状态去重、hello 只发一次,所以重复调用最多什么都不发。
+      case "/api/agi-alerts-run": {
+        const k = env.AGI_ALERT_KEY || AGI_ALERT_KEY;
+        if (!k || url.searchParams.get("k") !== k) return json({ ok: false, error: "鉴权失败" });
+        const cfg = await getTgConfig(env);
+        if (!cfg) return json({ ok: false, error: "TG 未配置" });
+        try {
+          return json({ ok: true, ...await notifyAgiAlerts(env, cfg) });
+        } catch (e) {
+          return json({ ok: false, error: String(e && e.message || e) });
+        }
+      }
       // ---- Pro 会员体系 ----
       // 生成激活码(站长专用,以 bot token 鉴权):/api/gen-code?token=<bot token>
       case "/api/gen-code": {
@@ -954,21 +969,25 @@ const AGI_ALERT_KEY = "1739d525ac7656e17178a4f7fc5ede09";
 async function notifyAgiAlerts(env, cfg) {
   const k = encodeURIComponent(env.AGI_ALERT_KEY || AGI_ALERT_KEY);
   const r = await fetch(`${AGI_ALERT_FEED}?k=${k}`, { signal: AbortSignal.timeout(8000) });
-  if (!r.ok) return;
+  if (!r.ok) return { feed: r.status };
   const d = await r.json();
   const alerts = (d && d.alerts) || [];
 
   // 接通确认(站长偏好 TG 触达确认):只在第一次真正拿到有效响应时发一条,此后永久静默。
   // 说的是刚刚发生的真事——通道接通,不是编造的"新闻"。
+  let hello = null;
   if (!(await env.SUNWATCH_KV.get("agi-alert-hello"))) {
-    await env.SUNWATCH_KV.put("agi-alert-hello", new Date().toISOString());
-    await sendTelegram(cfg,
+    const res = await sendTelegram(cfg,
       "🔗 <b>agiscorecard 重大信息通道已接通</b>\n\n"
       + "今后只在真有重大信息时出声：追踪指数变动、订阅里程碑、agent 首次调用 MCP、"
       + "订阅漏斗报错、读者与 AI 引荐上台阶——每条带该采取的动作。不做每日摘要。")
-      .catch(() => {});
+      .catch(() => null);
+    hello = !!(res && res.ok);
+    // 只有真发出去了才记标志,否则下一轮重试——先记标志再发送会把一条发失败的
+    // 确认永久吞掉,而"通道没通"恰恰是最需要说出口的那种失败。
+    if (hello) await env.SUNWATCH_KV.put("agi-alert-hello", new Date().toISOString());
   }
-  if (!alerts.length) return;
+  if (!alerts.length) return { hello, fetched: 0, sent: 0 };
 
   let sent = 0;
   for (const a of alerts.slice(0, 5)) {
@@ -979,8 +998,11 @@ async function notifyAgiAlerts(env, cfg) {
       .catch(() => null);
     if (res && res.ok) sent++;
   }
-  if (sent === Math.min(alerts.length, 5))
+  const want = Math.min(alerts.length, 5);
+  const acked = sent === want;
+  if (acked)
     await fetch(`${AGI_ALERT_FEED}?ack=1&k=${k}`, { signal: AbortSignal.timeout(8000) }).catch(() => {});
+  return { hello, fetched: alerts.length, sent, acked };
 }
 
 async function siteTrends() {
