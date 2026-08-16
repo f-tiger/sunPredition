@@ -621,6 +621,11 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
     const quoteResult = await refreshQuotes(env).catch(() => null);
     const cfg = await getTgConfig(env);
     if (!cfg) return;
+    // agiscorecard 重大信息(站长 2026-08-16:「有重大信息,给我指导提醒」)。
+    // 判定不在这里做:什么算"重大"由对面按它自己的 D1 决定,本 worker 只负责送达——
+    // TG 凭据只在这里。同 notifyBaskets 的纪律:绝不在第二处重新实现对面的逻辑。
+    // 放在最前面且静默降级:对面挂了也绝不影响下面的行情简报与价格触发报警。
+    await notifyAgiAlerts(env, cfg).catch(() => {});
     // 价格穿越触发线:实时报警(独立于新闻)
     if (quoteResult && quoteResult.crossings.length) {
       const lines = quoteResult.crossings.map(
@@ -934,6 +939,48 @@ async function notifyBaskets(env, cfg) {
   }
   await tgSend({ token: cfg.token, chatId: cfg.chatId },
     `\ud83d\udcca \u8ffd\u8e2a\u6307\u6570 ${before} \u2192 ${score}\uff0c\u5df2\u901a\u77e5 ${ids.length} \u4f4d\u7ec4\u5408\u7ed1\u5b9a\u8005\u3002`, "HTML").catch(() => {});
+}
+
+// agiscorecard 重大信息 → 站长 TG。判定全在对面(/api/owner-alerts 按其 D1 决定什么
+// 算"重大",每条自带该采取的动作);这里只做送达,因为 TG 凭据只在本 worker。
+//
+// 先发后 ack:取回时不 ack,全部发送成功才回调标记已送达。发送失败就不标记,下一轮
+// cron 自动重发——「取过就算处理过」正是对面刚修掉的 bug,这一侧不能把它再造回来。
+// 对面首次调用只建基线并返回空,所以接通当天不会拿既有旧状态炸一轮。
+// 密钥只读且 feed 只含计数(邮箱等 PII 绝不跨 worker),可用变量 AGI_ALERT_KEY 轮换。
+const AGI_ALERT_FEED = "https://agiscorecard.com/api/owner-alerts";
+const AGI_ALERT_KEY = "1739d525ac7656e17178a4f7fc5ede09";
+
+async function notifyAgiAlerts(env, cfg) {
+  const k = encodeURIComponent(env.AGI_ALERT_KEY || AGI_ALERT_KEY);
+  const r = await fetch(`${AGI_ALERT_FEED}?k=${k}`, { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) return;
+  const d = await r.json();
+  const alerts = (d && d.alerts) || [];
+
+  // 接通确认(站长偏好 TG 触达确认):只在第一次真正拿到有效响应时发一条,此后永久静默。
+  // 说的是刚刚发生的真事——通道接通,不是编造的"新闻"。
+  if (!(await env.SUNWATCH_KV.get("agi-alert-hello"))) {
+    await env.SUNWATCH_KV.put("agi-alert-hello", new Date().toISOString());
+    await sendTelegram(cfg,
+      "🔗 <b>agiscorecard 重大信息通道已接通</b>\n\n"
+      + "今后只在真有重大信息时出声：追踪指数变动、订阅里程碑、agent 首次调用 MCP、"
+      + "订阅漏斗报错、读者与 AI 引荐上台阶——每条带该采取的动作。不做每日摘要。")
+      .catch(() => {});
+  }
+  if (!alerts.length) return;
+
+  let sent = 0;
+  for (const a of alerts.slice(0, 5)) {
+    // sendTelegram 永远返回对象,失败时是 {ok:false} —— 必须看 .ok,否则一次失败的
+    // 推送会被当成已送达 ack 掉,消息就永远丢了。
+    const res = await sendTelegram(cfg,
+      `🔔 <b>${escHtml(String(a.title || ""))}</b>\n\n${escHtml(String(a.action || ""))}`)
+      .catch(() => null);
+    if (res && res.ok) sent++;
+  }
+  if (sent === Math.min(alerts.length, 5))
+    await fetch(`${AGI_ALERT_FEED}?ack=1&k=${k}`, { signal: AbortSignal.timeout(8000) }).catch(() => {});
 }
 
 async function siteTrends() {
