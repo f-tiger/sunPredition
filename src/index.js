@@ -1038,6 +1038,8 @@ async function notifyAgiAlerts(env, cfg) {
   if (acked)
     await fetch(`${AGI_ALERT_FEED}?ack=1&k=${k}`, { signal: AbortSignal.timeout(8000) }).catch(() => {});
   return { hello, fetched: alerts.length, sent, acked };
+}
+
 // 抄作业成绩单绑定者的通知:只在**新的 13F 真的落地**那天发。
 //
 // 这是「/start h_<选择>」那句承诺的兑现路径,和 notifyBaskets 同一个原则:先有这段

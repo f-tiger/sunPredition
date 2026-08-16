@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 先用和 wrangler 同一个解析器(esbuild/ESM)过一遍语法。
+      # `node --check` 按 CommonJS 脚本解析,漏掉过一个未闭合的函数,部署才红。
+      - name: Parse with the same parser wrangler uses
+        run: npx -y esbuild@0.25 src/index.js --bundle --format=esm --outfile=/dev/null
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
         with:
