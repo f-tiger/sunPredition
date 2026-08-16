@@ -358,6 +358,39 @@ export default {
               `\ud83e\uddfa <b>有人从网站绑定了组合</b>\n${escHtml(tickers.join(" \u00b7 "))}`, "HTML").catch(() => {});
             return new Response("ok");
           }
+          // 抄作业成绩单绑定:/start h_sd-cw_20240814
+          // (来自 compass.agiscorecard.com/{zh,en}/track-record 的「这份作业更新时通知我」)
+          // 载荷里是投资人短码 + 起始申报日。这里**刻意不解析短码含义**——短码表只存在
+          // 罗盘那个仓库里,这边原样拼回链接即可。这样对面加人、改名都不需要动这个仓。
+          // 承诺同样只写真的会发生的事:见 scheduled 里的 notifyHomework()。
+          const hm = (msg.text || "").match(/^\/start\s+h_([a-z]{2}(?:-[a-z]{2})*)_(\d{8})\b/);
+          if (!m && !bm && hm) {
+            const codes = hm[1];
+            const from = `${hm[2].slice(0, 4)}-${hm[2].slice(4, 6)}-${hm[2].slice(6, 8)}`;
+            const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
+            if (!free.includes(msg.chat.id)) {
+              free.push(msg.chat.id);
+              await env.SUNWATCH_KV.put("free-subs", JSON.stringify(free));
+            }
+            const hw = (await env.SUNWATCH_KV.get("homework", "json")) || {};
+            hw[msg.chat.id] = { w: codes, from, at: new Date().toISOString(), en: EN_U };
+            await env.SUNWATCH_KV.put("homework", JSON.stringify(hw));
+            const hlink = homeworkLink(codes, from, EN_U);
+            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+              ? "✅ <b>Watching this copy-homework selection.</b>\n\n"
+                + "A 13F lands four times a year. When the next filing from these investors arrives and the "
+                + "scorecard recomputes, you get one message — with the link back to this exact selection.\n\n"
+                + `Your selection: ${hlink}\n\n`
+                + "You will also get the free daily market preview. Nothing else."
+              : "✅ <b>已盯住这份抄作业选择。</b>\n\n"
+                + "13F 一年只落地 4 次。下一次这几位的新申报出来、成绩单重算时，"
+                + "你会收到一条——带回你这份选择的链接。\n\n"
+                + `你的选择：${hlink}\n\n`
+                + "另外你会收到每日免费行情预告。除此之外没有别的。", "HTML");
+            await tgSend({ token: cfg.token, chatId: cfg.chatId },
+              `🏆 <b>有人绑定了抄作业选择</b>\n${escHtml(codes)} · ${escHtml(from)} 起`, "HTML").catch(() => {});
+            return new Response("ok");
+          }
           // 无码 /start:注册为免费订户(线索漏斗),每日收预告版
           if (!m && /^\/start/.test(msg.text || "")) {
             const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
@@ -691,6 +724,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       }
       // 组合绑定者:只在追踪指数分数真的变了那天发一条(承诺兑现路径)
       await notifyBaskets(env, cfg).catch(() => {});
+      // 抄作业绑定者:只在新的 13F 真的落地那天发一条(同上,承诺兑现路径)
+      await notifyHomework(env, cfg).catch(() => {});
       // 早间:保存每日复盘快照(内容飞轮:站点每天自动+1个可收录页面)
       if (event.cron === "30 0 * * *") {
         const today = new Date().toISOString().slice(0, 10);
@@ -1003,6 +1038,60 @@ async function notifyAgiAlerts(env, cfg) {
   if (acked)
     await fetch(`${AGI_ALERT_FEED}?ack=1&k=${k}`, { signal: AbortSignal.timeout(8000) }).catch(() => {});
   return { hello, fetched: alerts.length, sent, acked };
+// 抄作业成绩单绑定者的通知:只在**新的 13F 真的落地**那天发。
+//
+// 这是「/start h_<选择>」那句承诺的兑现路径,和 notifyBaskets 同一个原则:先有这段
+// 代码,才有资格在绑定时把话说出口。
+//
+// 触发条件刻意不是「JSON 的 generated 变了」——那个日期每跑一次回测就会变,手动重跑
+// 会把人吵醒,而承诺说的是「下一次申报出来时」。所以看的是全体投资人里**最新的那个
+// 申报日**:它前进,才代表真的有新申报进来了。
+//
+// 同样刻意不宣称「你那份涨了多少」:收益要按每个人自己选的起点和投资人重算,而那套
+// 算法在罗盘那个仓库里,在这边重新实现必然漂移。只说真话:重算了,给回他自己的链接。
+function homeworkLink(codes, from, en) {
+  const lang = en ? "en" : "zh";
+  return `https://compass.agiscorecard.com/${lang}/track-record/?w=${codes}&from=${from}`;
+}
+
+async function notifyHomework(env, cfg) {
+  const hw = (await env.SUNWATCH_KV.get("homework", "json")) || {};
+  const ids = Object.keys(hw);
+  if (!ids.length) return;
+  let latest = null, asOf = null;
+  try {
+    const r = await fetch("https://compass.agiscorecard.com/copy-homework.json", { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return;
+    const d = await r.json();
+    const invs = Array.isArray(d.investors) ? d.investors : [];
+    if (!invs.length) return;
+    for (const iv of invs) if (iv && iv.to && (!latest || iv.to > latest)) latest = iv.to;
+    asOf = d.generated || null;
+  } catch (e) { return; }
+  if (!latest) return;
+  const prev = await env.SUNWATCH_KV.get("homework-last");
+  await env.SUNWATCH_KV.put("homework-last", latest);
+  // 第一次运行只建基线,不发消息——否则一次部署就会诈所有人一次。
+  if (prev === null || prev === undefined) return;
+  if (!(latest > prev)) return;
+  for (const id of ids) {
+    const b = hw[id] || {};
+    const link = homeworkLink(b.w || "", b.from || "", b.en);
+    const txt = b.en
+      ? "🏆 <b>A new 13F landed — the Copy-Homework Scorecard just recomputed.</b>\n\n"
+        + `Latest filing date in the data: ${escHtml(latest)}`
+        + (asOf ? ` (rebuilt ${escHtml(String(asOf))})` : "") + "\n\n"
+        + "Your selection re-scores with it — open it to see where it lands now.\n"
+        + link
+      : "🏆 <b>新的 13F 落地了——抄作业成绩单已重算。</b>\n\n"
+        + `数据里最新的申报日：${escHtml(latest)}`
+        + (asOf ? `（重算于 ${escHtml(String(asOf))}）` : "") + "\n\n"
+        + "你那份选择也跟着重新算了——打开看看现在是多少。\n"
+        + link;
+    await tgSend({ token: cfg.token, chatId: id }, txt, "HTML").catch(() => {});
+  }
+  await tgSend({ token: cfg.token, chatId: cfg.chatId },
+    `🏆 新 13F ${escHtml(prev)} → ${escHtml(latest)}，已通知 ${ids.length} 位抄作业绑定者。`, "HTML").catch(() => {});
 }
 
 async function siteTrends() {
