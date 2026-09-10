@@ -1,4 +1,5 @@
-import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE } from "./data.js";
+import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE, HOLDINGS} from "./data.js";
+import { computeLevels, decide, distances, alignBars, PARAMS } from "./rules.js";
 import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN, renderStockIndexEN, FORECAST_EN } from "./html.js";
 
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
@@ -515,6 +516,56 @@ export default {
         const r = await sendTelegram(cfg, buildSummary(items, SITE, null, q.quotes));
         return json(r);
       }
+      // 参数表(2026-09-10)。机械系统最容易失效的方式不是参数选错,是**事后改参数去迎合
+      // 已经发生的行情**,而那种改动在聊天里看不见。把参数摊在一个公开页面上,改了就有人能对。
+      case "/rules": {
+        const qs = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+        const rows = holdingDecisions(qs.quotes).map((h) => {
+          const L = h.levels;
+          return `<tr><td>${escHtml(h.name)}</td><td class="n">${L ? L.close : "—"}</td>` +
+            `<td class="n">${L && L.trendLine != null ? L.trendLine : "—"}</td>` +
+            `<td class="n">${L && L.stop != null ? L.stop : "—"}</td>` +
+            `<td class="n">${L && L.exitLine != null ? L.exitLine : "—"}</td>` +
+            `<td class="n">${L && L.addLine != null ? L.addLine : "—"}</td>` +
+            `<td><b>${escHtml(h.decision.state)}</b> <span class="mut">${h.decision.rule}</span></td></tr>`;
+        }).join("");
+        const html = `<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>执行规则 · SunWatch</title>
+<meta name="robots" content="noindex">
+<style>body{font:15px/1.65 -apple-system,"Noto Sans SC",sans-serif;max-width:820px;margin:0 auto;padding:28px 18px;color:#111}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:26px 0 8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;margin:10px 0}
+td,th{border-bottom:1px solid rgba(0,0,0,.1);padding:7px 6px;text-align:left;font-size:14px}
+.n{text-align:right}.mut{color:#666;font-size:12px}
+code{background:#f4f4f6;padding:1px 5px;border-radius:4px}
+.box{background:#f7f7f8;border-left:3px solid #002FA7;padding:12px 14px;margin:14px 0;border-radius:0 8px 8px 0}
+@media(max-width:640px){table{display:block;overflow-x:auto}}</style>
+<h1>执行规则</h1>
+<div class="mut">读数时间 ${escHtml(qs.at || "—")} · 每 30 分钟重算</div>
+<div class="box"><b>这一页存在的理由:</b>规则的参数如果只活在代码里,事后为了迎合行情去调它,不会有任何人发现。所以摊在这里。<br>
+<b>规则不看你的成本价</b>——系统一旦知道你套了多少,「等回本再走」就有了入口。输入只有价格序列。</div>
+<h2>今天的读数</h2>
+<table><tr><th>标的</th><th class="n">现价</th><th class="n">趋势线</th><th class="n">止损</th><th class="n">清仓线</th><th class="n">加仓线</th><th>状态</th></tr>${rows}</table>
+<h2>参数(固定)</h2>
+<table>
+<tr><td>趋势线</td><td class="n">${PARAMS.trendDays} 日均线</td><td class="mut">杠杆品用 ${PARAMS.fastDays} 日</td></tr>
+<tr><td>清仓线</td><td class="n">${PARAMS.exitDays} 日最低</td><td class="mut">杠杆品收紧到 ${PARAMS.levExitDays} 日</td></tr>
+<tr><td>加仓线</td><td class="n">${PARAMS.entryDays} 日最高</td><td class="mut">杠杆品无加仓规则</td></tr>
+<tr><td>止损</td><td class="n">区间高 − ${PARAMS.atrMult}×ATR${PARAMS.atrDays}</td><td class="mut">杠杆品 ${PARAMS.levAtrMult}×</td></tr>
+</table>
+<h2>规则梯(自上而下,第一条命中即执行)</h2>
+<table>
+<tr><td><code>R1</code></td><td>收盘 &lt; 清仓线 → <b>清仓</b></td></tr>
+<tr><td><code>R2</code></td><td>收盘 &lt; 止损 → <b>卖出 1/3</b></td></tr>
+<tr><td><code>R5</code></td><td>收盘 &gt; 加仓线 且 &gt; 趋势线 → <b>买入 1/3</b></td></tr>
+<tr><td><code>R4</code></td><td>收盘 &lt; 趋势线 → <b>不买不卖</b>(禁止加仓)</td></tr>
+<tr><td><code>R3</code></td><td>其余 → <b>持有,不动</b></td></tr>
+</table>
+<p class="mut">杠杆品走 L1/L2/L3/L4,同形状但更紧,且没有加仓项:两倍杠杆 ETF 每日重置,横盘本身就损耗净值。</p>
+<p class="mut">研究框架,非投资建议。规则会亏钱;机械不等于正确,只等于可复算、可审计。原始读数:<a href="/api/holdings">/api/holdings</a></p>
+</html>`;
+        return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+      }
       case "/faq":
         return new Response(renderFaq(), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
       case "/track-record":
@@ -620,6 +671,22 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           baskets: Object.keys(baskets).length,
         }), { headers: { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*" } });
       }
+      // 机械执行层的两个可审计面(2026-09-10)。
+      // /api/holdings:今天每只持仓的读数、规则编号、动作、距离最近的线还有多远。
+      // /rules:参数表原样渲染。参数如果只活在代码里,事后调参去迎合行情就没人看得见。
+      case "/api/holdings": {
+        const qs = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
+        return json({
+          at: qs.at || null,
+          params: PARAMS,
+          note: "研究框架,非投资建议。规则不看成本价,只看价格序列。",
+          holdings: holdingDecisions(qs.quotes).map((h) => ({
+            symbol: h.symbol, name: h.name, lev: h.lev, note: h.note,
+            price: h.quote ? h.quote.price : null,
+            levels: h.levels, decision: h.decision, near: h.near,
+          })),
+        });
+      }
       case "/robots.txt":
         return new Response("User-agent: *\nAllow: /\nSitemap: https://invest.agiscorecard.com/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
       case "/sitemap.xml": {
@@ -645,13 +712,6 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         ctx.waitUntil(bumpGrowth(env, "proClicks"));
         if (v) ctx.waitUntil(bumpGrowth(env, `proClick_${v}`));
         return Response.redirect(SITE + "/#pricing", 302);
-      }
-      case "/api/growth": {
-        const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
-        const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
-        const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
-        const proBound = Object.values(lic).filter((l) => l.chatId).length;
-        return json({ pv: g.pv || 0, tgClicks: g.tgClicks || 0, freeSubs: free.length, codesIssued: Object.keys(lic).length, proBound });
       }
       case "/favicon.ico":
       case "/favicon.svg":
@@ -683,6 +743,11 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       await sendTelegram(cfg, alertText).catch(() => {});
       await broadcastPro(env, alertText).catch(() => {});
     }
+    // 持仓规则翻转(2026-09-10):静默降级,绝不影响下面的简报
+    try {
+      const qs = (await env.SUNWATCH_KV.get("quotes", "json"))?.quotes;
+      await notifyHoldingFlips(env, cfg, qs);
+    } catch (e) {}
     if (quoteResult && quoteResult.panics && quoteResult.panics.length) {
       const pl = quoteResult.panics.map((p) => `• ${p.name} ${p.changePct}%(恐慌日纪律:分批小仓,批间≥10%回调或≥4周)`);
       const t = `🟢 <b>恐慌买点候选(潜伏池)</b>\n\n${pl.join("\n")}`;
@@ -859,6 +924,7 @@ async function fetchQuote(w) {
   const price = meta.regularMarketPrice;
   let prevClose = meta.regularMarketPreviousClose || null;
   let hi52 = null, lo52 = null, chg5dPct = null, newHigh20 = false, newLow20 = false;
+  let levels = null;
   try {
     const q = result.indicators.quote[0];
     const closes = (q.close || []).filter((v) => v != null);
@@ -879,6 +945,16 @@ async function fetchQuote(w) {
       newHigh20 = price > Math.max(...win);
       newLow20 = price < Math.min(...win);
     }
+    // 机械执行层(2026-09-10):这一年的日线本来就已经下载完了,此前只取了几个标量就丢掉。
+    // 均线/ATR/唐奇安通道全部从同一份数据里算,不新增任何一次网络请求。
+    // 最后一根是今天的盘中价,先用现价覆盖它,规则才是"按现在这个价"算的。
+    const bars = alignBars(q.high, q.low, q.close);
+    if (bars.c.length) {
+      bars.c[bars.c.length - 1] = price;
+      if (price > bars.h[bars.h.length - 1]) bars.h[bars.h.length - 1] = price;
+      if (price < bars.l[bars.l.length - 1]) bars.l[bars.l.length - 1] = price;
+      levels = computeLevels(bars, { lev: w.lev || 1 });
+    }
   } catch (e) {}
   if (!prevClose) prevClose = price;
   return {
@@ -890,9 +966,44 @@ async function fetchQuote(w) {
     fromLowPct: lo52 ? Math.round(((price - lo52) / lo52) * 100) : null,
     offHighPct: hi52 ? Math.round(((price - hi52) / hi52) * 100) : null,
     chg5dPct, newHigh20, newLow20,
+    levels,
     currency: meta.currency || "",
     at: new Date().toISOString(),
   };
+}
+
+
+// ---- 机械执行层:持仓决策与状态翻转报警(2026-09-10) ----
+// 站长原话:「告诉我应该在哪些时间买入卖出,机械式而不是代情绪」。
+// 这里不产生任何新判断——decide() 是纯算术,本函数只负责把它取出来并配上标的名。
+function holdingDecisions(quotes) {
+  const qm = Object.fromEntries((quotes || []).map((q) => [q.symbol, q]));
+  return HOLDINGS.map((h) => {
+    const q = qm[h.symbol];
+    const lv = q && q.levels;
+    return { ...h, quote: q || null, levels: lv || null, decision: decide(lv), near: distances(lv) };
+  });
+}
+
+// 只在规则状态翻转时推送。每 30 分钟重复推同一个「持有」会把人训练成无视通知,
+// 而无视通知之后接管决策的就是情绪——这正是这套东西要防的。
+async function notifyHoldingFlips(env, cfg, quotes) {
+  const rows = holdingDecisions(quotes);
+  const out = [];
+  for (const r of rows) {
+    if (!r.levels || r.decision.rule === "R0") continue;
+    const key = `hold-state-${r.symbol}`;
+    const prev = await env.SUNWATCH_KV.get(key);
+    if (prev === r.decision.rule) continue;
+    await env.SUNWATCH_KV.put(key, r.decision.rule);
+    // 首次运行只建基线,不把"系统刚上线"当成"行情刚翻转"发出去。
+    if (prev == null) continue;
+    out.push(`<b>${escHtml(r.name)}</b> ${fmtPrice(r.quote.price)}\n规则 ${r.decision.rule} · <b>${escHtml(r.decision.state)}</b>\n${escHtml(r.decision.action)}`);
+  }
+  if (!out.length) return 0;
+  const t = `⚙️ <b>持仓规则翻转</b>\n\n${out.join("\n\n")}\n\n参数固定见 /rules。研究框架,非投资建议。`;
+  await sendTelegram(cfg, t).catch(() => {});
+  return out.length;
 }
 
 // ---- 趋势雷达(涌现引擎,2026-08-08 站长指令) ----
@@ -1281,6 +1392,18 @@ function buildSummary(items, origin, label, quotes, trendLines) {
   const movers = (quotes || []).filter((q) => Math.abs(q.changePct) >= 3)
     .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 5)
     .map((q) => `• ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct}%`);
+  // 【持仓执行】(2026-09-10)站长只持有 HOLDINGS 里那几只,所以这一段排在最前面:
+  // 一只一行,今天收盘、规则编号、动作、以及距离最近一条会改变动作的线还有多远。
+  // 「什么时候买卖」的答案就是那个百分比——它每天重算,不是七月写死的常数。
+  const holdLines = [];
+  for (const h of holdingDecisions(quotes)) {
+    if (!h.quote) { holdLines.push(`• ${escHtml(h.name)} — 暂无行情`); continue; }
+    if (!h.levels) { holdLines.push(`• ${escHtml(h.name)} ${fmtPrice(h.quote.price)} — 日线样本不足,不出规则`); continue; }
+    const n0 = h.near[0];
+    const gap = n0 ? ` · 距${escHtml(n0.name)} ${n0.pct > 0 ? "+" : ""}${n0.pct}%` : "";
+    holdLines.push(`• <b>${escHtml(h.name)}</b> ${fmtPrice(h.quote.price)} → <b>${escHtml(h.decision.state)}</b>(${h.decision.rule})${gap}\n  ${escHtml(h.decision.action)}`);
+  }
+
   // 【今日操作】按市场分组(站长 8-8:必须明确"今天能不能买/卖、买卖什么、为什么",
   // 且美/港/A 股开盘时间不同——早简报是 A/H/韩的盘前,晚简报是美股的盘前)。
   // "可执行" = 价格已穿越预登记触发线(act 字段就是为什么);没穿越就明说"不动"。
@@ -1330,6 +1453,7 @@ function buildSummary(items, origin, label, quotes, trendLines) {
     `🔭 <b>SunWatch</b> ${today}${label ? " · " + label.replace(/(简报|[()·]|美股隔夜复盘|A\/H 开盘前|A\/H 收盘复盘|执行提醒|\s)/g, "") : ""}`,
     ``,
     ...heartbeat,
+    ...(holdLines.length ? [`⚙️ <b>持仓执行</b>(规则每天重算,参数固定见 ${origin}/rules)`, ...holdLines, ``] : []),
     `🎯 <b>今日操作</b>(能不能买卖、买卖什么、为什么)`,
     ...opsLines,
     ``,

@@ -17,6 +17,12 @@ jobs:
       # `node --check` 按 CommonJS 脚本解析,漏掉过一个未闭合的函数,部署才红。
       - name: Parse with the same parser wrangler uses
         run: npx -y esbuild@0.25 src/index.js --bundle --format=esm --outfile=/dev/null
+      # 机械执行层的数字型 bug 全是静默的:ATR 把不同交易日的字段配错、停牌的 null 少算几根、
+      # 唐奇安通道把今天算进去导致清仓规则一辈子不触发(这一条就是被这个测试当场抓出来的)。
+      # 全部离线合成数据,不联网,几秒钟。
+      - name: Unit-test the mechanical rule engine
+        run: node test/rules.test.mjs
+
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
         with:
@@ -156,6 +162,32 @@ jobs:
           done
           echo "owner alert run: $arun"
           echo "$arun" | grep -q '"ok":true' || { echo "owner alert channel broken"; exit 1; }
+          # 持仓机械层(2026-09-10):三只持仓必须真的算出数字。
+          # 这里断言的是"规则跑出来了",不是"规则赚钱"——数据源换了字段名、
+          # 符号写错、样本不足,表现都是安静地不出读数,和"今天没信号"长得一模一样。
+          curl -s "$URL/api/refresh-quotes" > /dev/null || true
+          sleep 3
+          hold=""
+          for i in 1 2 3 4 5 6 7 8; do
+            hold=$(curl -s --max-time 25 "$URL/api/holdings")
+            echo "$hold" | grep -q '"decision"' && break
+            echo "holdings not live yet, retry $i"; sleep 5
+          done
+          echo "$hold" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          hs=d.get('holdings',[])
+          assert len(hs)>=3, 'holdings missing: %d' % len(hs)
+          bad=[h['symbol'] for h in hs if not h.get('levels') or h['levels'].get('trendLine') is None]
+          for h in hs:
+              L=h.get('levels') or {}
+              print('%-10s %-16s price=%s trend=%s stop=%s exit=%s -> %s (%s)' % (
+                  h['symbol'], h['name'], h.get('price'), L.get('trendLine'), L.get('stop'),
+                  L.get('exitLine'), h['decision']['state'], h['decision']['rule']))
+          assert not bad, 'no rule levels computed for: %s' % bad
+          print('mechanical layer OK for all %d holdings' % len(hs))
+          " || { echo "holdings rule engine broken"; exit 1; }
+          curl -s "$URL/rules" | grep -q "规则不看你的成本价" || { echo "/rules page broken"; exit 1; }
           echo "refresh result:"
           curl -sf "$URL/api/refresh"
           echo

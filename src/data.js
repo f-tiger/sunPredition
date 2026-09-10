@@ -415,7 +415,7 @@ export const WATCHLIST = [
     { price: 170, dir: "above", label: "首日开盘高点", act: "升破=上市周仍有承接,按日程派发即可" } ] },
   { symbol: "MU", name: "Micron", group: "存储", levels: [
     { price: 1010, dir: "below", label: "7/9反弹位(跌回=反弹夭折)", act: "关注更低高点形态" } ] },
-  { symbol: "7709.HK", name: "南方两倍海力士", group: "存储", levels: [
+  { symbol: "7709.HK", name: "南方两倍海力士", group: "存储", lev: 2, levels: [
     { price: 100, dir: "below", label: "参考位(待校准)", act: "反弹优先卖出" } ] },
   { symbol: "SPCX", name: "SpaceX", group: "太空", levels: [
     { price: 135, dir: "above", label: "发行价收复线(IPO $135,2026-06-12)", act: "破发套牢盘消化信号,重新评估太空主题;仅收复不追,需周线站稳" },
@@ -461,6 +461,10 @@ export const WATCHLIST = [
   { symbol: "002520.SZ", name: "日发精机", group: "潜伏池观察", levels: [] },
   { symbol: "300007.SZ", name: "汉威科技", group: "潜伏池观察", levels: [] },
   { symbol: "003021.SZ", name: "兆威机电", group: "潜伏池", levels: [] },
+  // 站长 2026-09-10 报出的实际持仓(此前只有 7709.HK 在表内)。两个新符号已核对:
+  // 智谱 = Z.AI Co Ltd,2026-01-08 港交所上市,代码 2513;AXT Inc 在纳斯达克 AXTI。
+  { symbol: "2513.HK", name: "智谱 Z.AI", group: "持仓", levels: [] },
+  { symbol: "AXTI", name: "AXT", group: "持仓", levels: [] },
 ];
 
 // 预测记录与打分:给自己建档,像给孙宇晨建档一样。verdict: hit/miss/partial/pending
@@ -578,4 +582,21 @@ export const TAG_RULES = [
   { tag: "物理AI/机器人", re: /physical\s?AI|embodied|robot|humanoid|drone|optimus|unitree|物理\s?AI|具身|机器人|人形|无人机|空间计算|太空|space/i },
   { tag: "存储/芯片", re: /storage|memory|HBM|NAND|flash|SanDisk|Micron|hynix|semiconductor|chip|存储|闪存|闪迪|芯片|半导体|美光/i },
   { tag: "能源", re: /energy|nuclear|power\s?plant|uranium|电力|能源|核电|铀/i },
+];
+
+// ---- 实际持仓(站长 2026-09-10 自报)与机械执行层的绑定 ----
+//
+// 这张表存在的唯一目的,是让「今天要不要动」有一个不依赖记忆、不依赖心情的答案。
+// 它刻意**不记买入价、不记股数**:见 src/rules.js 顶部第 1 条约束——系统一旦知道你
+// 套了多少,"等回本"就有了入口。仓位一律用"档"(1/3)表述,不需要知道你的绝对规模。
+//
+// lev>1 的品种走收紧的规则梯(20 日下轨 + 2×ATR),并且**没有加仓规则**:
+// 两倍杠杆 ETF 每天重置,横盘震荡本身就吃掉净值,本仓 CLAUDE.md 早已写死
+// 「杠杆品仅事件窗,严禁长持」。7709.HK 就是这一类,系统会每天把这句话连同数字一起报。
+export const HOLDINGS = [
+  { symbol: "7709.HK", name: "南方两倍海力士", lev: 2,
+    note: "两倍杠杆 ETF:每日重置,震荡即损耗。规则梯已收紧且无加仓项。" },
+  { symbol: "2513.HK", name: "智谱 Z.AI", lev: 1,
+    note: "2026-01-08 上市,日线样本较短;不足 100 根时趋势线按现有样本算,读数里的 bars 就是它。" },
+  { symbol: "AXTI", name: "AXT", lev: 1, note: "" },
 ];
