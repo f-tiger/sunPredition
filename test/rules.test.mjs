@@ -91,5 +91,18 @@ function series(up, down) {
   for (let i = 1; i < d.length; i++) ok(Math.abs(d[i].pct) >= Math.abs(d[i - 1].pct), "距离按绝对值升序 #" + i);
 }
 
+// --- 判定必须落在"走完的那根",盘中价不得改变结论 ---
+{
+  const bars = series(140, 0);
+  const a = decide(computeLevels(bars, { live: 1 }));       // 盘中暴跌到 1
+  const b = decide(computeLevels(bars, { live: 99999 }));   // 盘中暴涨到 99999
+  eq(a, b, "盘中价不改变规则判定(判定只看走完的日线)");
+  const lv = computeLevels(bars, { live: 1 });
+  ok(lv.close !== 1, "close 是走完的收盘,不是盘中价");
+  eq(lv.live, 1, "live 字段记录盘中价");
+  const d = distances(lv);
+  ok(d.every((x) => x.pct > 0), "距离从盘中价量:现价 1 时所有线都在上方");
+}
+
 console.log(bad ? "\n" + bad + " FAILED" : "\n全部通过");
 process.exit(bad ? 1 : 0);

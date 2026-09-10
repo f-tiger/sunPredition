@@ -56,8 +56,13 @@ export function atr(h, l, c, days) {
 }
 
 // 全部读数一次算完。价格序列进,数字出,没有任何分支依赖"今天是什么情况"。
-export function computeLevels(bars, { lev = 1 } = {}) {
-  const { h, l, c } = bars;
+// bars 的最后一根是**今天**,而在开市时间里它还没走完。规则的措辞是「收盘 < X」,
+// 若拿盘中价去判定,同一条规则可能 14:00 喊清仓、收盘前又自己收回——那种反复正是
+// 这套东西要挡掉的噪音,而且它会训练人去盯盘,也就是把情绪请回来。
+// 所以:**判定一律用最后一根走完的日线**,盘中价只用来算"距离还有多远"。
+// 代价是信号晚一天;这是日线系统的正常代价,不是缺陷。
+export function computeLevels(bars, { lev = 1, live = null } = {}) {
+  const h = bars.h.slice(0, -1), l = bars.l.slice(0, -1), c = bars.c.slice(0, -1);
   if (c.length < 30) return null;           // 上市不足 30 个交易日:不出规则,而不是用短样本硬算
   const P = PARAMS;
   const A = atr(h, l, c, P.atrDays);
@@ -75,7 +80,8 @@ export function computeLevels(bars, { lev = 1 } = {}) {
   const floor_ = prevL.length ? Math.min(...last(prevL, exitDays)) : null;
   return {
     bars: c.length,
-    close: r2(c[c.length - 1]),
+    close: r2(c[c.length - 1]),   // 最后一根走完的日线收盘 —— 规则判定用的就是它
+    live: r2(live),               // 现价,只用于距离显示
     trendLine: r2(trend),
     trendDays: lev > 1 ? P.fastDays : P.trendDays,
     atr: r2(A),
@@ -112,8 +118,10 @@ export function decide(lv) {
 // 距离最近一条会改变动作的线还有多远——「什么时候买卖」的时间感来自这里。
 export function distances(lv) {
   if (!lv || lv.close == null) return [];
+  // 距离从**现价**量(拿不到现价才退回收盘):"还有多远"是一个此刻的问题。
+  const from = lv.live != null ? lv.live : lv.close;
   const out = [];
-  const push = (name, v) => { if (v != null && v > 0) out.push({ name, level: v, pct: Math.round(((v - lv.close) / lv.close) * 1000) / 10 }); };
+  const push = (name, v) => { if (v != null && v > 0) out.push({ name, level: v, pct: Math.round(((v - from) / from) * 1000) / 10 }); };
   push("止损", lv.stop); push("清仓线", lv.exitLine); push(`${lv.trendDays}日线`, lv.trendLine); push("加仓线", lv.addLine);
   return out.sort((a, b) => Math.abs(a.pct) - Math.abs(b.pct));
 }

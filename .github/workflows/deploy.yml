@@ -181,9 +181,11 @@ jobs:
           bad=[h['symbol'] for h in hs if not h.get('levels') or h['levels'].get('trendLine') is None]
           for h in hs:
               L=h.get('levels') or {}
-              print('%-10s %-16s price=%s trend=%s stop=%s exit=%s -> %s (%s)' % (
-                  h['symbol'], h['name'], h.get('price'), L.get('trendLine'), L.get('stop'),
-                  L.get('exitLine'), h['decision']['state'], h['decision']['rule']))
+              n=(h.get('near') or [{}])[0]
+              print('%-10s %-14s 判定收盘=%s 现价=%s bars=%s trend=%s stop=%s exit=%s -> %s (%s) 最近线 %s %s%%' % (
+                  h['symbol'], h['name'], L.get('close'), L.get('live'), L.get('bars'),
+                  L.get('trendLine'), L.get('stop'), L.get('exitLine'),
+                  h['decision']['state'], h['decision']['rule'], n.get('name','-'), n.get('pct','-')))
           assert not bad, 'no rule levels computed for: %s' % bad
           print('mechanical layer OK for all %d holdings' % len(hs))
           " || { echo "holdings rule engine broken"; exit 1; }

@@ -949,12 +949,8 @@ async function fetchQuote(w) {
     // 均线/ATR/唐奇安通道全部从同一份数据里算,不新增任何一次网络请求。
     // 最后一根是今天的盘中价,先用现价覆盖它,规则才是"按现在这个价"算的。
     const bars = alignBars(q.high, q.low, q.close);
-    if (bars.c.length) {
-      bars.c[bars.c.length - 1] = price;
-      if (price > bars.h[bars.h.length - 1]) bars.h[bars.h.length - 1] = price;
-      if (price < bars.l[bars.l.length - 1]) bars.l[bars.l.length - 1] = price;
-      levels = computeLevels(bars, { lev: w.lev || 1 });
-    }
+    // 现价只传给 distances 用;判定固定落在最后一根走完的日线上(见 rules.js 注释)。
+    if (bars.c.length) levels = computeLevels(bars, { lev: w.lev || 1, live: price });
   } catch (e) {}
   if (!prevClose) prevClose = price;
   return {
