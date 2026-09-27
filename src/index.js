@@ -37,7 +37,7 @@ function allUrls() {
 const KV_KEY = "feed-items"; // KV 主键:去重后的监控条目列表(手动触达 2026-07-05)
 const MAX_ITEMS = 300;
 
-export default {
+const worker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // pSEO 动态路由(含 PV 计数)
@@ -816,6 +816,34 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       await sendTelegram(cfg, text).catch(() => {});
       await broadcastPro(env, text).catch(() => {});
     }
+  },
+};
+
+// 分享预览(2026-09-27):十几个页面模板都没有 og:image / twitter:card,链接被转发时只剩一行字。
+// 与其逐个模板加,在唯一出口统一补:成功的 HTML 响应、且页面自己没声明 og:image 时,在 </head> 前插入。
+// 卡片是不带任何数字的品牌图(数字会过期),托管在 agiscorecard.com/share/(同一投资板块)。
+const SHARE_IMG = {
+  en: "https://agiscorecard.com/share/sunwatch-en.png",
+  zh: "https://agiscorecard.com/share/sunwatch-zh.png",
+};
+export function addShareTags(html) {
+  if (typeof html !== "string" || !html.includes("</head>") || /property="og:image"/.test(html)) return html;
+  const en = /<html[^>]*lang="en/i.test(html);
+  const img = en ? SHARE_IMG.en : SHARE_IMG.zh;
+  const tags = `<meta property="og:image" content="${img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${img}">`;
+  return html.replace("</head>", tags + "</head>");
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const res = await worker.fetch(request, env, ctx);
+    const ct = res.headers.get("content-type") || "";
+    if (request.method !== "GET" || res.status !== 200 || !ct.startsWith("text/html")) return res;
+    const body = addShareTags(await res.text());
+    return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+  },
+  scheduled(event, env, ctx) {
+    return worker.scheduled(event, env, ctx);
   },
 };
 

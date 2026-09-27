@@ -154,6 +154,9 @@ jobs:
             sleep 8
           done
           [ "$hok" = 1 ] || { echo "api/growth human block or robots Disallow /go/ missing"; exit 1; }
+          # 分享预览(2026-09-27):每个页面都应带 og:image(页面自己的或出口统一补的)
+          curl -s "$URL/en" | grep -q 'property="og:image"' && curl -s "$URL/track-record" | grep -q 'property="og:image"' \
+            || { echo "share preview (og:image) missing"; exit 1; }
           # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
           # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)
           tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)

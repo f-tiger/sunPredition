@@ -11,3 +11,16 @@ const humans = ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWeb
 for (const u of bots) assert.equal(isBotUA(u), true, 'should be bot: ' + u);
 for (const u of humans) assert.equal(isBotUA(u), false, 'should be human: ' + u);
 console.log(`growth: ${bots.length + humans.length} UA assertions OK`);
+
+// 分享预览补丁(2026-09-27)
+import { addShareTags } from '../src/index.js';
+const zhPage = '<!doctype html><html lang="zh-CN"><head><title>x</title></head><body></body></html>';
+const enPage = '<!doctype html><html lang="en"><head><title>x</title></head><body></body></html>';
+const hasOwn = '<html lang="en"><head><meta property="og:image" content="https://x/y.png"></head></html>';
+assert.match(addShareTags(zhPage), /sunwatch-zh\.png/);
+assert.match(addShareTags(enPage), /sunwatch-en\.png/);
+assert.match(addShareTags(enPage), /twitter:card/);
+assert.equal(addShareTags(hasOwn), hasOwn, 'a page that declares its own og:image is left alone');
+assert.equal(addShareTags('{"a":1}'), '{"a":1}', 'non-HTML passes through');
+assert.equal((addShareTags(enPage).match(/og:image"/g) || []).length, 1, 'inserted exactly once');
+console.log('share tags: 6 assertions OK');
