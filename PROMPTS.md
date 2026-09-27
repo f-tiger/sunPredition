@@ -626,6 +626,7 @@ trendLine/stop/exitLine 并把读数打进日志(沙箱读不到线上,这是唯
 freeSubs 1 · proBound 0 · baskets 0。pv 与三个 /go/* 计数每个请求都 +1,不分爬虫;/go/buy 是页面普通链接,
 robots.txt 也没挡;部署自检每次都 curl /go/buy(失败还重试)。所以「购买 71 → 询价 1」大半是机器,不是漏斗断裂。
 Telegram 侧的数(询价 1、付款 0、免费订户 1、Pro 绑定 0)不受影响,是真的。
+**更正(同日 owner)**:那 1 次询价是站长自己的测试 —— 真实询价 0。
 
 **执行**:
 1. `bumpGrowth(env, key, request)`:原键照旧累加(历史不断),另记 `h_<key>`,只在 UA 不像机器时 +1;
