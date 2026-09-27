@@ -22,6 +22,8 @@ jobs:
       # 全部离线合成数据,不联网,几秒钟。
       - name: Unit-test the mechanical rule engine
         run: node test/rules.test.mjs
+      - name: Growth human-count test
+        run: node test/growth.test.mjs
 
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
@@ -144,6 +146,14 @@ jobs:
           print('track-record json OK:',d['scored'],'scored,',d['hits'],'hits')
           " || { echo "api/track-record broken"; exit 1; }
           curl -s "$URL/api/growth" | grep -q '"pv"' || { echo "api/growth broken"; exit 1; }
+          # 真人口径(2026-09-27):/api/growth 带 human 块;robots 让爬虫别顺 /go/ 计数跳转
+          # 新版传播有延迟,与 /go/buy 一样重试而非一击定生死
+          hok=0
+          for i in 1 2 3 4 5 6; do
+            curl -s "$URL/api/growth" | grep -q '"human":{' && curl -s "$URL/robots.txt" | grep -q 'Disallow: /go/' && { hok=1; break; }
+            sleep 8
+          done
+          [ "$hok" = 1 ] || { echo "api/growth human block or robots Disallow /go/ missing"; exit 1; }
           # 趋势管线上游探针:agiscorecard /api/trends 应返回 JSON(失败只警告——
           # siteTrends() 在 worker 里本来就静默降级,这里只为让断链可见)
           tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)

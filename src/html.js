@@ -32,7 +32,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 <h1>📊 SunWatch Pro 公开战绩</h1>
 <p>每一次明确判断公开建档,命中与失误同等展示(失误附教训)。当前:可评分 <b>${scored.length}</b> 条,命中 <b>${hits}</b> 条${scored.length ? `,命中率 <b>${Math.round((hits / scored.length) * 100)}%</b>` : ""}。</p>
 ${rows}
-<p><a href="/">← 返回 SunWatch Pro 主站</a> · <a href="/go/tg">🤖 免费订阅每日信号预告</a></p>
+<p><a href="/">← 返回 SunWatch Pro 主站</a> · <a href="/go/tg" rel="nofollow">🤖 免费订阅每日信号预告</a></p>
 <p class="meta">另设孙宇晨预判档案(2019-2026,同一建档标准)见主站。本页内容为研究记录,非投资建议。</p>
 </div></body></html>`;
 }
@@ -43,8 +43,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .wrap{max-width:820px;margin:0 auto;padding:24px 16px 64px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
-const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
+const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg" rel="nofollow">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
+const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg" rel="nofollow">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
 
 // pSEO:单只标的页
 export function renderStockPage(s, quote, related, news) {
@@ -598,7 +598,7 @@ export function renderDashboard() {
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
-  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/red-team">🛡 对抗审查</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
+  <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/red-team">🛡 对抗审查</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg" rel="nofollow">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
 </header>
@@ -641,7 +641,7 @@ export function renderDashboard() {
     <div style="font-size:14px">✅ 五大赛道深度分析与周期定位<br>✅ 实时行情与新闻监控流<br>✅ 孙宇晨预判档案 + 系统预测记录<br>🔒 具体买卖价位与触发线<br>🔒 操盘纪律与仓位方案<br>🔒 Telegram 实时信号</div></div>
   <div class="card" style="border-color:var(--accent)"><b>Pro 会员</b> <span class="tag">推荐</span><div style="font-size:22px;font-weight:700;margin:4px 0">¥199/月 <span class="meta" style="font-size:13px">或 ¥1999/年</span></div>
     <div style="font-size:14px">✅ 免费版全部内容<br>✅ <b>全部买入区间 / 止损线 / 仓位方案</b><br>✅ <b>实时触发线报警(价格穿越秒推 TG)</b><br>✅ 每日双简报(北京 08:30 / 20:30)<br>✅ 重要信号快讯(SKHY/宇树/Optimus/合约价拐点等)</div>
-    <div style="margin-top:8px"><a href="/go/buy" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:700;text-decoration:none">立即购买 →</a></div>
+    <div style="margin-top:8px"><a href="/go/buy" rel="nofollow" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:700;text-decoration:none">立即购买 →</a></div>
     <div class="meta" style="margin-top:6px">点击后在 Telegram 里完成:机器人当场给出 USDT(BEP20)收款地址,付完把交易哈希发回,站长上链核对后发激活码(也可走微信/支付宝)→ 向 @sunwatchBot 发送 <code>/start 激活码</code> 绑定信号,或在下方输入解锁网站价位</div></div>
 </div>
 <div class="card" style="margin-top:10px"><b>激活 Pro</b>

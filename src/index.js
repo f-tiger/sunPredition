@@ -42,7 +42,7 @@ export default {
     const url = new URL(request.url);
     // pSEO 动态路由(含 PV 计数)
     if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast") || url.pathname.startsWith("/en")) {
-      ctx.waitUntil(bumpGrowth(env, "pv"));
+      ctx.waitUntil(bumpGrowth(env, "pv", request));
     }
     // EN 标的页(E4):只服务已有忠实英译的标的,其余 404 而不是回退中文页
     if (url.pathname.startsWith("/en/stock/")) {
@@ -666,6 +666,9 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         return new Response(JSON.stringify({
           pv: g.pv || 0, tgClicks: g.tgClicks || 0, buyClicks: g.buyClicks || 0,
           buyRequests: g.buyRequests || 0, payClaims: g.payClaims || 0,
+          // 真人口径(2026-09-27 起才有;上面四个原键含爬虫与部署自检,只作历史延续)
+          human: { since: g.humanSince || null, pv: g.h_pv || 0, tgClicks: g.h_tgClicks || 0,
+            buyClicks: g.h_buyClicks || 0, proClicks: g.h_proClicks || 0 },
           freeSubs: free.length,
           proBound: Object.values(lic).filter((l) => l.chatId).length,
           baskets: Object.keys(baskets).length,
@@ -688,7 +691,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         });
       }
       case "/robots.txt":
-        return new Response("User-agent: *\nAllow: /\nSitemap: https://invest.agiscorecard.com/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
+        return new Response("User-agent: *\nAllow: /\nDisallow: /go/\nSitemap: https://invest.agiscorecard.com/sitemap.xml\n", { headers: { "content-type": "text/plain" } });
       case "/sitemap.xml": {
         const list = await env.SUNWATCH_KV.list({ prefix: "daily-" }).catch(() => ({ keys: [] }));
         const dailies = list.keys.map((k) => `${SITE}/daily/${k.name.slice(6)}`).slice(-30);
@@ -696,21 +699,21 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       }
       // 增长度量:CTA 点击计数 → 跳转 bot
       case "/go/tg": {
-        ctx.waitUntil(bumpGrowth(env, "tgClicks"));
+        ctx.waitUntil(bumpGrowth(env, "tgClicks", request));
         return Response.redirect("https://t.me/sunwatchBot", 302);
       }
       // 购买入口。此前定价卡只写"联系站长付款",而全站没有任何联系方式——
       // 买家走到这一步就断了,所以"零成交"从来不是需求证据。现在跳进 bot 的
       // /start buy,由 bot 同时回复买家并通知站长。
       case "/go/buy": {
-        ctx.waitUntil(bumpGrowth(env, "buyClicks"));
+        ctx.waitUntil(bumpGrowth(env, "buyClicks", request));
         return Response.redirect("https://t.me/sunwatchBot?start=buy", 302);
       }
       // Pro 升级点击归因(免费预告 A/B 文案分变体计数):/go/pro?v=<变体id>
       case "/go/pro": {
         const v = (url.searchParams.get("v") || "").slice(0, 2).replace(/[^a-z0-9]/gi, "");
-        ctx.waitUntil(bumpGrowth(env, "proClicks"));
-        if (v) ctx.waitUntil(bumpGrowth(env, `proClick_${v}`));
+        ctx.waitUntil(bumpGrowth(env, "proClicks", request));
+        if (v) ctx.waitUntil(bumpGrowth(env, `proClick_${v}`, request));
         return Response.redirect(SITE + "/#pricing", 302);
       }
       case "/favicon.ico":
@@ -1241,9 +1244,24 @@ function buildAlert(items) {
 }
 
 // 增长计数(低频写,容忍并发损耗)
-async function bumpGrowth(env, key) {
+//
+// 2026-09-27 真人口径:pv 与 /go/* 三个点击计数此前每个请求都 +1,不分爬虫。/go/buy 是页面上的
+// 普通链接,爬虫顺链就算一次「购买点击」;部署自检本身也用 curl 打 /go/buy(失败还重试)——于是
+// 「购买按钮 71 → 询价 1」读起来像漏斗断了,实际大半是机器。现在:原键照旧累加(历史不断),
+// 另记 h_<key>,只在 UA 不像机器时 +1。UA 词表取自 agi-site 的 tools/fleet/bot_ua.txt(舰队唯一权威),
+// 改那边就同步这里。空 UA 一律算机器。
+const BOT_UA = /bot|crawler|spider|slurp|scrap|crawl|fetch|monitor|uptime|lighthouse|pagespeed|preview|headless|phantom|selenium|puppeteer|playwright|curl|wget|python|java|go-http|okhttp|libwww|httpclient|http-client|axios|node-fetch|undici|^node$|^node\/|feed|rss|validator|archive|semrush|ahrefs|dataforseo|mj12|dotbot|bytespider|petalbot|applebot|amazonbot|facebookexternalhit|embedly|gptbot|chatgpt|oai-search|claude|perplexity|ccbot|google-extended|panscient|censys|inspect|shodan|expanse|masscan|zgrab|scan|probe/i;
+export function isBotUA(ua) {
+  const u = String(ua || "").trim();
+  return !u || BOT_UA.test(u);
+}
+async function bumpGrowth(env, key, request) {
   const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
   g[key] = (g[key] || 0) + 1;
+  if (request && !isBotUA(request.headers.get("user-agent"))) {
+    g["h_" + key] = (g["h_" + key] || 0) + 1;
+    if (!g.humanSince) g.humanSince = new Date().toISOString().slice(0, 10);
+  }
   await env.SUNWATCH_KV.put("growth", JSON.stringify(g));
 }
 
@@ -1260,6 +1278,10 @@ async function growthLine(env) {
   // 误读成"没需求"——这正是 2026-08-06 之前发生的事。
   const buyTxt = (g.buyClicks || g.buyRequests || g.payClaims)
     ? ` | 购买按钮 ${g.buyClicks || 0}→询价 ${g.buyRequests || 0}→付款回执 ${g.payClaims || 0}` : "";
+  // 真人口径有了之后,简报只报真人数;原键含爬虫,继续报会让人把机器当读者。
+  if (g.humanSince) {
+    return `📊 <b>增长(真人,自 ${g.humanSince})</b>:PV ${g.h_pv || 0} | TG按钮 ${g.h_tgClicks || 0} | 购买按钮 ${g.h_buyClicks || 0} → 询价 ${g.buyRequests || 0} → 付款回执 ${g.payClaims || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${idxTxt}`;
+  }
   return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${buyTxt}${idxTxt}`;
 }
 

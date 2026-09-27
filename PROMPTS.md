@@ -613,3 +613,26 @@ html.js 新增 renderStockPageEN;index.js 加 /en/stock/<slug> 路由——**未
 
 **验证方式**:CI 里 `node test/rules.test.mjs` + 部署后断言三只持仓真的算出了
 trendLine/stop/exitLine 并把读数打进日志(沙箱读不到线上,这是唯一通道)。
+
+---
+
+## 2026-09-27 · 投资线使用情况补全 + 真人口径(来自 agi-site 会话)
+
+**原始请求**:「读它们的访问和订单数据,把投资线的使用情况补全;直接在 SunWatch 或 Compass 上做优化」
+
+**目标**:把 SunWatch 的增长数字从「所有请求」改成能区分真人,否则漏斗读数没有意义。
+
+**核实的数据(2026-09-27 线上 /api/growth)**:pv 5 794 · tgClicks 123 · buyClicks 71 · buyRequests 1 · payClaims 0 ·
+freeSubs 1 · proBound 0 · baskets 0。pv 与三个 /go/* 计数每个请求都 +1,不分爬虫;/go/buy 是页面普通链接,
+robots.txt 也没挡;部署自检每次都 curl /go/buy(失败还重试)。所以「购买 71 → 询价 1」大半是机器,不是漏斗断裂。
+Telegram 侧的数(询价 1、付款 0、免费订户 1、Pro 绑定 0)不受影响,是真的。
+
+**执行**:
+1. `bumpGrowth(env, key, request)`:原键照旧累加(历史不断),另记 `h_<key>`,只在 UA 不像机器时 +1;
+   UA 词表同 agi-site `tools/fleet/bot_ua.txt`;首次写入记 `humanSince`。
+2. `/api/growth` 增加 `human` 块;TG 简报的增长行在有真人口径后只报真人数。
+3. robots.txt 加 `Disallow: /go/`;页面上 5 处 /go/ 链接加 `rel="nofollow"`。
+4. `test/growth.test.mjs`(12 条 UA 断言)进 CI;部署自检断言 `human` 块与 robots 规则(带重试)。
+
+**验证**:rules/growth 两套离线测试全过;esbuild 解析通过;部署后看 /api/growth 的 human 块开始计数。
+**非投资建议。** 本轮不改价格、不改任何判断与触发线。
