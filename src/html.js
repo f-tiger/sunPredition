@@ -1,3 +1,4 @@
+import { auditNotice } from "./ledger-audit.js";
 // 公开战绩页(服务端渲染,可分享,SEO 友好)
 // 为每条 FORECASTS 生成稳定 id(date + 同日序号;判断只追加不重排 → id 稳定)。战绩内容矩阵化的地基。
 export function forecastSlugs(forecasts) {
@@ -9,7 +10,7 @@ export function forecastSlugs(forecasts) {
 }
 
 export function renderTrackRecord(forecasts, predictions) {
-  const scored = forecasts.filter((f) => f.verdict !== "pending");
+  const scored = forecasts.filter((f) => ["hit", "miss"].includes(f.verdict));
   const hits = scored.filter((f) => f.verdict === "hit").length;
   const V = { hit: "✅ 命中", miss: "❌ 失误", partial: "🟡 部分", pending: "⏳ 验证中" };
   const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -31,6 +32,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:24px}</style></head><body><div class="wrap">
 <h1>📊 SunWatch Pro 公开战绩</h1>
 <p>每一次明确判断公开建档,命中与失误同等展示(失误附教训)。当前:可评分 <b>${scored.length}</b> 条,命中 <b>${hits}</b> 条${scored.length ? `,命中率 <b>${Math.round((hits / scored.length) * 100)}%</b>` : ""}。</p>
+${auditNotice(forecasts)}
 ${rows}
 <p><a href="/">← 返回 SunWatch Pro 主站</a> · <a href="/go/tg" rel="nofollow">🤖 免费订阅每日信号预告</a></p>
 <p class="meta">另设孙宇晨预判档案(2019-2026,同一建档标准)见主站。本页内容为研究记录,非投资建议。</p>
@@ -103,7 +105,7 @@ export function renderStockPageEN(s, quote, related, news) {
 <h1>${escS(nm)} <span class="tag">${escS(s.ticker)}</span></h1>
 ${q}<div class="card">${rows}</div>
 ${(news && news.length) ? `<div class="card"><b>Latest coverage</b><ul style="margin:6px 0 0 18px;padding:0">${news.map((n) => `<li style="margin:3px 0"><a href="${escS(n.link)}" rel="nofollow">${escS(n.title)}</a>${n.published ? ` <span class="meta">${n.published.slice(0, 10)}</span>` : ""}</li>`).join("")}</ul></div>` : ""}
-<div class="card"><b>How this name is traded here</b><div class="meta" style="margin-top:4px">Entry zones, stop lines and sizing are <b>pre-registered before the outcome</b> and executed only when price crosses them — see the <a href="/en/method">eight-layer method</a> and the <a href="/en/red-team">red-team desk</a> where every open call carries survival odds. Past calls, hits and misses alike: <a href="/en/track-record">public track record</a>.</div></div>
+<div class="card"><b>How this name is traded here</b><div class="meta" style="margin-top:4px">Entry zones, stop lines and sizing are <b>documented as research rules</b>; alerts fire when price crosses them — see the <a href="/en/method">eight-layer method</a> and the <a href="/en/red-team">red-team desk</a> where every open call carries survival odds. Past calls, hits and misses alike: <a href="/en/track-record">public track record</a>.</div></div>
 ${CTA_EN}
 ${rel ? `<p class="meta">Same theme: ${rel}</p>` : ""}
 <p class="meta">Research framework, not investment advice. Specific levels, stops and sizing are Pro content.</p>
@@ -196,7 +198,7 @@ ${CTA}<p class="meta">研究记录,命中与失误同等展示;具体买卖价�
 // 战绩复盘索引页(把 N 条判断聚合为一个可收录入口)
 export function renderForecastIndex(items) {
   const V = { hit: "✅ 命中", miss: "❌ 失误", partial: "🟡 部分", pending: "⏳ 验证中" };
-  const scored = items.filter(({ f }) => f.verdict !== "pending");
+  const scored = items.filter(({ f }) => ["hit", "miss"].includes(f.verdict));
   const hits = scored.filter(({ f }) => f.verdict === "hit").length;
   const cards = items.map(({ id, f }) => `<div class="card"><a href="/forecast/${id}"><b>${f.date}</b> · ${V[f.verdict] || f.verdict}</a><div style="margin-top:4px">${escS(String(f.call || "").slice(0, 50))}${f.call && f.call.length > 50 ? "…" : ""}</div></div>`).join("");
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -239,14 +241,14 @@ const fmtEN = (iso) => {
   return m ? `${M[m - 1]} ${d}, ${y}` : iso;
 };
 export function renderLandingEN(forecasts) {
-  const scored = forecasts.filter((f) => f.verdict !== "pending");
+  const scored = forecasts.filter((f) => ["hit", "miss"].includes(f.verdict));
   const hits = scored.filter((f) => f.verdict === "hit").length;
   const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
   const latest = forecasts[0] ? fmtEN(forecasts[0].date) : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SunWatch — AI-cycle investing, on the record | AGI Scorecard Invest</title>
-<meta name="description" content="Market judgments written as falsifiable price triggers, watched by machine, logged in public: ${scored.length} scored calls, ${rate}% hit rate. Hits and misses side by side. Not investment advice.">
-<meta property="og:title" content="SunWatch — every market call on the record (${rate}% hit rate)">
+<meta name="description" content="Public research log: ${scored.length} editorial hit/miss labels. Prospective evidence coverage is disclosed on the page. Hits and misses side by side. Not investment advice.">
+<meta property="og:title" content="SunWatch — research calls and evidence status">
 <meta property="og:description" content="Triggers, not predictions. Public track record across US, HK and China A-shares. Part of the AGI Scorecard network.">
 <link rel="canonical" href="https://invest.agiscorecard.com/en">
 <link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en">
@@ -260,17 +262,18 @@ export function renderLandingEN(forecasts) {
 .hero{margin:8px 0 4px;font-size:27px;line-height:1.25}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › Invest · <a href="/?lang=zh">中文</a> · <b>English</b></p>
 <h1 class="hero">Market calls you can audit.<br>Triggers, not vibes.</h1>
-<p>SunWatch turns judgments about the AI cycle — memory, robotics, space, energy, crypto — into <b>falsifiable price triggers</b> across US, Hong Kong and China A-share markets. A machine watches the lines 24/7. Every call is logged <b>before</b> the outcome, and misses stay on the page next to the hits.</p>
+<p>SunWatch turns judgments about the AI cycle — memory, robotics, space, energy, crypto — into <b>falsifiable price triggers</b> across US, Hong Kong and China A-share markets. A machine watches the lines 24/7. Calls and outcomes are retained together; publication-before-outcome evidence is assessed separately below.</p>
 <div class="band">
 <div class="card"><b>${scored.length}</b><span>scored calls</span></div>
-<div class="card"><b>${rate}%</b><span>hit rate</span></div>
+<div class="card"><b>${rate}%</b><span>editorial hit-label rate</span></div>
 <div class="card"><b>${forecasts.length - scored.length}</b><span>open &amp; pending</span></div>
 <div class="card"><b>${latest}</b><span>latest call</span></div>
 </div>
+${auditNotice(forecasts, true)}
 <p><a class="btnp" href="/en/track-record">See the full track record →</a></p>
 <p class="meta" style="margin-top:-6px"><a href="/en/stocks">Browse stock coverage in English →</a> · <a href="/en/method">the eight-layer method</a> · <a href="/en/red-team">red-team desk</a></p>
 <h2 style="font-size:18px">How it works</h2>
-<div class="card"><b>1 · Registered before the outcome.</b><div class="meta" style="margin-top:3px">Each judgment is written as "if price crosses X, do Y" with a dated entry in the public log — no after-the-fact narratives.</div></div>
+<div class="card"><b>1 · Record the research claim.</b><div class="meta" style="margin-top:3px">Keep the original claim, publication evidence, resolution rule and observation date. A date printed on a page alone does not prove preregistration.</div></div>
 <div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
@@ -280,13 +283,13 @@ ${CTA_EN}
 <div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
 <h2 style="font-size:18px">FAQ</h2>
 <div class="card"><b>Is this investment advice?</b><div class="meta" style="margin-top:3px">No. It is a research framework with a public score. Nothing here is a recommendation to buy or sell any security; consult a licensed professional before acting.</div></div>
-<div class="card"><b>Why should I trust the hit rate?</b><div class="meta" style="margin-top:3px">Don't trust it — audit it. Every scored call links to its dated entry, original wording and outcome, including the losers.</div></div>
+<div class="card"><b>What does the displayed rate measure?</b><div class="meta" style="margin-top:3px">It summarizes editorial hit/miss labels, not trading profits. Check the evidence status and original record; unresolved and partial calls are excluded.</div></div>
 <div class="card"><b>What is AGI Scorecard?</b><div class="meta" style="margin-top:3px">An independent site grading the "AGI by 2027" predictions with pre-registered flip conditions — the evidence layer this console trades against. <a href="https://agiscorecard.com">agiscorecard.com →</a></div></div>
 <p class="meta" style="margin-top:18px"><b>Risk disclosure:</b> research and education only; not investment, legal or tax advice. Markets involve risk of loss. Past performance of any logged call does not guarantee future results. Prices verified against dated sources; errors are corrected in the open log.</p>
 </div></body></html>`;
 }
 
-// 英文战绩页 /en/track-record(命中率 + 每条判断日期/徽章/忠实英文摘要)
+// 英文战绩页 /en/track-record(编辑命中比率 + 每条判断日期/徽章/忠实英文摘要)
 // 英文标的索引 /en/stocks
 // Why this page exists: the per-ticker English pages shipped before anything linked to
 // them, so they were reachable only from the sitemap, from the Chinese page's "English"
@@ -330,7 +333,7 @@ export function renderStockIndexEN(stocks) {
 <script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "AGI Scorecard", item: "https://agiscorecard.com/" }, { "@type": "ListItem", position: 2, name: "SunWatch", item: "https://invest.agiscorecard.com/en" }, { "@type": "ListItem", position: 3, name: "Stock coverage" }] })}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> \u203a <a href="/en">SunWatch</a> \u203a Coverage</p>
 <h1>Stock coverage, in English</h1>
-<p>${withEn.length} names, grouped by the part of the AI cycle they belong to. Each page carries the investment case, the size, what actually protects the business, who it competes with, and the risk that would end the thesis \u2014 plus the live quote. Entry zones, stop lines and sizing are pre-registered before the outcome and are <a href="/#pricing">Pro</a> content; the <a href="/en/track-record">public record</a> shows how the calls turned out, losers included.</p>
+<p>${withEn.length} names, grouped by the part of the AI cycle they belong to. Each page carries the investment case, the size, what actually protects the business, who it competes with, and the risk that would end the thesis \u2014 plus the live quote. Entry zones, stop lines and sizing are documented research rules and are <a href="/#pricing">Pro</a> content; the <a href="/en/track-record">public record</a> shows how the calls turned out, losers included.</p>
 ${groups}
 ${zhList ? `<div class="card"><b>Chinese-only for now (${zhOnly.length})</b><div class="meta" style="margin-top:3px">These are tracked on the Chinese side and have no English page yet. The links work, the pages are in Chinese \u2014 said plainly rather than showing a shorter list without explanation.</div>${zhList}</div>` : ""}
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score a basket of these tickers against the eight graded AGI-2027 predictions \u2014 free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check \u2192</a></div></div>
@@ -341,7 +344,7 @@ ${CTA_EN}
 
 export function renderTrackRecordEN(forecasts) {
   const V = { hit: "✅ Hit", miss: "❌ Miss", partial: "🟡 Partial", pending: "⏳ Pending" };
-  const scored = forecasts.filter((f) => f.verdict !== "pending");
+  const scored = forecasts.filter((f) => ["hit", "miss"].includes(f.verdict));
   const hits = scored.filter((f) => f.verdict === "hit").length;
   const rate = scored.length ? Math.round((hits / scored.length) * 100) : 0;
   const rows = forecastSlugs(forecasts).map(({ id, f }) => {
@@ -359,6 +362,7 @@ export function renderTrackRecordEN(forecasts) {
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › <a href="/en">Invest</a> › Track record · <a href="/track-record">中文</a> · <b>English</b></p>
 <h1>📊 Public track record</h1>
 <p>Every explicit judgment is logged in the open, hits and misses shown side by side (misses carry the lesson). Currently <b>${scored.length}</b> scored, <b>${hits}</b> hits${scored.length ? `, hit rate <b>${rate}%</b>` : ""}.</p>
+${auditNotice(forecasts, true)}
 ${rows}
 ${CTA_EN}
 <p class="meta">Research record, not investment advice. Full rationale and price levels are in the Chinese archive and Pro content.</p>
@@ -428,7 +432,7 @@ export function renderMethod() {
 <h1>🧭 十倍工程方法论 v2.1:八层纪律</h1>
 <p>业界最好的投资方法不是秘密——杠铃、五要素、周期时钟、分数凯利、预登记、熔断,书里都有。稀缺的是<b>把它们写死成规则并接受公开审计</b>。本页每一层:出处 → 本系统的落地 → 可核对的页面(<a href="/track-record">战绩台账</a> / <a href="/forecast">判断复盘</a> / 各标的页的 52 周读数)。</p>
 ${cards}
-<div class="card"><b>方法论如何被审计</b><div style="margin-top:4px">每条判断先建档后见结果(<a href="/track-record">公开战绩</a>);触发线由机器每 30 分钟盯守;证伪条件与复查日和判断一起预登记。方法论若改版,旧版规则与冲突判定留档——这页本身也在台账里。</div></div>
+<div class="card"><b>方法论如何被审计</b><div style="margin-top:4px">逐条保留判断和结果，并单独核对事前公开证据(<a href="/track-record">记录与证据状态</a>);触发线由机器每 30 分钟盯守;证伪条件与复查日和判断一起预登记。方法论若改版,旧版规则与冲突判定留档——这页本身也在台账里。</div></div>
 ${CTA}
 <p class="meta">研究框架,非投资建议。具体买卖价位、止损线与仓位方案为 Pro 内容。</p>
 </div></body></html>`;
@@ -470,7 +474,7 @@ export function renderMethodEN() {
 <h1>🧭 The Project-10x Method: eight layers of discipline</h1>
 <p>The best investing methodology is not a secret — the barbell, cycle clocks, expectations analysis, fractional Kelly, pre-registration are all in books. What is scarce is <b>writing them down as binding rules and accepting a public audit</b>. Each layer below: the source → how this system operationalizes it → where to verify (<a href="/en/track-record">track record</a>, per-stock 52-week readouts).</p>
 ${cards}
-<div class="card"><b>How the method itself is audited</b><div style="margin-top:4px">Every call is logged before the outcome (<a href="/en/track-record">public track record</a>); trigger lines are machine-watched every 30 minutes; falsification conditions and review dates are registered together with the call. When the method is revised, the old rules and the conflict ruling stay on file — this page is part of the ledger too.</div></div>
+<div class="card"><b>How the method itself is audited</b><div style="margin-top:4px">Calls and outcomes are retained, with publication evidence reported separately (<a href="/en/track-record">evidence status</a>); trigger lines are machine-watched every 30 minutes; falsification conditions and review dates are registered together with the call. When the method is revised, the old rules and the conflict ruling stay on file — this page is part of the ledger too.</div></div>
 ${CTA_EN}
 <p class="meta">Research framework, not investment advice. Specific levels, stops and sizing are Pro content.</p>
 </div></body></html>`;
@@ -618,6 +622,7 @@ export function renderDashboard() {
 
 <h2>预测记录与打分(给自己建档)</h2>
 <p class="meta">本系统每次明确判断都在此公开记档——命中与失误同等展示,与孙宇晨预判档案同一标准。</p>
+<p class="meta">此处是编辑复盘，不是交易胜率或已验证盈利。事前公开证据覆盖见 <a href="/track-record">证据状态</a>。</p>
 <div id="forecasts"></div>
 
 <h2>主题周期定位与操盘框架</h2>
@@ -735,10 +740,10 @@ function renderActionBoard(q){
 }
 const F_VERDICT={hit:['✅ 命中','v-hit'],miss:['❌ 失误','v-miss'],partial:['🟡 部分','v-partial'],pending:['⏳ 验证中','v-partial']};
 function renderForecasts(fc){
-  const scored=fc.filter(x=>x.verdict!=='pending');
+  const scored=fc.filter(x=>['hit','miss'].includes(x.verdict));
   const hits=scored.filter(x=>x.verdict==='hit').length;
   document.getElementById('forecasts').innerHTML=
-    '<div class="meta" style="margin-bottom:8px">可评分 '+scored.length+' 条,命中 '+hits+' 条'+(scored.length?'(命中率 '+Math.round(hits/scored.length*100)+'%)':'')+'</div>'+
+    '<div class="meta" style="margin-bottom:8px">可评分 '+scored.length+' 条,命中 '+hits+' 条'+(scored.length?'(编辑命中比率 '+Math.round(hits/scored.length*100)+'%)':'')+'</div>'+
     fc.map(x=>{
       const[v,c]=F_VERDICT[x.verdict]||[x.verdict,''];
       return '<div class="card"><b>'+x.date+'</b> · <b class="'+c+'">'+v+'</b><div style="margin-top:4px">'+esc(x.call)+'</div>'+
@@ -841,3 +846,4 @@ load();
 </script>
 </body></html>`;
 }
+

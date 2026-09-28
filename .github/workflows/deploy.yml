@@ -25,11 +25,14 @@ jobs:
       - name: Growth human-count test
         run: node test/growth.test.mjs
 
+      - name: Audit ledger evidence semantics
+        run: node --test test/ledger-audit.test.mjs
+
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Smoke test + initial fetch
+      - name: Read-only production smoke test
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "Deployed at: $URL"
@@ -162,24 +165,10 @@ jobs:
           tr=$(curl -s --max-time 15 "https://agiscorecard.com/api/trends" | head -c 200)
           echo "site trends probe: $tr"
           echo "$tr" | grep -q "searches" && echo "trends endpoint OK" || echo "trends endpoint not ready (non-blocking)"
-          # 重大信息通道端到端(2026-08-16):真的走一遍「拉判定 → 发站长 TG」,不是探活。
-          # cron 每 30 分钟才跑,而「通道通没通」不该等半小时、更不该靠猜——每次部署实测一次。
-          # 密钥从源码取,不在此重复一份:同一个值写两处早晚漂移。
-          ak=$(grep -oE 'AGI_ALERT_KEY = "[a-f0-9]{32}"' src/index.js | grep -oE '[a-f0-9]{32}')
-          [ -n "$ak" ] || { echo "alert key not found in src"; exit 1; }
-          arun=""
-          for i in 1 2 3 4 5 6; do
-            arun=$(curl -s --max-time 25 "$URL/api/agi-alerts-run?k=$ak")
-            echo "$arun" | grep -q '"ok":true' && break
-            echo "alert channel not live yet ($arun), retry $i"; sleep 5
-          done
-          echo "owner alert run: $arun"
-          echo "$arun" | grep -q '"ok":true' || { echo "owner alert channel broken"; exit 1; }
+          # Notification delivery is exercised by its existing cron, not a code deployment.
           # 持仓机械层(2026-09-10):三只持仓必须真的算出数字。
           # 这里断言的是"规则跑出来了",不是"规则赚钱"——数据源换了字段名、
           # 符号写错、样本不足,表现都是安静地不出读数,和"今天没信号"长得一模一样。
-          curl -s "$URL/api/refresh-quotes" > /dev/null || true
-          sleep 3
           hold=""
           for i in 1 2 3 4 5 6 7 8; do
             hold=$(curl -s --max-time 25 "$URL/api/holdings")
@@ -203,12 +192,6 @@ jobs:
           print('mechanical layer OK for all %d holdings' % len(hs))
           " || { echo "holdings rule engine broken"; exit 1; }
           curl -s "$URL/rules" | grep -q "规则不看你的成本价" || { echo "/rules page broken"; exit 1; }
-          echo "refresh result:"
-          curl -sf "$URL/api/refresh"
-          echo
-          echo "quotes:"
-          curl -s "$URL/api/refresh-quotes" || true
-          echo
           # 每次部署把全部报价打进日志:沙箱直连 workers.dev 403,这里是会话能读到
           # 实时行情的唯一通道;顺带每次部署留一份行情快照存档。
           echo "quote snapshot:"
@@ -224,21 +207,9 @@ jobs:
           " || true
           curl -sf "$URL/api/feed" | head -c 400
           echo
-      - name: Bootstrap Pro (webhook + first code, idempotent)
-        run: |
-          URL="${{ steps.wrangler.outputs.deployment-url }}"
-          echo "bootstrap:"
-          curl -s "$URL/api/bootstrap-pro" || true
-          echo
       - name: Ping IndexNow (auto search-engine indexing)
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "indexnow:"
           curl -s "$URL/api/ping-indexnow" || true
-          echo
-      - name: Push monitoring summary to Telegram
-        run: |
-          URL="${{ steps.wrangler.outputs.deployment-url }}"
-          echo "push summary:"
-          curl -s "$URL/api/push-summary" || true
           echo

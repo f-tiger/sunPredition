@@ -1,3 +1,4 @@
+import { ledgerAudit } from "./ledger-audit.js";
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE, HOLDINGS} from "./data.js";
 import { computeLevels, decide, distances, alignBars, PARAMS } from "./rules.js";
 import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN, renderTrackPage, renderDailyPage, renderDailyIndex, renderFaq, slugify, forecastSlugs, renderForecastPage, renderForecastIndex, renderLandingEN, renderTrackRecordEN, renderMethod, renderMethodEN, renderRedTeam, renderRedTeamEN, renderStockIndexEN, FORECAST_EN } from "./html.js";
@@ -592,14 +593,14 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       // 别家;track-record JSON 给主站 /mcp 的新工具(agent 原生调战绩);growth JSON
       // 让自动化会话第一次能读到本站流量计数(此前只有站长 TG 日报可见,会话是盲的)。
       case "/llms.txt": {
-        const scored = FORECASTS.filter((f) => f.verdict !== "pending");
+        const scored = FORECASTS.filter((f) => ["hit", "miss"].includes(f.verdict));
         const hits = scored.filter((f) => f.verdict === "hit").length;
         return new Response([
           "# SunWatch — AI-cycle market calls, on the record",
           "",
-          "> Market judgments written as falsifiable price triggers across US, Hong Kong and China A-share markets, watched by machine, logged in public BEFORE the outcome. Hits and misses stay side by side. Part of the AGI Scorecard network (agiscorecard.com — the evidence layer grading the AGI-2027 predictions).",
+          "> Market judgments written as falsifiable price triggers across US, Hong Kong and China A-share markets, watched by machine, and retained in a public editorial outcome log. Publication-before-outcome evidence is reported separately. Hits and misses stay side by side. Part of the AGI Scorecard network (agiscorecard.com — the evidence layer grading the AGI-2027 predictions).",
           "",
-          `Current ledger: ${scored.length} scored calls, ${hits} hits (${Math.round((hits / scored.length) * 100)}% — audit it, don't trust it). Not investment advice.`,
+          `Current editorial ledger: ${scored.length} hit/miss labels, ${hits} hits. Complete prospective provenance fields: ${ledgerAudit(FORECASTS).registration.documentedScored}. No audited trade-return evidence. The label rate is not a forecast success probability. Not investment advice.`,
           "",
           "## Key pages",
           `- [English landing](${SITE}/en): what this is, how the discipline works`,
@@ -638,21 +639,28 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         ].join("\n"), { headers: { "content-type": "text/markdown; charset=utf-8", "cache-control": "public, max-age=3600" } });
       }
       case "/api/track-record": {
-        const scored = FORECASTS.filter((f) => f.verdict !== "pending");
+        const scored = FORECASTS.filter((f) => ["hit", "miss"].includes(f.verdict));
         const hits = scored.filter((f) => f.verdict === "hit").length;
         return new Response(JSON.stringify({
           source: SITE + "/en/track-record",
-          asOf: new Date().toISOString().slice(0, 10),
+          asOf: ledgerAudit(FORECASTS).latestCallDate,
+          generatedAt: new Date().toISOString(),
+          asOfMeaning: "latest recorded call date; not a fresh market check or outcome-review date",
+          audit: ledgerAudit(FORECASTS),
           scored: scored.length, hits,
-          hitRate: scored.length ? Math.round((hits / scored.length) * 100) / 100 * 100 : 0,
-          note: "Every call logged before the outcome; misses stay published. Not investment advice.",
+          hitRate: ledgerAudit(FORECASTS).hitRate,
+          note: "Editorial outcome log; historical hit labels are not audited trades, net returns or calibrated future probabilities. Publication evidence coverage is separate. Not investment advice.",
           entries: forecastSlugs(FORECASTS).map(({ id, f }) => ({
             date: f.date, verdict: f.verdict,
             // 英文摘要有则用(人工审校),无则给中文原文并明确标注语言——数据接口
             // 不适用「英文页零中文」规则,但语言必须自我声明,不能让 agent 猜。
             call_en: FORECAST_EN[id] || null,
             call_zh: f.call,
-            odds: f.odds || null,
+            odds: Number.isFinite(f.odds) ? f.odds : null,
+            registrationEvidenceUrl: f.registrationEvidenceUrl || null,
+            publishedAt: f.publishedAt || null,
+            outcomeObservedAt: f.outcomeObservedAt || null,
+            resolutionRule: f.resolutionRule || null,
             outcome: f.outcome || "",
             url: SITE + "/forecast/" + id,
           })),
@@ -1684,3 +1692,4 @@ function fnv1a(str) {
   }
   return h.toString(36);
 }
+
