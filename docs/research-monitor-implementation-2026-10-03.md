@@ -82,3 +82,12 @@ SEC 历史 60 份档案保留在单独折叠区与 API sec_archive，不计入�
 该订阅验证为 HTTP 200、正确 Tesla 频道、当前 0 条 item。空的有效频道建立时间基线，保留已知 ID；后续首次出现的新发布时间在基线之后才入队。页面明确“订阅本次为空，不代表没有历史公告”，不把空列表伪装成 Tesla 历史公告。记录来源为 Company-authorized Business Wire，与 11 家公司自有来源分别显示。短窗口订阅不会把自然清空视为来源回滚；有条目时仍防日期回滚、链接越界、重复和历史补录。
 
 collector_revision 更新 official-ir-v2，只重试变更后的正确发布源，不更换出口去绕过被拒源。新增 connection_status / connection_ack_at，避免把之前 SEC 配置提示的 Telegram 回执误认为新公告连接成功。
+
+
+### 最终上线与回执
+- 发布 commit：5a1d9990ed87f4b04dc0c15f6b51566e05ebd858；部署 run 37133203446。所有运行步骤通过，包括真实源采集、公开刷新零消息、中英文页面、GA4、发现入口与既有收益 API/MCP。
+- 生产 collector_revision：official-ir-v2；health=ok；12/12 来源检查成功。11 家公司共 55 条初始公告；Tesla 授权 RSS 已连通、本次空，不声称取得 Tesla 的新公告。
+- 原有 60 份 SEC 快照独立保留，自动 SEC 采集仍暂停。33 条旧观点仍待复核，未伪造新分析结论。
+- 现有每半小时 cron 实际运行后，connection_status=acknowledged，connection_ack_at=2026-10-03T15:30:09.525Z（北京时间 23:30:09）。新公告监控接通通知获得 Telegram 真实回执；这与之前 SEC 配置提示的旧回执分开。未批量发送历史公告，未来真实新公告事件尚待自然产生。
+- 真实生产 API 数据渲染检查：手机无横向溢出、英文可见正文无中文混杂；保留原始公司标题语言。
+- IndexNow 既有提交在 2026-10-03T15:26:28.104Z 返回 429，未接受；不宣称已收录，不增加重试或新周期。
