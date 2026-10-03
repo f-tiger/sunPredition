@@ -74,3 +74,11 @@ SEC 历史 60 份档案保留在单独折叠区与 API sec_archive，不计入�
 来源验证/两轮自检：固定公司域名、显式允许 Amazon RSS 引用的 /amazon/ 代理投票文档链接（ezodproxy 为源中实际链接，不作为抓取代理）；拒绝用户信息 URL、恶意协议、未来日期、错误公司、重复 ID、DTD；HTTP 链接仅将已允许公司域名升级为 HTTPS，禁止自动跟随采集重定向；流式响应上限 4MB。新源迁移只建立基线，公开刷新不发消息；owner-only outbox 保留失败重试、暂停恢复与串行化。
 
 验证：十二源真实样本解析；离线新增/补录/重入/迁移/安全边界测试通过。发布沿用现有 CI、GA4 同意设置、canonical/hreflang/sitemap/llms 和原 IndexNow 频率；上线运行与 Telegram 回执将在部署后记录，不提前宣称。
+
+
+### 线上复核后的调整
+第一版真实 Worker 读取 11 家成功，Tesla IR 返回 HTTP 403，CI 因未达到全覆盖而失败（部署本身成功），未将其宣称为 12 家全通。停止对被拒绝的 Tesla IR 页面做轮询；采用独立授权分发渠道：Tesla 在 Business Wire 2026-10-02 公告页面直接提供 `moreNewsRssUrl`，对应 https://feed.businesswire.com/rss/home/company/Tesla/e6Uq0QhVpYxJuczyKOo2Rw== 。
+
+该订阅验证为 HTTP 200、正确 Tesla 频道、当前 0 条 item。空的有效频道建立时间基线，保留已知 ID；后续首次出现的新发布时间在基线之后才入队。页面明确“订阅本次为空，不代表没有历史公告”，不把空列表伪装成 Tesla 历史公告。记录来源为 Company-authorized Business Wire，与 11 家公司自有来源分别显示。短窗口订阅不会把自然清空视为来源回滚；有条目时仍防日期回滚、链接越界、重复和历史补录。
+
+collector_revision 更新 official-ir-v2，只重试变更后的正确发布源，不更换出口去绕过被拒源。新增 connection_status / connection_ack_at，避免把之前 SEC 配置提示的 Telegram 回执误认为新公告连接成功。

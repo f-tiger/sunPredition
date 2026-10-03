@@ -12,7 +12,7 @@ export const ISSUERS = [
 export const RELEVANT_FORMS = new Set(['8-K','8-K/A','10-Q','10-Q/A','10-K','10-K/A','20-F','20-F/A','6-K','S-1','S-1/A','S-3','S-3/A','424B2','424B5']);
 const SITE='https://invest.agiscorecard.com';
 const INTERVAL=20*60*1000;
-const COLLECTOR_REVISION='official-ir-v1';
+const COLLECTOR_REVISION='official-ir-v2';
 const DAY=86400000;
 const stamp=now=>new Date(now).toISOString();
 const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&stamp(Date.parse(s)).slice(0,10)===s;
@@ -92,13 +92,13 @@ export function formatResearchEvent(e){
 }
 
 export function researchSummary(s,opinions=[],now=Date.now()){
- const issuers=ISSUERS.map(i=>{const v=s.issuers?.[i.ticker];const stale=!v?.last_success_at||now-Date.parse(v.last_success_at)>90*60000;return {...i,source_type:v?.source_id?'official_ir':'unverified',source_url:IR_SOURCES[i.ticker].url,source_name:IR_SOURCES[i.ticker].name,status:stale?'stale':v.status,last_success_at:v?.last_success_at??null,baseline_at:v?.baseline_at??null,latest_filing_date:v?.latest_filing_date??null,error:v?.error??null};});
+ const issuers=ISSUERS.map(i=>{const v=s.issuers?.[i.ticker];const stale=!v?.last_success_at||now-Date.parse(v.last_success_at)>90*60000;return {...i,source_type:v?.source_id?'official_ir':'unverified',source_url:IR_SOURCES[i.ticker].url,source_name:IR_SOURCES[i.ticker].source_label??IR_SOURCES[i.ticker].name,source_kind:i.ticker==='TSLA'?'authorized_distributor':'company_owned',feed_empty:v?.feed_empty??false,status:stale?'stale':v.status,last_success_at:v?.last_success_at??null,baseline_at:v?.baseline_at??null,latest_filing_date:v?.latest_filing_date??null,error:v?.error??null};});
  return {schema_version:2,version:RESEARCH_VERSION,monitor_mode:'official_ir',sec_collection:'paused_using_official_ir',collector_revision:s.collector_revision??null,last_check:s.last_check??null,
   health:issuers.every(x=>x.status==='ok')?'ok':issuers.some(x=>x.last_success_at)?'partial':'not_ready',
   cadence_minutes:30,issuers,events:(s.events??[]).slice(0,120),
   review:{total:opinions.length,pending:opinions.filter(x=>x.status==='needs_review').length,expired:opinions.filter(x=>x.expired).length},
   limitations:['Company IR releases are monitored; this is not complete SEC filing coverage. Financial changes and direction are unassessed.','First observations establish a baseline, not historical signals.','Owner-only alerts; no automated trades or paid-source feeds.'],
-  owner_channel:{enabled:s.enabled!==false,last_ack_at:s.last_delivery?.at??null,delivery_health:s.delivery_error?'unconfirmed':s.last_delivery?'acknowledged':'pending'},
+  owner_channel:{enabled:s.enabled!==false,connection_status:s.ir_connected?'acknowledged':'pending',connection_ack_at:s.ir_connection_ack_at??null,last_ack_at:s.last_delivery?.at??null,delivery_health:s.delivery_error?'unconfirmed':s.last_delivery?'acknowledged':'pending'},
   evidence_clock:'first_seen_at is SunWatch observation time; published_at is normalized UTC where available; day-only releases do not claim a verified time or timezone'};
 }
 
@@ -126,7 +126,7 @@ export class ResearchMonitor extends PortfolioAlerts {
   s.collector_revision=COLLECTOR_REVISION;s.last_check=stamp(now);s.issuers??={};s.events??=[];s.pending??=[];
   for(const issuer of ISSUERS){
    try{
-    const rows=await this.loadIssuer(issuer);const apply=rows[0]?.evidence_type==='company_release'?applyIRSnapshot:applySnapshot;const update=apply(s.issuers[issuer.ticker]?.baseline_at?s.issuers[issuer.ticker]:null,rows,now);
+    const rows=await this.loadIssuer(issuer);const apply=!rows.length||rows[0]?.evidence_type==='company_release'?applyIRSnapshot:applySnapshot;const update=apply(s.issuers[issuer.ticker]?.baseline_at?s.issuers[issuer.ticker]:null,rows,now,IR_SOURCES[issuer.ticker]);
     const nextPending=[...new Set([...s.pending,...update.pending])];
     if(nextPending.length>500)throw Error('delivery_backlog');
     s.issuers[issuer.ticker]=update.issuer;
@@ -162,7 +162,7 @@ ${SITE}/research`,'configuration_required')){s.contact_notified=true;sent++;}
   }
   const covered=ISSUERS.filter(i=>s.issuers?.[i.ticker]?.baseline_at).length;
   if(!s.ir_connected&&covered){
-   if(await this.acknowledge(s,`🔎 SunWatch 官方公司公告监控已接通\n官方公告基线：${covered}/12 家。每 30 分钟检查公司 RSS / IR 公告。无需 SEC 邮箱。\n首次加载的历史文件不作为新信号推送。\n提醒包含原文、发布日期、首次发现时间和复核重点；正文数值与买卖方向仍需核实。公司公告不等于完整 SEC 申报覆盖。\n历史观点已加入有效期检查，未复核记录明确标记。\n${SITE}/research\n/research 查询 · /research_pause 暂停 · /research_resume 恢复`,'connected')){s.ir_connected=true;sent++;await this.ctx.storage.put('research-state',s);}else return sent;
+   if(await this.acknowledge(s,`🔎 SunWatch 官方公司公告监控已接通\n官方公告基线：${covered}/12 家。每 30 分钟检查公司 RSS / IR 公告。无需 SEC 邮箱。Tesla 使用其授权的 Business Wire RSS；空订阅不代表没有历史公告。\n首次加载的历史文件不作为新信号推送。\n提醒包含原文、发布日期、首次发现时间和复核重点；正文数值与买卖方向仍需核实。公司公告不等于完整 SEC 申报覆盖。\n历史观点已加入有效期检查，未复核记录明确标记。\n${SITE}/research\n/research 查询 · /research_pause 暂停 · /research_resume 恢复`,'connected')){s.ir_connected=true;s.ir_connection_ack_at=stamp(Date.now());sent++;await this.ctx.storage.put('research-state',s);}else return sent;
   }
   const failed=ISSUERS.filter(i=>s.issuers?.[i.ticker]?.status!=='ok').map(x=>x.ticker);
   if(failed.length){

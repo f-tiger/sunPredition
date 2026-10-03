@@ -10,11 +10,11 @@ for(let n=0;n<8;n++){
 assert.equal(initial?.version,'sec-disclosures-v1','Monitor deployment is unavailable');
 const fresh=await(await read('/api/research-refresh',{method:'POST'})).json();
 assert.equal(fresh.ok,true);assert.equal(fresh.webhook_secured,true,'Private webhook migration failed');assert.equal(fresh.issuers.length,12);assert.equal(fresh.sent,0,'Public refresh must never send Telegram messages');
-assert.equal(fresh.collector_revision,'official-ir-v1');
+assert.equal(fresh.collector_revision,'official-ir-v2');
 assert.equal(fresh.monitor_mode,'official_ir');
 console.log('Official IR health:',fresh.issuers.map(x=>`${x.ticker}:${x.status}${x.error?'('+x.error+')':''}`).join(' '));
 assert.equal(fresh.health,'ok','Official company sources failed; do not claim full coverage');
-assert.ok(fresh.events.length>=12);assert.ok(fresh.events.every(x=>x.source==='Official company IR'&&x.evidence_type==='company_release'&&x.interpretation_status==='metadata_only'&&x.first_seen_at&&x.url.startsWith('https://')));
+assert.ok(fresh.events.length>=12);assert.ok(fresh.events.every(x=>['Official company IR','Company-authorized Business Wire'].includes(x.source)&&x.evidence_type==='company_release'&&x.interpretation_status==='metadata_only'&&x.first_seen_at&&x.url.startsWith('https://')));
 assert.equal(fresh.sec_archive.events.length,60);assert.equal(fresh.sec_archive.automatic_collection,false);assert.ok(fresh.sec_archive.as_of);
 assert.ok(fresh.review.pending>0);assert.equal(JSON.stringify(fresh).includes('message_id'),false);
 assert.equal((await fetch(site+'/tg-webhook',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,403,'Missing webhook secret must be rejected');
@@ -25,4 +25,4 @@ for(const [path,label] of [['/research','公司披露监控'],['/en/research','C
 const llms=await(await read('/llms.txt')).text();assert.ok(llms.includes('/api/research'));
 const sitemap=await(await read('/sitemap.xml')).text();assert.ok(sitemap.includes('/en/research'));
 console.log('Public repeat sends zero; bilingual pages + opt-in GA4 + discovery verified. Source mode:','official RSS/IR checks; historical SEC archive separate');
-console.log('Owner alert channel:',fresh.owner_channel.delivery_health,'last acknowledged:',fresh.owner_channel.last_ack_at??'awaiting existing cron');
+console.log('Owner alert channel:',fresh.owner_channel.connection_status,'connection acknowledged:',fresh.owner_channel.connection_ack_at??'awaiting existing cron');

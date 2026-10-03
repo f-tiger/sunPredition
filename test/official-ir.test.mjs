@@ -22,7 +22,7 @@ test('initial history silent, new IDs alert once, same-day historical insertion 
 test('Palantir and Tesla source timestamps without verified timezone stay date-only',()=>{
  const pltr=parseIR(JSON.stringify({GetPressReleaseListResult:[{Headline:'Palantir announcement',LinkToDetailPage:'/news-details/a',PressReleaseDate:'10/03/2026 12:00:00'}]}),IR_SOURCES.PLTR,now)[0];
  assert.equal(pltr.published_at,null);assert.equal(pltr.date_precision,'day');assert.equal(pltr.filing_date,'2026-10-03');
- const tsla=parseIR('<section class="press-release-teaser"><h4><a href="/press-release/a">Tesla release</a></h4><time datetime="2026-10-02T12:00:00Z"></time></section>',IR_SOURCES.TSLA,now)[0];assert.equal(tsla.published_at,null);assert.match(formatResearchEvent(tsla),/仅日期/);
+ const tsla=parseIR('<section class="press-release-teaser"><h4><a href="/press-release/a">Tesla release</a></h4><time datetime="2026-10-02T12:00:00Z"></time></section>',{...IR_SOURCES.TSLA,format:'tesla',url:'https://ir.tesla.com/press',host:'ir.tesla.com'},now)[0];assert.equal(tsla.published_at,null);assert.match(formatResearchEvent(tsla),/仅日期/);
  const base=applyIRSnapshot(null,[{...pltr,id:'older',filing_date:'2026-10-02'}],now);assert.equal(applyIRSnapshot(base.issuer,[pltr,{...pltr,id:'older',filing_date:'2026-10-02'}],now).pending.length,0);
 });
 test('HTTP links upgraded only for known official hosts; RSS relative PDFs remain first-party',()=>{
@@ -43,3 +43,12 @@ test('migrates old SEC state to separate archive, uses IR baseline and acknowled
  const first=await call('refresh');assert.equal(first.health,'ok');assert.equal(first.sent,0);assert.deepEqual(storage.get('research-state').pending,[]);assert.ok(storage.get('research-state').sec_issuers.META);
  assert.equal((await call('run')).sent,1);assert.match(sent[0],/官方公告基线：12\/12/);assert.equal((await call('run')).sent,0);assert.equal((await call('public')).owner_channel.delivery_health,'acknowledged');
 });
+
+ test('authorized Tesla wire may be empty: establishes silent baseline and later alerts only new releases',()=>{
+ const s=IR_SOURCES.TSLA;
+ const empty='<rss><channel><title>Business Wire - News by Company: Tesla</title></channel></rss>';
+ const rows=parseIR(empty,s,now);assert.deepEqual(rows,[]);const base=applyIRSnapshot(null,rows,now,s);assert.equal(base.issuer.feed_empty,true);assert.deepEqual(base.pending,[]);
+ const populated=empty.replace('</channel>','<item><title>Tesla release</title><link>https://www.businesswire.com/news/home/20261004/en/Tesla</link><pubDate>Sun, 04 Oct 2026 12:00:00 GMT</pubDate></item></channel>');
+ const nextRows=parseIR(populated,s,now+86400000);const next=applyIRSnapshot(base.issuer,nextRows,now+86400000,s);assert.equal(next.pending.length,1);assert.equal(next.added[0].source,'Company-authorized Business Wire');
+ const quiet=applyIRSnapshot(next.issuer,[],now+86400001,s);assert.deepEqual(quiet.issuer.seen,next.issuer.seen);assert.equal(applyIRSnapshot(quiet.issuer,nextRows,now+86400002,s).pending.length,0);
+ });

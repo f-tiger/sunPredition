@@ -1,7 +1,7 @@
 // Public company-owned feeds; no SEC requests, proxy, login or paid feed.
 const entries = [
  ['AMD','rss','https://ir.amd.com/news-events/press-releases/rss','Advanced Micro Devices'],
- ['TSLA','tesla','https://ir.tesla.com/press','Tesla'],
+ ['TSLA','rss','https://feed.businesswire.com/rss/home/company/Tesla/e6Uq0QhVpYxJuczyKOo2Rw==','Tesla'],
  ['META','rss','https://investor.atmeta.com/rss/pressrelease.aspx','Meta'],
  ['MU','rss','https://investors.micron.com/rss/pressrelease.aspx','Micron'],
  ['NVDA','rss','https://nvidianews.nvidia.com/cats/press_release.xml','NVIDIA'],
@@ -14,6 +14,9 @@ const entries = [
  ['PANW','rss','https://investors.paloaltonetworks.com/rss/news-releases.xml','Palo Alto'],
 ];
 export const IR_SOURCES=Object.fromEntries(entries.map(([ticker,format,url,name])=>[ticker,{ticker,format,url,name,id:'official-ir:'+ticker,host:new URL(url).hostname}]));
+IR_SOURCES.TSLA.allow_empty=true;
+IR_SOURCES.TSLA.short_window=true;
+IR_SOURCES.TSLA.source_label='Tesla / Business Wire';
 const iso=n=>new Date(n).toISOString();
 function decode(s){return String(s??'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&#(x[0-9a-f]+|\d+);|&(amp|lt|gt|quot|apos|nbsp);/gi,(all,num,named)=>{
  if(num){const n=num[0].toLowerCase()==='x'?parseInt(num.slice(1),16):Number(num);return n>0&&n<=0x10ffff?String.fromCodePoint(n):'';}
@@ -24,7 +27,7 @@ function field(s,tag){return decode(s.match(new RegExp('<'+tag+'(?:\\s[^>]*)?>([
 function originalURL(value,source){
  if(typeof value!=='string'||!value.trim())throw Error('ir_invalid_link');
  const u=new URL(decode(value),source.url);
- if(!['https:','http:'].includes(u.protocol)||!(u.hostname===source.host||(source.ticker==='AMZN'&&u.hostname==='www.ezodproxy.com'&&u.pathname.startsWith('/amazon/')))||u.username||u.password||u.port)throw Error('ir_invalid_link');
+ if(!['https:','http:'].includes(u.protocol)||!(u.hostname===source.host||(source.ticker==='TSLA'&&u.hostname==='www.businesswire.com'&&u.pathname.startsWith('/news/'))||(source.ticker==='AMZN'&&u.hostname==='www.ezodproxy.com'&&u.pathname.startsWith('/amazon/')))||u.username||u.password||u.port)throw Error('ir_invalid_link');
  u.protocol='https:';u.hash='';return u.href;
 }
 function dateOnly(s){
@@ -37,7 +40,7 @@ function row(source,title,link,published,now,{day=null}={}){
  const date=dateOnly(day??iso(ts).slice(0,10));
  if(date>iso(now).slice(0,10)||ts>now+5*60000)throw Error('ir_future_date');
  const url=originalURL(link,source);
- return {id:source.id+':'+url,ticker:source.ticker,source_id:source.id,source:'Official company IR',source_url:source.url,
+ return {id:source.id+':'+url,ticker:source.ticker,source_id:source.id,source:source.ticker==='TSLA'?'Company-authorized Business Wire':'Official company IR',source_url:source.url,
   evidence_type:'company_release',title:titleText,url,form:'IR',items:'',accession:null,report_date:null,
   filing_date:date,published_at:ts===null?null:iso(ts),published_at_source:plain(published),date_precision:day?'day':'timestamp',
   interpretation_status:'metadata_only',status:'needs_review'};
@@ -66,7 +69,7 @@ export function parseIR(text,source,now=Date.now()){
    return row(source,x.Headline,x.LinkToDetailPage,x.PressReleaseDate,now,{day:`${date[3]}-${date[1]}-${date[2]}`});
   });
  }
- if(!rows.length)throw Error('ir_empty_feed');
+ if(!rows.length&&!source.allow_empty)throw Error('ir_empty_feed');
  if(new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('ir_duplicate_item');
  return rows.sort((a,b)=>b.filing_date.localeCompare(a.filing_date)||a.id.localeCompare(b.id));
 }
@@ -90,16 +93,19 @@ export async function loadOfficialIR(issuer,now=Date.now()){
  if(new Date(now).getUTCMonth()===0)rows.push(...await readFeed(url(year-1),source,now));
  return rows.sort((a,b)=>b.filing_date.localeCompare(a.filing_date));
 }
-export function applyIRSnapshot(previous,rows,now=Date.now()){
- if(!rows.length)throw Error('ir_empty_feed');
+export function applyIRSnapshot(previous,rows,now=Date.now(),source=null){
+ if(!rows.length){
+  if(!source?.allow_empty)throw Error('ir_empty_feed');
+  return {issuer:{...(previous??{}),source_id:source.id,baseline_at:previous?.baseline_at??iso(now),last_success_at:iso(now),latest_filing_date:previous?.latest_filing_date??null,seen:previous?.seen??[],status:'ok',error:null,feed_empty:true},added:[],pending:[]};
+ }
  const latest=rows.reduce((m,x)=>x.filing_date>m?x.filing_date:m,'');
  if(previous?.latest_filing_date&&latest<previous.latest_filing_date)throw Error('source_rollback');
  const known=new Set(previous?.seen??[]);
- if(previous&&rows.every(x=>!known.has(x.id)))throw Error('history_gap');
+ if(previous&&!source?.short_window&&rows.every(x=>!known.has(x.id)))throw Error('history_gap');
  const first=!previous,baseline=previous?.baseline_at??iso(now);
  const added=(first?rows.slice(0,5):rows.filter(x=>!known.has(x.id))).map(x=>({...x,first_seen_at:iso(now),baseline:first,
   historical_backfill:!first&&(x.published_at?x.published_at<=baseline:x.filing_date<=baseline.slice(0,10))}));
  return {issuer:{source_id:rows[0].source_id,baseline_at:baseline,last_success_at:iso(now),latest_filing_date:latest,
-  seen:[...new Set([...rows.map(x=>x.id),...(previous?.seen??[])])].slice(0,2000),status:'ok',error:null},
+  seen:[...new Set([...rows.map(x=>x.id),...(previous?.seen??[])])].slice(0,2000),status:'ok',error:null,feed_empty:false},
   added,pending:added.filter(x=>!x.baseline&&!x.historical_backfill).map(x=>x.id)};
 }
