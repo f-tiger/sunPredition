@@ -44,6 +44,7 @@ jobs:
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
         with:
+          wranglerVersion: "4.147.0"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Read-only production smoke test
         run: |
