@@ -33,6 +33,14 @@ jobs:
       - name: Test SEC evidence, delivery and owner permissions
         run: node --test test/research-monitor.test.mjs test/official-ir.test.mjs test/private-config.test.mjs
 
+      - name: Verify roadmap provenance, owner isolation and retry behavior
+        run: node --test test/roadmap-alerts.test.mjs
+
+      - name: Configure scoped roadmap verification binding
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/roadmap-verification-key.mjs
+
       - name: Audit ledger evidence semantics
         run: node --test test/ledger-audit.test.mjs
 
@@ -225,6 +233,12 @@ jobs:
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
+      - name: Verify first roadmap owner delivery and deduplication
+        env:
+          SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node test/roadmap-live.mjs
+
       - name: Verify live official company disclosure monitor
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}

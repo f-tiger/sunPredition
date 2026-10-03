@@ -178,7 +178,7 @@ ${SITE}/research`,'configuration_required')){s.contact_notified=true;sent++;}
   for(let n=0;n<3&&s.pending?.length;n++){
    const batch=s.pending.slice(0,2).map(id=>s.events.find(x=>x.id===id));
    if(batch.some(x=>!x)){s.delivery_error='outbox_event_missing';break;}
-   const text='🔎 SunWatch · 新披露，需要复核\n\n'+batch.map(formatResearchEvent).join('\n\n')+`\n\n研究证据，尚未核实财务变化，不生成买卖指令。\n${SITE}/research`;
+   const text='🔎 SunWatch · 新披露，需要复核\n\n'+batch.map(formatResearchEvent).join('\n\n')+`\n\n研究证据，尚未核实财务变化，不生成买卖指令。\n对照 AI 路线与验证条件：https://agiscorecard.com/zh/invest\n${SITE}/research`;
    if(!await this.acknowledge(s,text,'filings'))break;
    const delivered=new Set(batch.map(x=>x.id));s.pending=s.pending.filter(id=>!delivered.has(id));sent++;await this.ctx.storage.put('research-state',s);
   }

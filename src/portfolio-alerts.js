@@ -1,3 +1,4 @@
+import {handleRoadmap} from './roadmap-alerts.js';
 // Public model returns only. Telegram credentials stay in the existing SunWatch env/KV.
 export const FEED='https://agiscorecard.com/api/portfolio';
 const COHORT='social-basket-2026-10-02-close';
@@ -66,6 +67,7 @@ export class PortfolioAlerts {
   if(!r.ok)throw Error('feed_unavailable');return validatePortfolio(await r.json(),previous);
  }
  async handle(action){
+  if(action.startsWith('roadmap/'))return handleRoadmap(this.ctx,this.env,this.send.bind(this),action.slice(8));
   const store=this.ctx.storage;
   const s=await store.get('state')??{enabled:true};
   if(action==='status')return {ok:true,enabled:s.enabled,last_delivery:s.last_delivery??null,last_check:s.last_check??null,health:s.health??'not_checked',as_of:s.last?.as_of??null};

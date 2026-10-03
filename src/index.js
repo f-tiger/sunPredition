@@ -1,3 +1,4 @@
+import {roadmapCommand} from './roadmap-alerts.js';
 import researchBaseline from "./research-baseline.json" with {type:"json"};
 import {researchCommand, reviewOpinions} from "./research-monitor.js";
 import {renderResearch} from "./research-page.js";
@@ -188,6 +189,15 @@ const worker = {
       // 存在的理由:cron 每 30 分钟才跑一次,而「通道到底通没通」不该等半小时才知道,
       // 更不该靠猜——每次部署都真发一次,断了立刻红。
       // 天然幂等:告警在对面按状态去重、hello 只发一次,所以重复调用最多什么都不发。
+      case "/api/roadmap-status": {
+        const state=await roadmapCommand(env,"public");
+        return new Response(JSON.stringify(state),{headers:{"content-type":"application/json","cache-control":"no-store","access-control-allow-origin":"https://agiscorecard.com"}});
+      }
+      case "/api/roadmap-alerts": {
+        const k=env.ROADMAP_VERIFY_KEY||env.AGI_ALERT_KEY||"",action=url.searchParams.get("action");
+        if(!k||request.method!=="POST"||request.headers.get("authorization")!=="Bearer "+k||!["status","run"].includes(action))return new Response("forbidden",{status:403});
+        return json(await roadmapCommand(env,action));
+      }
       case "/api/portfolio-alerts": {
         const k = env.AGI_ALERT_KEY || "";
         const action = url.searchParams.get("action");
@@ -259,6 +269,14 @@ const worker = {
         const upd = await request.json().catch(() => ({}));
         const msg = upd.message;
         if (msg?.chat?.id && cfg) {
+          const roadmap=(msg.text||"").match(/^\/(roadmap(?:_pause|_resume)?)(?:@sunwatchBot)?\s*$/i);
+          if(roadmap||(msg.text||"").match(/^\/start(?:@sunwatchBot)?\s+roadmap\s*$/i)){
+            if(msg.chat.type!=="private"||String(msg.chat.id)!==String(cfg.chatId))return new Response("forbidden",{status:403});
+            const command=roadmap?.[1]?.toLowerCase()||"roadmap";
+            const out=await roadmapCommand(env,command==="roadmap"?"read":command==="roadmap_pause"?"pause":"resume");
+            await tgSend(cfg,command==="roadmap"?(out.text||"路线暂不可用"):out.ok?(out.enabled?"AI 路线提醒已恢复。":"AI 路线提醒已暂停；/roadmap 仍可查询。") : "操作未完成，请稍后重试。",null);
+            return new Response("ok");
+          }
           const research = (msg.text || "").match(/^\/(research(?:_pause|_resume)?)(?:@sunwatchBot)?\s*$/i);
           if (research) {
             if (msg.chat.type !== "private" || String(msg.chat.id) !== String(cfg.chatId)) return new Response("forbidden", {status:403});
@@ -791,6 +809,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
     await researchCommand(env,"run").catch(() => {});
     // Independent of news/quote refresh failures; owner only, serialized durable receipts.
     await portfolioCommand(env).catch(() => {});
+    await roadmapCommand(env).catch(() => {});
     const result = await refreshFeed(env);
     const quoteResult = await refreshQuotes(env).catch(() => null);
     const cfg = await getTgConfig(env);

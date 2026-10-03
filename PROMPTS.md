@@ -705,3 +705,14 @@ Release outcome: public commit 0eebd66 / run 37129985278 succeeded; historical s
 线上核验修正：11 家直连成功，Tesla IR 被拒。改用 Tesla 在授权 Business Wire 新闻页面给出的公司专属 RSS，当前为空且明确标注；不绕过原来源拒绝。为新监控增加独立 Telegram 接通回执，避免复用之前“配置待完成”的旧回执造成误报。
 
 执行结果：official-ir-v2 已上线，12 个独立公司/授权发布源检查成功，55 条公司公告与 60 份 SEC 历史快照分开；真实 TG 接通回执 2026-10-03T15:30:09.525Z。Tesla RSS 本次为空已显示，不声称完整 SEC 覆盖。原定时任务、收益建仓基准、客户广播边界保持原范围。
+
+## 2026-10-03 — Video evidence to an investment roadmap and owner alerts
+
+User request: integrate existing AGI expert-video views into AI-era industry routes, map conditional US-stock research candidates and deliver through the existing SunWatch Telegram channel. Clarification: AGI homepages must remain unchanged; change only the investment hub.
+
+Three refinements: (1) unify routes, company evidence, fixed portfolio and existing tools in the investment hub; (2) distinguish original views, our hypotheses, issuer facts and valuation, preserve counterevidence; (3) ship EN/ZH, easy local watch selection/export, daily metadata discovery, bounded owner-only notification with acknowledgement, deduplication, pause/query/resume, analytics and live verification. No orders, new subscriptions or customer broadcasts.
+
+Self-check 1: famous speakers are interested participants, repeated opinions are not independent evidence, AI adoption is not shareholder return. Use conditional candidates and invalidation rules; valuation remains unassessed.
+Self-check 2: metadata-only videos never revise a reviewed thesis; historical discoveries do not replay alerts. Reuse the existing durable owner sender, retry failed delivery, keep private keys out of browsers/logs and reject unversioned/rolled-back data. Local watchlists do not configure Telegram subscriptions.
+
+Delivery uses existing crons and the existing deployment branch. A derived verification key permits only fixed-content run/status on this notifier. It never accepts text or recipients; initial connection sends once. Receipts, delivery state and recipient remain private, with only aggregate acknowledgement time exposed.
