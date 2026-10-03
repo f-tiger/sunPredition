@@ -647,3 +647,16 @@ Telegram 侧的数(询价 1、付款 0、免费订户 1、Pro 绑定 0)不受影
 2. 方法轮：区分编辑复盘命中、事前预测证据、真实交易收益和网站营收。旧记录不得倒填时间或删除失误；当前市场价格不在本次审计中重新定价。
 3. 交付轮：SunWatch 增加中英/API 证据状态、明示事前公开字段覆盖和零实盘收益核验；修正二元判定分母，生成时间与记录时间分开。保持定时监控和现有付费条款。部署只做构建与只读自检，不触发 Telegram 群发、初始化或行情刷新副作用。
 验收：离线零样本、部分判定、倒序时间、当前旧档案及中英/API 契约测试；发布后只读核对。商业验收仍是独立用户复查留存与实收，未证明盈利。
+
+## 2026-10-03 — AGI twelve-stock returns → reusable tool / SunWatch owner alerts
+
+Original request:「可以变成工具或mcp，然后接入到我的sunwatch的tg机器人提醒」。Prior constraints: twelve screenshot stocks compared with SPY / QQQ / TQQQ, dynamically updated; entry uses October 2 NY close.
+
+Prompt refinement 1 — Goal: extend the existing AGI MCP with a public read-only portfolio-return tool and HTTP endpoint; reuse its reconciled dataset in the existing SunWatch owner Telegram channel.
+Prompt refinement 2 — Constraints: immutable cohort `social-basket-2026-10-02-close`; no new return calculation or personal trading; credentials remain in SunWatch; no subscriber broadcast, new paid service, fabricated return or guaranteed outperformance. Keep existing signals and crons intact.
+Prompt refinement 3 — Acceptance: API and MCP agree with website snapshot; all twelve stocks and three benchmarks present; notify once for first baseline and each new complete valuation/correction; data failures retain last good valuation and retry; Telegram success receipt before marking sent; owner can query/pause/resume; tests and live delivery verification required. Update the existing public MCP mirror/discovery, never create a duplicate registry identity.
+
+Self-check 1 (not an independent review): overlapping cron schedules and manual requests can defeat eventual-consistency KV deduplication. Serialize this notifier with one Durable Object and persist delivery state there; do not infer Telegram delivery from HTTP alone.
+Self-check 2 (not an independent review): a refreshed timestamp does not mean changed returns; a stale or invalid dataset cannot become a 0% result. Fingerprint the valuation, validate schema/cohort/completeness, label retained dates and health transitions, avoid repeated warnings. Telegram send acknowledgement plus persistence is not an atomic transaction: an acknowledgement lost during process failure can still duplicate; never claim exactly-once delivery.
+
+Execution: implement and test AGI API/MCP first, deploy and verify; then wire SunWatch cron and strict owner commands, deploy, verify initial Telegram receipt and an immediate deduplicated run. Public code/docs contain no bot token or chat identifier. SEO/GEO reflect only real public endpoints; submit changed canonical documentation through existing manual IndexNow path, no new per-push submission.

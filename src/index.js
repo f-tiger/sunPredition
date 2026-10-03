@@ -1,3 +1,5 @@
+import {portfolioCommand} from "./portfolio-alerts.js";
+export {PortfolioAlerts} from "./portfolio-alerts.js";
 import { ledgerAudit } from "./ledger-audit.js";
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE, HOLDINGS} from "./data.js";
 import { computeLevels, decide, distances, alignBars, PARAMS } from "./rules.js";
@@ -164,6 +166,12 @@ const worker = {
       // 存在的理由:cron 每 30 分钟才跑一次,而「通道到底通没通」不该等半小时才知道,
       // 更不该靠猜——每次部署都真发一次,断了立刻红。
       // 天然幂等:告警在对面按状态去重、hello 只发一次,所以重复调用最多什么都不发。
+      case "/api/portfolio-alerts": {
+        const k = env.AGI_ALERT_KEY || AGI_ALERT_KEY;
+        const action = url.searchParams.get("action");
+        if (!k || request.headers.get("authorization") !== "Bearer " + k || request.method !== "POST" || !["run", "status"].includes(action)) return new Response("forbidden", {status:403});
+        return json(await portfolioCommand(env, action));
+      }
       case "/api/agi-alerts-run": {
         const k = env.AGI_ALERT_KEY || AGI_ALERT_KEY;
         if (!k || url.searchParams.get("k") !== k) return json({ ok: false, error: "鉴权失败" });
@@ -228,6 +236,15 @@ const worker = {
         const msg = upd.message;
         const cfg = await getTgConfig(env);
         if (msg?.chat?.id && cfg) {
+          const portfolio = (msg.text || "").match(/^\/(portfolio(?:_pause|_resume)?)(?:@sunwatchBot)?\s*$/i);
+          if (portfolio) {
+            if (sec !== WEBHOOK_SECRET || msg.chat.type !== "private" || String(msg.chat.id) !== String(cfg.chatId)) return new Response("forbidden", {status:403});
+            const command=portfolio[1].toLowerCase();
+            const out=await portfolioCommand(env, command==="portfolio"?"read":command==="portfolio_pause"?"pause":"resume");
+            const text=command==="portfolio"?out.text:out.ok?(out.enabled?"AGI 12 股收益提醒已恢复，每 30 分钟检查新收盘记录。":"AGI 12 股收益提醒已暂停。/portfolio 仍可查询；/portfolio_resume 恢复。"):"操作未完成，请稍后重试。";
+            await tgSend(cfg,text||"收益数据暂不可用，请稍后重试。",null);
+            return new Response("ok");
+          }
           const m = (msg.text || "").match(/\/start\s+(SW-[A-Z0-9]+)/i);
           // 欧美改造(站长 2026-08-08):按 Telegram language_code 双语回复。
           // 未知语言默认中文(存量用户全是中文);站长侧通知永远中文。
@@ -736,6 +753,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
   },
 
   async scheduled(event, env, _ctx) {
+    // Independent of news/quote refresh failures; owner only, serialized durable receipts.
+    await portfolioCommand(env).catch(() => {});
     const result = await refreshFeed(env);
     const quoteResult = await refreshQuotes(env).catch(() => null);
     const cfg = await getTgConfig(env);

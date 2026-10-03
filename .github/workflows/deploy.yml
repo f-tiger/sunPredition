@@ -25,6 +25,9 @@ jobs:
       - name: Growth human-count test
         run: node test/growth.test.mjs
 
+      - name: Test portfolio owner delivery and deduplication
+        run: node --test test/portfolio-alerts.test.mjs
+
       - name: Audit ledger evidence semantics
         run: node --test test/ledger-audit.test.mjs
 
@@ -207,6 +210,10 @@ jobs:
           " || true
           curl -sf "$URL/api/feed" | head -c 400
           echo
+      - name: Verify portfolio API, MCP and first owner Telegram receipt
+        env:
+          SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
+        run: node test/portfolio-live.mjs
       - name: Ping IndexNow (auto search-engine indexing)
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"

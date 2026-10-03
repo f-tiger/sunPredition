@@ -20,3 +20,12 @@ id = "95e53046baf048cd803687c86aaa3f67"
 
 # 可选:接入 X API 时在 Cloudflare 后台或 wrangler secret 设置
 #   npx wrangler secret put X_BEARER_TOKEN
+
+# Owner-only portfolio notifications: one SQLite-backed durable sender, existing crons.
+[[durable_objects.bindings]]
+name = "PORTFOLIO_ALERTS"
+class_name = "PortfolioAlerts"
+
+[[migrations]]
+tag = "portfolio-alerts-v1"
+new_sqlite_classes = ["PortfolioAlerts"]

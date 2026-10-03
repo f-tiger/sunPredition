@@ -56,3 +56,10 @@ SunWatch:孙宇晨预判监控 + 跨市场(美/港/A)投资执行系统。
 - 持仓涉及:美股存储(派发中,SKHY 事件驱动)、港股 7709(两倍海力士,重点标的)、关注物理AI建仓(优必选/潜伏池)
 - 关键日程:SKHY 已于 2026-07-10 挂牌($149 发行/首日收 $168);上市周(7/13-17)执行第二段派发降至 1/3 底仓;MU 财报 9 月下旬;宇树科创板挂牌在即
 - 用户偏好:结论先行、给具体价位和仓位、诚实认错、TG 触达确认
+
+
+## AGI twelve-stock portfolio owner alerts (2026-10-03)
+
+`src/portfolio-alerts.js` exposes `PortfolioAlerts`, bound by `PORTFOLIO_ALERTS` to a SQLite-backed Durable Object. Existing 30-minute cron reads `https://agiscorecard.com/api/portfolio` before unrelated feed refresh. Fixed cohort `social-basket-2026-10-02-close`, October 2 NY close, twelve stocks vs SPY/QQQ/TQQQ; no personal trading and no copy of return calculations. Initial baseline, new complete valuation and actual source correction send only to the already configured owner chat, never free/pro subscribers.
+
+Serial durable delivery state, successful Telegram message ID before acknowledgement, retry on failure. One warning per outage after 25-minute grace, one recovery. A crash between external acknowledgement and durable persistence may duplicate; do not claim exactly-once. `/portfolio` reads, `/portfolio_pause` and `/portfolio_resume` control owner alerts; all require verified webhook header, private chat and configured owner chat match. `POST /api/portfolio-alerts?action=run|status` reuses existing owner integration Bearer authentication for verification, no arbitrary messages/recipients. Never print tokens, chat IDs or webhook secrets.
