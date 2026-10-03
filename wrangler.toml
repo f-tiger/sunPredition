@@ -29,3 +29,12 @@ class_name = "PortfolioAlerts"
 [[migrations]]
 tag = "portfolio-alerts-v1"
 new_sqlite_classes = ["PortfolioAlerts"]
+
+# SEC disclosures share the existing 30-minute schedule; no paid provider.
+[[durable_objects.bindings]]
+name = "RESEARCH_MONITOR"
+class_name = "ResearchMonitor"
+
+[[migrations]]
+tag = "research-monitor-v1"
+new_sqlite_classes = ["ResearchMonitor"]

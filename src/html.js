@@ -618,7 +618,7 @@ export function renderDashboard() {
 <div id="actionboard"><div class="card meta">行情加载中…</div></div>
 
 <h2>🧭 核心信号清单(完整版)</h2>
-<div id="coreSignals"></div>
+<p class="meta">历史观点需重新复核，不能把页面刷新当作判断更新。<a href="/research">查看公司披露监控与复核状态 →</a></p><div id="coreSignals"></div>
 
 <h2>预测记录与打分(给自己建档)</h2>
 <p class="meta">本系统每次明确判断都在此公开记档——命中与失误同等展示,与孙宇晨预判档案同一标准。</p>

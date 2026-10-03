@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PortfolioAlerts,validatePortfolio,formatPortfolio,FEED} from '../src/portfolio-alerts.js';
-import worker from '../src/index.js';
+import worker,{telegramWebhookSecret} from '../src/index.js';
 // Synthetic source contract; these are not market quotes.
 function fixture(){
  const row=ticker=>({ticker,entry_adjusted_close:100,return_pct:0,max_drawdown_pct:0,excess_spy_pp:0});
@@ -66,8 +66,7 @@ test('missing, nonfinite, wrong-cohort and rollback data cannot become zero retu
  const d=fixture();d.last_success_at='2026-09-01T00:00:00Z';assert.equal(validatePortfolio(d).status,'stale');
 });
 test('owner commands reject spoofed webhook, other chat and groups',async t=>{
- const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
- const secret=source.match(/const WEBHOOK_SECRET = "([^"]+)"/)[1];
+ const secret=await telegramWebhookSecret({}, {token:'fixture-token'});
  let calls=0;const env={TELEGRAM_BOT_TOKEN:'fixture-token',TELEGRAM_CHAT_ID:'123',PORTFOLIO_ALERTS:{idFromName:()=>'',get:()=>({fetch:async()=>{calls++;return Response.json({ok:true,enabled:false});}})}};
  for(const [headers,id,type] of [[{},123,'private'],[{'x-telegram-bot-api-secret-token':secret},124,'private'],[{'x-telegram-bot-api-secret-token':secret},123,'group']]){
   const r=await worker.fetch(new Request('https://invest.agiscorecard.com/tg-webhook',{method:'POST',headers,body:JSON.stringify({message:{chat:{id,type},text:'/portfolio_pause'}})}),env,{waitUntil(){}});assert.equal(r.status,403);

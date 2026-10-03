@@ -1,3 +1,6 @@
+import {researchCommand, reviewOpinions} from "./research-monitor.js";
+import {renderResearch} from "./research-page.js";
+export {ResearchMonitor} from "./research-monitor.js";
 import {portfolioCommand} from "./portfolio-alerts.js";
 export {PortfolioAlerts} from "./portfolio-alerts.js";
 import { ledgerAudit } from "./ledger-audit.js";
@@ -8,14 +11,13 @@ import { renderDashboard, renderTrackRecord, renderStockPage, renderStockPageEN,
 // IndexNow 密钥(托管于站内,协议要求;无需注册任何账号)
 const INDEXNOW_KEY = "a7f3c9e2b8d14f60b5e21c47d903aa58";
 // Telegram webhook 校验密钥(防伪造 webhook 调用;每日 cron 自愈重注册)
-const WEBHOOK_SECRET = "swhk-9d2f7c41e8b3a650c7d19e84f2b5a3c8";
+// Webhook authentication is derived from the private bot token, never a public source constant.
 const SITE = "https://invest.agiscorecard.com";
 
 // USDT 收款(站长 2026-08-06 指定)。**只在 bot 私信里给出,不渲染到公开页面**——
 // 公开页上的地址会被抓取归档,且链上余额与全部往来记录任何人都能查。
 // 地址经两个独立来源逐字符核对(钱包截图 + 站长粘贴文本)。链错=资金不可找回,所以
 // 每次给地址都必须同时给出链名警告。
-const USDT_ADDR = "0xBc2a5eB76170DfE6d1A4FbFD966a27E5F2B93221";
 const USDT_CHAIN = "BNB Smart Chain (BEP20)";
 // 按 ¥199 / ¥1999 以约 7.15 折算取整,不借汇率换算悄悄涨价。改价改这里一处。
 const USDT_MONTH = 28;
@@ -29,7 +31,7 @@ const TRACK_MATCHERS = {
   crypto: (g) => /加密|稳定币|币库|特朗普|直接载体|孙宇晨/.test(g || ""),
 };
 function allUrls() {
-  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/en/stocks", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team"];
+  const urls = [SITE + "/", SITE + "/track-record", SITE + "/faq", SITE + "/feed.xml", SITE + "/forecast", SITE + "/en", SITE + "/en/track-record", SITE + "/en/stocks", SITE + "/method", SITE + "/en/method", SITE + "/red-team", SITE + "/en/red-team", SITE + "/research", SITE + "/en/research"];
   for (const t of TRACKS.filter((x) => x.id !== "all")) urls.push(`${SITE}/track/${t.id}`);
   for (const s of STOCKS) urls.push(`${SITE}/stock/${slugify(s.ticker)}`);
   for (const s of STOCKS) if (s.en) urls.push(`${SITE}/en/stock/${slugify(s.ticker)}`);
@@ -43,9 +45,21 @@ const MAX_ITEMS = 300;
 const worker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const USDT_ADDR = env.USDT_RECEIVE_ADDRESS || "";
     // pSEO 动态路由(含 PV 计数)
-    if (url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast") || url.pathname.startsWith("/en")) {
+    if (url.pathname === "/research" || url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast") || url.pathname.startsWith("/en")) {
       ctx.waitUntil(bumpGrowth(env, "pv", request));
+    }
+    if (["/research", "/en/research", "/api/research", "/api/research-refresh"].includes(url.pathname)) {
+      const refresh = url.pathname === "/api/research-refresh";
+      if (request.method !== (refresh ? "POST" : "GET")) return new Response("Method not allowed", {status:405});
+      const webhookReady = refresh ? await ensurePrivateWebhook(env).catch(() => false) : undefined;
+      const data = await researchCommand(env, refresh ? "refresh" : "public");
+      if (refresh) data.webhook_secured = webhookReady === true;
+      const opinions = reviewOpinions(CORE_SIGNALS);
+      data.review = {total:opinions.length,pending:opinions.filter(x=>x.status==="needs_review").length,expired:opinions.filter(x=>x.expired).length};
+      if (url.pathname.startsWith("/api/")) return json(data);
+      return new Response(renderResearch(data, url.pathname.startsWith("/en/")), {headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
     }
     // EN 标的页(E4):只服务已有忠实英译的标的,其余 404 而不是回退中文页
     if (url.pathname.startsWith("/en/stock/")) {
@@ -159,7 +173,7 @@ const worker = {
       }
       case "/api/archive": {
         const pro = await isPro(env, url.searchParams.get("key"));
-        const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro, actions: ACTION_QUEUE, coreSignals: CORE_SIGNALS };
+        const full = { predictions: PREDICTIONS, stocks: STOCKS, playbook: PLAYBOOK, forecasts: FORECASTS, watchlist: WATCHLIST, tracks: TRACKS.map(t => ({ id: t.id, name: t.name })), pro, actions: ACTION_QUEUE, coreSignals: CORE_SIGNALS.map(text=>"【历史记录 · 待复核，不作为当前指导】"+text), coreSignalReviews: reviewOpinions(CORE_SIGNALS) };
         return json(pro ? full : redact(full));
       }
       // 手动触发一次 agiscorecard 重大信息推送(部署冒烟用,以 feed 密钥鉴权)。
@@ -167,13 +181,13 @@ const worker = {
       // 更不该靠猜——每次部署都真发一次,断了立刻红。
       // 天然幂等:告警在对面按状态去重、hello 只发一次,所以重复调用最多什么都不发。
       case "/api/portfolio-alerts": {
-        const k = env.AGI_ALERT_KEY || AGI_ALERT_KEY;
+        const k = env.AGI_ALERT_KEY || "";
         const action = url.searchParams.get("action");
         if (!k || request.headers.get("authorization") !== "Bearer " + k || request.method !== "POST" || !["run", "status"].includes(action)) return new Response("forbidden", {status:403});
         return json(await portfolioCommand(env, action));
       }
       case "/api/agi-alerts-run": {
-        const k = env.AGI_ALERT_KEY || AGI_ALERT_KEY;
+        const k = env.AGI_ALERT_KEY || "";
         if (!k || url.searchParams.get("k") !== k) return json({ ok: false, error: "鉴权失败" });
         const cfg = await getTgConfig(env);
         if (!cfg) return json({ ok: false, error: "TG 未配置" });
@@ -229,16 +243,25 @@ const worker = {
       // Telegram webhook:订户 /start <code> 绑定信号推送
       case "/tg-webhook": {
         if (request.method !== "POST") return new Response("ok");
-        // 软校验:带 secret 头但不匹配 → 拒;未带头(重注册前的旧 webhook)暂放行,每日 cron 重注册后恒有头
+        // Require Telegram secret on every update; source-code constants are not credentials.
         const sec = request.headers.get("x-telegram-bot-api-secret-token");
-        if (sec && sec !== WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
+        const cfg = await getTgConfig(env);
+        const webhookSecret = cfg ? await telegramWebhookSecret(env, cfg) : null;
+        if (!webhookSecret || sec !== webhookSecret) return new Response("forbidden", { status: 403 });
         const upd = await request.json().catch(() => ({}));
         const msg = upd.message;
-        const cfg = await getTgConfig(env);
         if (msg?.chat?.id && cfg) {
+          const research = (msg.text || "").match(/^\/(research(?:_pause|_resume)?)(?:@sunwatchBot)?\s*$/i);
+          if (research) {
+            if (msg.chat.type !== "private" || String(msg.chat.id) !== String(cfg.chatId)) return new Response("forbidden", {status:403});
+            const command=research[1].toLowerCase();
+            const out=await researchCommand(env,command==="research"?"read":command==="research_pause"?"pause":"resume");
+            await tgSend(cfg,command==="research"?(out.text||"披露监控暂不可用"):out.ok?(out.enabled?"披露提醒已恢复，下次定时检查继续处理待发事件。":"披露提醒已暂停，来源检查和网站查询继续。/research_resume 恢复。") : "操作未完成，请稍后重试。",null);
+            return new Response("ok");
+          }
           const portfolio = (msg.text || "").match(/^\/(portfolio(?:_pause|_resume)?)(?:@sunwatchBot)?\s*$/i);
           if (portfolio) {
-            if (sec !== WEBHOOK_SECRET || msg.chat.type !== "private" || String(msg.chat.id) !== String(cfg.chatId)) return new Response("forbidden", {status:403});
+            if (sec !== webhookSecret || msg.chat.type !== "private" || String(msg.chat.id) !== String(cfg.chatId)) return new Response("forbidden", {status:403});
             const command=portfolio[1].toLowerCase();
             const out=await portfolioCommand(env, command==="portfolio"?"read":command==="portfolio_pause"?"pause":"resume");
             const text=command==="portfolio"?out.text:out.ok?(out.enabled?"AGI 12 股收益提醒已恢复，每 30 分钟检查新收盘记录。":"AGI 12 股收益提醒已暂停。/portfolio 仍可查询；/portfolio_resume 恢复。"):"操作未完成，请稍后重试。";
@@ -465,7 +488,7 @@ const worker = {
         if (!cfg) return json({ ok: false, error: "未配置 Telegram" });
         const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
         if (Object.keys(lic).length) return json({ ok: true, already: true, note: "已初始化过,不再重复" });
-        const wh = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}`).then((r) => r.json()).catch(() => ({}));
+        const wh = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${await telegramWebhookSecret(env,cfg)}`).then((r) => r.json()).catch(() => ({}));
         const code = "SW-" + Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
         lic[code] = { createdAt: new Date().toISOString(), chatId: null, note: "首个激活码(自举生成)" };
         await env.SUNWATCH_KV.put("licenses", JSON.stringify(lic));
@@ -476,7 +499,7 @@ const worker = {
         const cfg = await getTgConfig(env);
         if (!cfg || url.searchParams.get("token") !== cfg.token)
           return json({ ok: false, error: "鉴权失败" });
-        const r = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}`);
+        const r = await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${await telegramWebhookSecret(env,cfg)}`);
         return json(await r.json().catch(() => ({})));
       }
       case "/api/quotes": {
@@ -629,6 +652,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           "",
           "## Machine-readable",
           `- [Track record JSON](${SITE}/api/track-record): the full scored ledger as data`,
+          `- [Disclosure monitor](${SITE}/en/research): original SEC filings, source health and pending reviews`,
+          `- [Disclosure JSON](${SITE}/api/research): metadata only, no assessed financial changes or trading recommendations`,
           `- [Live quotes JSON](${SITE}/api/quotes): watched tickers, refreshed every 30 minutes`,
           `- MCP server: https://agiscorecard.com/mcp (tool: get_sunwatch_track_record)`,
           "",
@@ -753,6 +778,9 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
   },
 
   async scheduled(event, env, _ctx) {
+    // Both collectors run independently of failures in news/quote feeds.
+    await ensurePrivateWebhook(env).catch(() => {});
+    await researchCommand(env,"run").catch(() => {});
     // Independent of news/quote refresh failures; owner only, serialized durable receipts.
     await portfolioCommand(env).catch(() => {});
     const result = await refreshFeed(env);
@@ -833,7 +861,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         };
         await env.SUNWATCH_KV.put(`daily-${today}`, JSON.stringify(snapshot)).catch(() => {});
         // webhook 自愈重注册(带 secret_token,幂等)
-        await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${WEBHOOK_SECRET}`).catch(() => {});
+        await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook?url=${encodeURIComponent(SITE + "/tg-webhook")}&secret_token=${await telegramWebhookSecret(env,cfg)}`).catch(() => {});
         // IndexNow:全站 URL + 今日新页(429/5xx 自动重试,状态入 KV 供简报健康度)
         await pingIndexNow(env, [...allUrls(), `${SITE}/daily/${today}`, `${SITE}/daily`]).catch(() => {});
       }
@@ -866,7 +894,11 @@ export default {
     const res = await worker.fetch(request, env, ctx);
     const ct = res.headers.get("content-type") || "";
     if (request.method !== "GET" || res.status !== 200 || !ct.startsWith("text/html")) return res;
-    const body = addShareTags(await res.text());
+    let body = addShareTags(await res.text());
+    if (!new URL(request.url).pathname.includes("research")) {
+      const en=/<html[^>]*lang="en/i.test(body);
+      body=body.replace("<body>",`<body><nav aria-label="${en?"Research monitor":"披露监控"}" style="padding:8px 16px;text-align:center;background:#122237;color:#fff"><a style="color:#b3d6ff" href="${en?"/en/research":"/research"}">${en?"New: company disclosures and review status":"公司披露监控 · 查看新公告与观点复核状态"}</a></nav>`);
+    }
     return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
   },
   scheduled(event, env, ctx) {
@@ -1164,10 +1196,9 @@ async function notifyBaskets(env, cfg) {
 // 对面首次调用只建基线并返回空,所以接通当天不会拿既有旧状态炸一轮。
 // 密钥只读且 feed 只含计数(邮箱等 PII 绝不跨 worker),可用变量 AGI_ALERT_KEY 轮换。
 const AGI_ALERT_FEED = "https://agiscorecard.com/api/owner-alerts";
-const AGI_ALERT_KEY = "1739d525ac7656e17178a4f7fc5ede09";
 
 async function notifyAgiAlerts(env, cfg) {
-  const k = encodeURIComponent(env.AGI_ALERT_KEY || AGI_ALERT_KEY);
+  const k = encodeURIComponent(env.AGI_ALERT_KEY || "");
   const r = await fetch(`${AGI_ALERT_FEED}?k=${k}`, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) return { feed: r.status };
   const d = await r.json();
@@ -1551,6 +1582,19 @@ async function getTgConfig(env) {
   if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)
     return { token: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID };
   return (await env.SUNWATCH_KV.get("tg-config", "json")) || null;
+}
+
+export async function telegramWebhookSecret(env,cfg) {
+  if(env.TELEGRAM_WEBHOOK_SECRET)return env.TELEGRAM_WEBHOOK_SECRET;
+  const bytes=new TextEncoder().encode("SunWatch private webhook v2:"+cfg.token);
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function ensurePrivateWebhook(env) {
+  const cfg=await getTgConfig(env);if(!cfg?.token)return;
+  const secret=await telegramWebhookSecret(env,cfg);
+  if(await env.SUNWATCH_KV.get("tg-private-webhook-v2")===secret)return true;
+  const response=await fetch(`https://api.telegram.org/bot${cfg.token}/setWebhook`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:SITE+"/tg-webhook",secret_token:secret}),signal:AbortSignal.timeout(8000)});
+  const data=await response.json();if(response.ok&&data.ok){await env.SUNWATCH_KV.put("tg-private-webhook-v2",secret);return true;}return false;
 }
 
 // 长消息按行分段(行内 HTML 标签完整,行边界切分不会截断标签);

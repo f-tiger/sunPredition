@@ -221,7 +221,7 @@ agiscorecard(资产扎实,~200 UV/月、0 收入)——**三个引擎,零个仓�
 - 目标:让买家在 Telegram 里**自助拿到收款地址并完成付款**,同时让站长能对账;
   地址**不进公开页面**。
 - 需核实的数据:**收款地址逐字符核对**——截图 OCR 与站长粘贴文本两个独立来源比对一致
-  (`0xBc2a5eB76170DfE6d1A4FbFD966a27E5F2B93221`,40 位十六进制),链为 BNB Smart Chain (BEP20)。
+  (`[private worker binding; historical literal redacted]`,40 位十六进制),链为 BNB Smart Chain (BEP20)。
   地址错一个字符 = 全部货款永久打给陌生人,因此不接受单一来源。
 - 执行步骤:
   1. `USDT_ADDR / USDT_CHAIN / USDT_MONTH / USDT_YEAR` 四个常量集中在 index.js 顶部,改价改一处
@@ -660,3 +660,31 @@ Self-check 1 (not an independent review): overlapping cron schedules and manual 
 Self-check 2 (not an independent review): a refreshed timestamp does not mean changed returns; a stale or invalid dataset cannot become a 0% result. Fingerprint the valuation, validate schema/cohort/completeness, label retained dates and health transitions, avoid repeated warnings. Telegram send acknowledgement plus persistence is not an atomic transaction: an acknowledgement lost during process failure can still duplicate; never claim exactly-once delivery.
 
 Execution: implement and test AGI API/MCP first, deploy and verify; then wire SunWatch cron and strict owner commands, deploy, verify initial Telegram receipt and an immediate deduplicated run. Public code/docs contain no bot token or chat identifier. SEO/GEO reflect only real public endpoints; submit changed canonical documentation through existing manual IndexNow path, no new per-push submission.
+
+## 2026-10-03 — Research high-quality investment monitoring sources
+
+Original request:「调研非常厉害的监控股票投资站点，这些站点的监控。应该可以作为sunwatch的股票指导？」
+
+Refinement 1: identify strong research/monitoring platforms relevant to the twelve-stock AI basket, storage-cycle interests and SPY/QQQ/TQQQ comparisons; explain the actual decision each source supports.
+Refinement 2: compare primary filings/IR, fundamentals and estimate revisions, institutional/insider disclosures, market structure, industry cycle and alternative data. Verify provider features, latency, integration interfaces and data-use constraints from current primary sources. Popularity or vendor backtests do not prove investment skill.
+Refinement 3: deliver a ranked source matrix, concrete SunWatch evidence-to-alert design, incremental adoption order and a prospective evaluation gate. Inspect the existing RSS/keyword implementation so the recommendations fit it. This request is research: do not buy subscriptions, bypass access controls, add live alerts, alter portfolio rules, publish trade calls or message subscribers.
+
+Self-checks (not independent reviews): (1) correlated sources and delayed filings can create false consensus or look-ahead bias; preserve original source and the first actually observable timestamp. (2) apparent signal quality may arise from survivorship, edited backtests or unlicensed redistribution; separate provider claims from verified capabilities, and separate personal subscription rights from API/public-product rights.
+
+
+## 2026-10-03 — Execute first-party investment research monitoring
+Request: 好的，基于建议继续执行。
+Round 1: Build the recommended first phase for the existing twelve-stock cohort: SEC company disclosures, evidence provenance, review expiry and owner Telegram reminders.
+Round 2: Verify CIK/ticker identity against SEC; establish historical baselines without backfill alerts; distinguish filing metadata from financial interpretation; preserve the fixed portfolio and mechanical rules. No paid data purchase.
+Round 3: Implement a bounded durable collector with source health, deduplication, retryable owner delivery, read-only/public research views and owner pause/resume; add offline adversarial tests and deployed smoke checks.
+Self-check 1: Reject mismatched issuers, malformed/future filing dates, unsafe document paths and historical-replay alerts; preserve previously known evidence during source outages.
+Self-check 2: Enforce private owner commands, bounded public refresh, Telegram acknowledgements before receipt, no subscriber broadcast, no unsupported buy/sell or confidence claims.
+Acceptance: First baseline from SEC, second run without duplicate alerts, visible pending-review status on legacy opinions, public API without private receipts or credentials, CI and live checks pass.
+Release: Existing authorized SunWatch deployment branch only; preserve concurrent changes; verify discovery/analytics for added public pages.
+
+Release self-check: automatic review rejected old embedded cross-service credentials and payment data. Remove the plaintext constants and historical address literal; migrate only missing bindings from the prior commit into the same existing Cloudflare worker during deployment, without logging values or overwriting configured secrets. Preserve behavior; this does not erase old Git history or claim those legacy keys have been rotated.
+
+
+## 2026-10-03 — Explicit approval to publish and deploy
+User reply: 允许。 The preceding question explicitly named publishing the code and existing project documents (including payment/operations descriptions, with plaintext credentials and address removed) to the public f-tiger/sunPredition repository and deploying it.
+Three-pass brief: publish the reviewed scope; preserve existing remote changes and private bindings; require migration, CI, live source/refresh checks and a truthful owner-delivery status. Two checks: confirm no embedded legacy literals in changed files; distinguish source verification, deployment and Telegram acknowledgement. Proceed under this explicit authorization without requesting it again.

@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       # 先用和 wrangler 同一个解析器(esbuild/ESM)过一遍语法。
       # `node --check` 按 CommonJS 脚本解析,漏掉过一个未闭合的函数,部署才红。
       - name: Parse with the same parser wrangler uses
@@ -28,8 +30,16 @@ jobs:
       - name: Test portfolio owner delivery and deduplication
         run: node --test test/portfolio-alerts.test.mjs
 
+      - name: Test SEC evidence, delivery and owner permissions
+        run: node --test test/research-monitor.test.mjs test/private-config.test.mjs
+
       - name: Audit ledger evidence semantics
         run: node --test test/ledger-audit.test.mjs
+
+      - name: Migrate legacy constants into existing private Worker bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/migrate-private-config.mjs
 
       - uses: cloudflare/wrangler-action@v3
         id: wrangler
@@ -214,6 +224,10 @@ jobs:
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
+      - name: Verify live SEC disclosure monitor
+        env:
+          SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
+        run: node test/research-live.mjs
       - name: Ping IndexNow (auto search-engine indexing)
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
