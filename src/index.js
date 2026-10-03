@@ -1,3 +1,4 @@
+import researchBaseline from "./research-baseline.json" with {type:"json"};
 import {researchCommand, reviewOpinions} from "./research-monitor.js";
 import {renderResearch} from "./research-page.js";
 export {ResearchMonitor} from "./research-monitor.js";
@@ -56,6 +57,12 @@ const worker = {
       const webhookReady = refresh ? await ensurePrivateWebhook(env).catch(() => false) : undefined;
       const data = await researchCommand(env, refresh ? "refresh" : "public");
       if (refresh) data.webhook_secured = webhookReady === true;
+      if (!data.events?.length && !data.issuers?.some(x=>x.last_success_at)) {
+        data.events=researchBaseline.events;
+        data.snapshot_only=true;
+        data.baseline_as_of=researchBaseline.as_of;
+        data.baseline_origin=researchBaseline.origin;
+      }
       const opinions = reviewOpinions(CORE_SIGNALS);
       data.review = {total:opinions.length,pending:opinions.filter(x=>x.status==="needs_review").length,expired:opinions.filter(x=>x.expired).length};
       if (url.pathname.startsWith("/api/")) return json(data);

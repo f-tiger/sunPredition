@@ -104,7 +104,7 @@ test('bilingual SSR has evidence, canonical links, source times and opt-in analy
 });
 
 test('SEC requests use runtime-compatible no-follow redirects and reject redirects without consuming content',async t=>{
- const monitor=new ResearchMonitor({storage:{}},{});
+ const monitor=new ResearchMonitor({storage:{}},{SEC_USER_AGENT:'SunWatch synthetic@example.com'});
  let bodyRead=false;
  t.mock.method(globalThis,'fetch',async(url,options)=>{
   assert.equal(options.redirect,'manual');
@@ -116,4 +116,12 @@ test('SEC requests use runtime-compatible no-follow redirects and reject redirec
  t.mock.restoreAll();
  t.mock.method(globalThis,'fetch',async()=>Response.json(source()));
  assert.equal((await monitor.loadIssuer(ISSUERS[0])).length,1);
+});
+
+test('missing SEC contact blocks outbound requests and sends a single honest owner setup notice',async t=>{
+ const raw=new ResearchMonitor({storage:{}},{});
+ let requests=0;t.mock.method(globalThis,'fetch',async()=>{requests++;throw Error('Unexpected network call')});
+ await assert.rejects(()=>raw.loadIssuer(ISSUERS[0]),/sec_contact_required/);assert.equal(requests,0);
+ const h=harness();h.monitor.loadIssuer=async()=>{throw Error('sec_contact_required')};
+ const first=await h.call('run');assert.equal(first.health,'not_ready');assert.equal(first.sent,1);assert.match(h.sent[0],/尚未接通/);assert.equal((await h.call('run')).sent,0);
 });

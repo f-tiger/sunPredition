@@ -11,7 +11,7 @@ export const ISSUERS = [
 export const RELEVANT_FORMS = new Set(['8-K','8-K/A','10-Q','10-Q/A','10-K','10-K/A','20-F','20-F/A','6-K','S-1','S-1/A','S-3','S-3/A','424B2','424B5']);
 const SITE='https://invest.agiscorecard.com';
 const INTERVAL=20*60*1000;
-const COLLECTOR_REVISION='manual-redirect-v2';
+const COLLECTOR_REVISION='declared-contact-v3';
 const DAY=86400000;
 const stamp=now=>new Date(now).toISOString();
 const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&stamp(Date.parse(s)).slice(0,10)===s;
@@ -108,7 +108,9 @@ export async function researchCommand(env,action='public'){
 export class ResearchMonitor extends PortfolioAlerts {
  constructor(ctx,env){super(ctx,env);}
  async loadIssuer(issuer){
-  const r=await fetch(`https://data.sec.gov/submissions/CIK${issuer.cik}.json`,{headers:{accept:'application/json','user-agent':this.env.SEC_USER_AGENT||SEC_AGENT},signal:AbortSignal.timeout(8000),redirect:'manual'});
+  const agent=this.env.SEC_USER_AGENT;
+  if(typeof agent!=='string'||!/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(agent)||/[\r\n]/.test(agent))throw Error('sec_contact_required');
+  const r=await fetch(`https://data.sec.gov/submissions/CIK${issuer.cik}.json`,{headers:{accept:'application/json','user-agent':agent},signal:AbortSignal.timeout(8000),redirect:'manual'});
   if(!r.ok)throw Error('sec_http_'+r.status);
   const text=await r.text();if(text.length>4000000)throw Error('response_too_large');
   return normalizeSubmissions(JSON.parse(text),issuer);
@@ -129,7 +131,7 @@ export class ResearchMonitor extends PortfolioAlerts {
     // Never evict an event awaiting delivery. Bounded collection fails visibly before overflow.
     s.events=s.events.filter((e,i)=>i<300||s.pending.includes(e.id));
    }catch(e){
-    const code=/^(issuer_mismatch|invalid_schema|invalid_filing|invalid_document|future_filing|source_rollback|history_gap|empty_snapshot|response_too_large|delivery_backlog|sec_http_\d+)$/.test(e.message)?e.message:'source_unavailable';
+    const code=/^(issuer_mismatch|invalid_schema|invalid_filing|invalid_document|future_filing|source_rollback|history_gap|empty_snapshot|response_too_large|delivery_backlog|sec_contact_required|sec_http_\d+)$/.test(e.message)?e.message:'source_unavailable';
     s.issuers[issuer.ticker]={...(s.issuers[issuer.ticker]??{}),status:'error',error:code};
    }
    await this.pauseBetweenRequests();
@@ -146,6 +148,13 @@ export class ResearchMonitor extends PortfolioAlerts {
  async deliver(s,now){
   if(!s.enabled)return 0;
   let sent=0;
+  if(ISSUERS.every(i=>s.issuers?.[i.ticker]?.error==='sec_contact_required')){
+   if(!s.contact_notified&&await this.acknowledge(s,`🔎 SunWatch 披露观察板已上线，自动采集待配置
+网页提供 60 份此前核验的历史公告快照。SEC 要求声明自动访问身份与联系信息，当前缺少联系人邮箱；动态采集尚未接通。
+已暂停未配置的请求，不会把历史公告当作新消息推送。
+${SITE}/research`,'configuration_required')){s.contact_notified=true;sent++;}
+   await this.ctx.storage.put('research-state',s);return sent;
+  }
   const covered=ISSUERS.filter(i=>s.issuers?.[i.ticker]?.baseline_at).length;
   if(!s.connected&&covered){
    if(await this.acknowledge(s,`🔎 SunWatch 公司披露监控已接通\nSEC 基线：${covered}/12 家。每 30 分钟检查新申报。\n首次加载的历史文件不作为新信号推送。\n提醒包含原文、披露日、首次发现时间和复核重点；正文数值与买卖方向仍需核实。\n历史观点已加入有效期检查，未复核记录明确标记。\n${SITE}/research\n/research 查询 · /research_pause 暂停 · /research_resume 恢复`,'connected')){s.connected=true;sent++;await this.ctx.storage.put('research-state',s);}else return sent;

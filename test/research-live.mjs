@@ -11,7 +11,9 @@ assert.equal(initial?.version,'sec-disclosures-v1','Monitor deployment is unavai
 const fresh=await(await read('/api/research-refresh',{method:'POST'})).json();
 assert.equal(fresh.ok,true);assert.equal(fresh.webhook_secured,true,'Private webhook migration failed');assert.equal(fresh.issuers.length,12);assert.equal(fresh.sent,0,'Public refresh must never send Telegram messages');
 console.log('SEC issuer health:',fresh.issuers.map(x=>`${x.ticker}:${x.status}${x.error?'('+x.error+')':''}`).join(' '));
-assert.equal(fresh.health,'ok','SEC baseline is incomplete; source failures must remain visible');
+const awaitingContact=fresh.issuers.every(x=>x.error==='sec_contact_required');
+if(awaitingContact){assert.equal(fresh.snapshot_only,true);assert.equal(fresh.events.length,60);assert.ok(fresh.baseline_as_of);console.log('AUTOMATIC SOURCE PENDING CONTACT: serving verified historical snapshot only.');}
+else assert.equal(fresh.health,'ok','SEC source failed; do not report live monitoring as healthy');
 assert.ok(fresh.events.length>0);assert.ok(fresh.events.every(x=>x.source==='SEC EDGAR'&&x.interpretation_status==='metadata_only'&&x.first_seen_at&&x.url.startsWith('https://www.sec.gov/Archives/edgar/data/')));
 assert.ok(fresh.review.pending>0);assert.equal(JSON.stringify(fresh).includes('message_id'),false);
 assert.equal((await fetch(site+'/tg-webhook',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,403,'Missing webhook secret must be rejected');
@@ -21,5 +23,5 @@ for(const [path,label] of [['/research','公司披露监控'],['/en/research','C
 }
 const llms=await(await read('/llms.txt')).text();assert.ok(llms.includes('/api/research'));
 const sitemap=await(await read('/sitemap.xml')).text();assert.ok(sitemap.includes('/en/research'));
-console.log('12 verified SEC sources; baseline retained; public repeat sends zero; bilingual pages + opt-in GA4 + discovery verified.');
+console.log('Public repeat sends zero; bilingual pages + opt-in GA4 + discovery verified. Source mode:',awaitingContact?'historical snapshot, contact required':'live SEC checks');
 console.log('Owner alert channel:',fresh.owner_channel.delivery_health,'last acknowledged:',fresh.owner_channel.last_ack_at??'awaiting existing cron');
