@@ -1,0 +1,25 @@
+name: Verify SEC public API runtime
+on:
+  push:
+    branches: [claude/sun-yuchen-investment-research-yzz9mx]
+    paths: [".github/workflows/verify-sec-runtime.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check declared public API request
+        run: |
+          node --input-type=module <<'JS'
+          const url='https://data.sec.gov/submissions/CIK0001045810.json';
+          const r=await fetch(url,{headers:{'user-agent':'SunWatch Research/1.0 (https://github.com/f-tiger/sunPredition/issues)','accept':'application/json'},redirect:'manual',signal:AbortSignal.timeout(15000)});
+          const body=await r.text();
+          console.log('SEC public API status:',r.status);
+          if(!r.ok){console.log('Response classification:',/undeclared automated tool/i.test(body)?'undeclared_automated_tool':/request rate/i.test(body)?'rate_limit':/access denied/i.test(body)?'access_denied':'other');process.exit(1);}
+          const d=JSON.parse(body);
+          if(!d.tickers?.includes('NVDA')||!d.filings?.recent?.accessionNumber?.length)throw Error('Unexpected public response');
+          console.log('Verified issuer:',d.cik,'NVDA; records:',d.filings.recent.accessionNumber.length);
+          JS
