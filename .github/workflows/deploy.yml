@@ -31,7 +31,7 @@ jobs:
         run: node --test test/portfolio-alerts.test.mjs
 
       - name: Test SEC evidence, delivery and owner permissions
-        run: node --test test/research-monitor.test.mjs test/private-config.test.mjs
+        run: node --test test/research-monitor.test.mjs test/official-ir.test.mjs test/private-config.test.mjs
 
       - name: Audit ledger evidence semantics
         run: node --test test/ledger-audit.test.mjs
@@ -225,7 +225,7 @@ jobs:
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
-      - name: Verify live SEC disclosure monitor
+      - name: Verify live official company disclosure monitor
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/research-live.mjs

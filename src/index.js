@@ -57,12 +57,13 @@ const worker = {
       const webhookReady = refresh ? await ensurePrivateWebhook(env).catch(() => false) : undefined;
       const data = await researchCommand(env, refresh ? "refresh" : "public");
       if (refresh) data.webhook_secured = webhookReady === true;
-      if (!data.events?.length && !data.issuers?.some(x=>x.last_success_at)) {
+      if (data.monitor_mode!=="official_ir" && !data.events?.length && !data.issuers?.some(x=>x.last_success_at)) {
         data.events=researchBaseline.events;
         data.snapshot_only=true;
         data.baseline_as_of=researchBaseline.as_of;
         data.baseline_origin=researchBaseline.origin;
       }
+      data.sec_archive={as_of:researchBaseline.as_of,events:researchBaseline.events,automatic_collection:false};
       const opinions = reviewOpinions(CORE_SIGNALS);
       data.review = {total:opinions.length,pending:opinions.filter(x=>x.status==="needs_review").length,expired:opinions.filter(x=>x.expired).length};
       if (url.pathname.startsWith("/api/")) return json(data);
@@ -659,7 +660,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           "",
           "## Machine-readable",
           `- [Track record JSON](${SITE}/api/track-record): the full scored ledger as data`,
-          `- [Disclosure monitor](${SITE}/en/research): original SEC filings, source health and pending reviews`,
+          `- [Disclosure monitor](${SITE}/en/research): official company RSS/IR releases, a separate historical SEC archive, source health and pending reviews`,
           `- [Disclosure JSON](${SITE}/api/research): metadata only, no assessed financial changes or trading recommendations`,
           `- [Live quotes JSON](${SITE}/api/quotes): watched tickers, refreshed every 30 minutes`,
           `- MCP server: https://agiscorecard.com/mcp (tool: get_sunwatch_track_record)`,

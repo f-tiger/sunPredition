@@ -694,3 +694,10 @@ Deployment verification found all twelve SEC calls failing immediately in Cloudf
 Access gate: Cloudflare and GitHub both received SEC 403; GitHub classified the response as undeclared automated tool. Stop unconfigured outbound requests instead of using proxy/browser identities. Require operator SEC_USER_AGENT with a real contact email. Publish the already verified pre-deployment 60-document snapshot with explicit fixed timestamp and pending-source labels; never present it as live. Add one owner configuration-status notice, no repeated notices. Automatic collection remains unverified until contact setup and live checks succeed.
 
 Release outcome: public commit 0eebd66 / run 37129985278 succeeded; historical snapshot mode is verified, while live SEC collection remains blocked pending operator contact configuration. IndexNow returned 429, not accepted. Telegram research acknowledgement remains pending the existing cron. Report these limits and request only the contact email required for the next access verification.
+
+
+## 2026-10-03 23:02 CST — 用其他方法
+原始请求：用其他方法。
+三轮优化：1）保留十二股自动监控和现有 TG 目标，以公司官方订阅源代替暂不可用的 SEC 自动访问；2）核实实际公开 RSS/IR 来源、覆盖缺口及运行环境可用性，拒绝把新闻伪装成完整 SEC 申报；3）接入现有持久化、30 分钟 cron、首次基线不群发、去重/失败重试/限频，部署后检查真实线上数据与站长提醒回执。
+两轮自检：来源真实性、日期与旧数据误报；重入、来源失败、恶意链接和通知边界。
+验收：逐公司展示有效来源、最后成功时间；中文英文语义一致；公开刷新不发消息；未覆盖来源明确标注。沿用既有发布授权、GA4/SEO/GEO/IndexNow 流程，不购买数据，不改收益基准，不使用代理或伪装绕过 SEC 拒绝。

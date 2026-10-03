@@ -46,3 +46,31 @@ Source access gate: after the runtime fix, both deployment environments received
 - Public refresh repeat sends zero messages. Private webhook registration and missing-header rejection checks passed. New research channel has no delivery acknowledgement yet; the existing cron can send one setup-status notice.
 - Contact gate prevents new SEC requests until an operator contact email is configured in SEC_USER_AGENT. After configuration, live source access and disclosure notification receipt still need verification.
 - Both language pages, canonical/hreflang, GA4 consent controls, sitemap and llms discovery passed checks. IndexNow returned HTTP 429 after three attempts for the existing release batch; submission is not accepted or indexing verified. No extra retry loop was added.
+
+
+## 23:02 CST 起 — 官方公司公告替代方案
+
+用户要求“用其他方法”，不再要求提供邮箱。本版默认采集公司自己公开的 RSS / IR 新闻接口；SEC 联系人门槛保持原样，未对 SEC 改用代理、浏览器伪装或新出口重试。
+
+| 标的 | 已核验公开来源 | 格式 |
+|---|---|---|
+| AMD | https://ir.amd.com/news-events/press-releases/rss | RSS |
+| TSLA | https://ir.tesla.com/press | 官方公告列表 / 日期 |
+| META | https://investor.atmeta.com/rss/pressrelease.aspx | RSS |
+| MU | https://investors.micron.com/rss/pressrelease.aspx | RSS |
+| NVDA | https://nvidianews.nvidia.com/cats/press_release.xml | RSS |
+| PLTR | https://investors.palantir.com/news | 官网 bundle.js 调用的公开 PressRelease.svc 列表 / 日期 |
+| SPCX | https://ir.spacex.com/rss/pressrelease.aspx | RSS |
+| AMZN | https://ir.aboutamazon.com/rss/pressrelease.aspx | RSS |
+| GOOGL | https://abc.xyz/rss/pressrelease.aspx | RSS |
+| MSFT | https://news.microsoft.com/source/tag/press-releases/feed/ | RSS |
+| NOW | https://newsroom.servicenow.com/rss/pressrelease.aspx | RSS |
+| PANW | https://investors.paloaltonetworks.com/rss/news-releases.xml | RSS |
+
+取样实测均成功解析；每源初次展示 5 条，共 60 条公司公告，后续仅新增且不是建基线之前的补录记录入队。仅日期的来源，同基线日新增记录也按保守历史补录处理。RSS 标题与日期/链接元数据保留，正文不复制，原始标题不假装已翻译。
+
+SEC 历史 60 份档案保留在单独折叠区与 API sec_archive，不计入当前 IR 健康状态；公司新闻不是完整法定披露覆盖，不根据标题给买卖建议。收益基准不变。
+
+来源验证/两轮自检：固定公司域名、显式允许 Amazon RSS 引用的 /amazon/ 代理投票文档链接（ezodproxy 为源中实际链接，不作为抓取代理）；拒绝用户信息 URL、恶意协议、未来日期、错误公司、重复 ID、DTD；HTTP 链接仅将已允许公司域名升级为 HTTPS，禁止自动跟随采集重定向；流式响应上限 4MB。新源迁移只建立基线，公开刷新不发消息；owner-only outbox 保留失败重试、暂停恢复与串行化。
+
+验证：十二源真实样本解析；离线新增/补录/重入/迁移/安全边界测试通过。发布沿用现有 CI、GA4 同意设置、canonical/hreflang/sitemap/llms 和原 IndexNow 频率；上线运行与 Telegram 回执将在部署后记录，不提前宣称。

@@ -1,5 +1,6 @@
 // First-party disclosure metadata. No trading decisions or portfolio rebalancing.
 import {PortfolioAlerts} from './portfolio-alerts.js';
+import {IR_SOURCES,loadOfficialIR,applyIRSnapshot} from './official-ir.js';
 export const RESEARCH_VERSION = 'sec-disclosures-v1';
 export const SEC_AGENT = 'SunWatch Research/1.0 (https://github.com/f-tiger/sunPredition/issues)';
 // Verified against https://www.sec.gov/files/company_tickers.json on 2026-10-03.
@@ -11,7 +12,7 @@ export const ISSUERS = [
 export const RELEVANT_FORMS = new Set(['8-K','8-K/A','10-Q','10-Q/A','10-K','10-K/A','20-F','20-F/A','6-K','S-1','S-1/A','S-3','S-3/A','424B2','424B5']);
 const SITE='https://invest.agiscorecard.com';
 const INTERVAL=20*60*1000;
-const COLLECTOR_REVISION='declared-contact-v3';
+const COLLECTOR_REVISION='official-ir-v1';
 const DAY=86400000;
 const stamp=now=>new Date(now).toISOString();
 const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&stamp(Date.parse(s)).slice(0,10)===s;
@@ -53,6 +54,7 @@ export function normalizeSubmissions(d,issuer,now=Date.now()){
 }
 
 export function reviewFocus(e,en=false){
+ if(e.evidence_type==='company_release')return en?'Company release: verify the original details, reporting period and investment assumptions. This is not a complete regulatory filing feed.':'公司公告：核对原文、所属期间和投资假设；本来源不覆盖全部法定申报。';
  if(/\/A$/.test(e.form))return en?'Amendment: compare the original and amended document; direction is unassessed.':'修订申报：核对原文与修订内容；尚未判断方向。';
  if(e.items.split(/[,;\s]+/).includes('4.02'))return en?'Item 4.02: review non-reliance on prior financial statements and the scope affected.':'Item 4.02：复核既往财务报表不再可信的范围与影响。';
  if(e.items.split(/[,;\s]+/).includes('2.02'))return en?'Earnings disclosure: compare results, previous guidance and the same fiscal period.':'业绩披露：核对实际业绩、上一版指引和同一财务期间。';
@@ -80,6 +82,7 @@ export function applySnapshot(previous,rows,now=Date.now()){
 }
 
 export function formatResearchEvent(e){
+ if(e.evidence_type==='company_release')return `${e.ticker} · 官方公司公告\n${e.title}\n发布日：${e.filing_date}${e.date_precision==='day'?'（仅日期，未核实时区）':'（UTC）'}\n首次发现：${e.first_seen_at}\n复核重点：${reviewFocus(e)}\n财务变化和买卖方向尚未核实。\n${e.url}`;
  return `${e.ticker} · ${e.form}${e.items?' · Items '+e.items:''}\n`
   +`SEC 披露日：${e.filing_date}；报告期：${e.report_date??'未提供'}\n`
   +`首次发现：${e.first_seen_at}\n`
@@ -89,14 +92,14 @@ export function formatResearchEvent(e){
 }
 
 export function researchSummary(s,opinions=[],now=Date.now()){
- const issuers=ISSUERS.map(i=>{const v=s.issuers?.[i.ticker];const stale=!v?.last_success_at||now-Date.parse(v.last_success_at)>90*60000;return {...i,status:stale?'stale':v.status,last_success_at:v?.last_success_at??null,baseline_at:v?.baseline_at??null,latest_filing_date:v?.latest_filing_date??null,error:v?.error??null};});
- return {schema_version:1,version:RESEARCH_VERSION,collector_revision:s.collector_revision??null,last_check:s.last_check??null,
+ const issuers=ISSUERS.map(i=>{const v=s.issuers?.[i.ticker];const stale=!v?.last_success_at||now-Date.parse(v.last_success_at)>90*60000;return {...i,source_type:v?.source_id?'official_ir':'unverified',source_url:IR_SOURCES[i.ticker].url,source_name:IR_SOURCES[i.ticker].name,status:stale?'stale':v.status,last_success_at:v?.last_success_at??null,baseline_at:v?.baseline_at??null,latest_filing_date:v?.latest_filing_date??null,error:v?.error??null};});
+ return {schema_version:2,version:RESEARCH_VERSION,monitor_mode:'official_ir',sec_collection:'paused_using_official_ir',collector_revision:s.collector_revision??null,last_check:s.last_check??null,
   health:issuers.every(x=>x.status==='ok')?'ok':issuers.some(x=>x.last_success_at)?'partial':'not_ready',
   cadence_minutes:30,issuers,events:(s.events??[]).slice(0,120),
   review:{total:opinions.length,pending:opinions.filter(x=>x.status==='needs_review').length,expired:opinions.filter(x=>x.expired).length},
-  limitations:['Disclosure metadata only; financial changes and investment direction are unassessed.','First observations establish a baseline, not historical signals.','Owner-only alerts; no automated trades or paid-source feeds.'],
+  limitations:['Company IR releases are monitored; this is not complete SEC filing coverage. Financial changes and direction are unassessed.','First observations establish a baseline, not historical signals.','Owner-only alerts; no automated trades or paid-source feeds.'],
   owner_channel:{enabled:s.enabled!==false,last_ack_at:s.last_delivery?.at??null,delivery_health:s.delivery_error?'unconfirmed':s.last_delivery?'acknowledged':'pending'},
-  evidence_clock:'first_seen_at is SunWatch observation time; accepted_at_source is the original SEC field, not independently timezone-verified'};
+  evidence_clock:'first_seen_at is SunWatch observation time; published_at is normalized UTC where available; day-only releases do not claim a verified time or timezone'};
 }
 
 export async function researchCommand(env,action='public'){
@@ -107,7 +110,8 @@ export async function researchCommand(env,action='public'){
 // Existing sender is reused exclusively for its owner configuration and Telegram acknowledgement.
 export class ResearchMonitor extends PortfolioAlerts {
  constructor(ctx,env){super(ctx,env);}
- async loadIssuer(issuer){
+ async loadIssuer(issuer){return loadOfficialIR(issuer);}
+ async loadSecIssuer(issuer){
   const agent=this.env.SEC_USER_AGENT;
   if(typeof agent!=='string'||!/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(agent)||/[\r\n]/.test(agent))throw Error('sec_contact_required');
   const r=await fetch(`https://data.sec.gov/submissions/CIK${issuer.cik}.json`,{headers:{accept:'application/json','user-agent':agent},signal:AbortSignal.timeout(8000),redirect:'manual'});
@@ -118,10 +122,11 @@ export class ResearchMonitor extends PortfolioAlerts {
  async pauseBetweenRequests(){await new Promise(r=>setTimeout(r,250));}
  async collect(s,now){
   if(s.collector_revision===COLLECTOR_REVISION&&s.last_check&&now-Date.parse(s.last_check)<INTERVAL)return false;
+  if(s.collector_revision&&!s.collector_revision.startsWith('official-ir-')&&!s.ir_migrated){s.sec_issuers=s.issuers;s.issuers={};s.ir_migrated=true;delete s.failure_since;delete s.health_notified;}
   s.collector_revision=COLLECTOR_REVISION;s.last_check=stamp(now);s.issuers??={};s.events??=[];s.pending??=[];
   for(const issuer of ISSUERS){
    try{
-    const rows=await this.loadIssuer(issuer);const update=applySnapshot(s.issuers[issuer.ticker]?.baseline_at?s.issuers[issuer.ticker]:null,rows,now);
+    const rows=await this.loadIssuer(issuer);const apply=rows[0]?.evidence_type==='company_release'?applyIRSnapshot:applySnapshot;const update=apply(s.issuers[issuer.ticker]?.baseline_at?s.issuers[issuer.ticker]:null,rows,now);
     const nextPending=[...new Set([...s.pending,...update.pending])];
     if(nextPending.length>500)throw Error('delivery_backlog');
     s.issuers[issuer.ticker]=update.issuer;
@@ -131,7 +136,7 @@ export class ResearchMonitor extends PortfolioAlerts {
     // Never evict an event awaiting delivery. Bounded collection fails visibly before overflow.
     s.events=s.events.filter((e,i)=>i<300||s.pending.includes(e.id));
    }catch(e){
-    const code=/^(issuer_mismatch|invalid_schema|invalid_filing|invalid_document|future_filing|source_rollback|history_gap|empty_snapshot|response_too_large|delivery_backlog|sec_contact_required|sec_http_\d+)$/.test(e.message)?e.message:'source_unavailable';
+    const code=/^(issuer_mismatch|invalid_schema|invalid_filing|invalid_document|future_filing|source_rollback|history_gap|empty_snapshot|response_too_large|delivery_backlog|sec_contact_required|sec_http_\d+|ir_[a-z_]+|ir_http_\d+)$/.test(e.message)?e.message:'source_unavailable';
     s.issuers[issuer.ticker]={...(s.issuers[issuer.ticker]??{}),status:'error',error:code};
    }
    await this.pauseBetweenRequests();
@@ -156,8 +161,8 @@ ${SITE}/research`,'configuration_required')){s.contact_notified=true;sent++;}
    await this.ctx.storage.put('research-state',s);return sent;
   }
   const covered=ISSUERS.filter(i=>s.issuers?.[i.ticker]?.baseline_at).length;
-  if(!s.connected&&covered){
-   if(await this.acknowledge(s,`🔎 SunWatch 公司披露监控已接通\nSEC 基线：${covered}/12 家。每 30 分钟检查新申报。\n首次加载的历史文件不作为新信号推送。\n提醒包含原文、披露日、首次发现时间和复核重点；正文数值与买卖方向仍需核实。\n历史观点已加入有效期检查，未复核记录明确标记。\n${SITE}/research\n/research 查询 · /research_pause 暂停 · /research_resume 恢复`,'connected')){s.connected=true;sent++;await this.ctx.storage.put('research-state',s);}else return sent;
+  if(!s.ir_connected&&covered){
+   if(await this.acknowledge(s,`🔎 SunWatch 官方公司公告监控已接通\n官方公告基线：${covered}/12 家。每 30 分钟检查公司 RSS / IR 公告。无需 SEC 邮箱。\n首次加载的历史文件不作为新信号推送。\n提醒包含原文、发布日期、首次发现时间和复核重点；正文数值与买卖方向仍需核实。公司公告不等于完整 SEC 申报覆盖。\n历史观点已加入有效期检查，未复核记录明确标记。\n${SITE}/research\n/research 查询 · /research_pause 暂停 · /research_resume 恢复`,'connected')){s.ir_connected=true;sent++;await this.ctx.storage.put('research-state',s);}else return sent;
   }
   const failed=ISSUERS.filter(i=>s.issuers?.[i.ticker]?.status!=='ok').map(x=>x.ticker);
   if(failed.length){
@@ -166,7 +171,7 @@ ${SITE}/research`,'configuration_required')){s.contact_notified=true;sent++;}
     if(await this.acknowledge(s,`⚠️ SunWatch 披露数据待更新：${failed.join('、')}。\n保留此前证据；不会把获取失败解释为“没有新公告”。\n${SITE}/research`,'source_warning')){s.health_notified=true;sent++;}
    }
   }else{
-   if(s.health_notified){if(await this.acknowledge(s,`✅ SunWatch SEC 披露监控已恢复，12 家来源检查成功。\n${SITE}/research`,'source_recovery')){delete s.health_notified;delete s.failure_since;sent++;}}
+   if(s.health_notified){if(await this.acknowledge(s,`✅ SunWatch 官方公司公告监控已恢复，12 家来源检查成功。\n${SITE}/research`,'source_recovery')){delete s.health_notified;delete s.failure_since;sent++;}}
    else delete s.failure_since;
   }
   // Three bounded messages per run; pending events remain durable for subsequent runs.

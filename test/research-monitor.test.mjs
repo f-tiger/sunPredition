@@ -111,17 +111,17 @@ test('SEC requests use runtime-compatible no-follow redirects and reject redirec
   assert.equal(new URL(url).hostname,'data.sec.gov');
   return {ok:false,status:302,text:async()=>{bodyRead=true;return ''}};
  });
- await assert.rejects(()=>monitor.loadIssuer(ISSUERS[0]),/sec_http_302/);
+ await assert.rejects(()=>monitor.loadSecIssuer(ISSUERS[0]),/sec_http_302/);
  assert.equal(bodyRead,false);
  t.mock.restoreAll();
  t.mock.method(globalThis,'fetch',async()=>Response.json(source()));
- assert.equal((await monitor.loadIssuer(ISSUERS[0])).length,1);
+ assert.equal((await monitor.loadSecIssuer(ISSUERS[0])).length,1);
 });
 
 test('missing SEC contact blocks outbound requests and sends a single honest owner setup notice',async t=>{
  const raw=new ResearchMonitor({storage:{}},{});
  let requests=0;t.mock.method(globalThis,'fetch',async()=>{requests++;throw Error('Unexpected network call')});
- await assert.rejects(()=>raw.loadIssuer(ISSUERS[0]),/sec_contact_required/);assert.equal(requests,0);
+ await assert.rejects(()=>raw.loadSecIssuer(ISSUERS[0]),/sec_contact_required/);assert.equal(requests,0);
  const h=harness();h.monitor.loadIssuer=async()=>{throw Error('sec_contact_required')};
  const first=await h.call('run');assert.equal(first.health,'not_ready');assert.equal(first.sent,1);assert.match(h.sent[0],/尚未接通/);assert.equal((await h.call('run')).sent,0);
 });
