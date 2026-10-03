@@ -11,6 +11,7 @@ export const ISSUERS = [
 export const RELEVANT_FORMS = new Set(['8-K','8-K/A','10-Q','10-Q/A','10-K','10-K/A','20-F','20-F/A','6-K','S-1','S-1/A','S-3','S-3/A','424B2','424B5']);
 const SITE='https://invest.agiscorecard.com';
 const INTERVAL=20*60*1000;
+const COLLECTOR_REVISION='manual-redirect-v2';
 const DAY=86400000;
 const stamp=now=>new Date(now).toISOString();
 const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&stamp(Date.parse(s)).slice(0,10)===s;
@@ -89,7 +90,7 @@ export function formatResearchEvent(e){
 
 export function researchSummary(s,opinions=[],now=Date.now()){
  const issuers=ISSUERS.map(i=>{const v=s.issuers?.[i.ticker];const stale=!v?.last_success_at||now-Date.parse(v.last_success_at)>90*60000;return {...i,status:stale?'stale':v.status,last_success_at:v?.last_success_at??null,baseline_at:v?.baseline_at??null,latest_filing_date:v?.latest_filing_date??null,error:v?.error??null};});
- return {schema_version:1,version:RESEARCH_VERSION,last_check:s.last_check??null,
+ return {schema_version:1,version:RESEARCH_VERSION,collector_revision:s.collector_revision??null,last_check:s.last_check??null,
   health:issuers.every(x=>x.status==='ok')?'ok':issuers.some(x=>x.last_success_at)?'partial':'not_ready',
   cadence_minutes:30,issuers,events:(s.events??[]).slice(0,120),
   review:{total:opinions.length,pending:opinions.filter(x=>x.status==='needs_review').length,expired:opinions.filter(x=>x.expired).length},
@@ -107,15 +108,15 @@ export async function researchCommand(env,action='public'){
 export class ResearchMonitor extends PortfolioAlerts {
  constructor(ctx,env){super(ctx,env);}
  async loadIssuer(issuer){
-  const r=await fetch(`https://data.sec.gov/submissions/CIK${issuer.cik}.json`,{headers:{accept:'application/json','user-agent':this.env.SEC_USER_AGENT||SEC_AGENT},signal:AbortSignal.timeout(8000),redirect:'error'});
+  const r=await fetch(`https://data.sec.gov/submissions/CIK${issuer.cik}.json`,{headers:{accept:'application/json','user-agent':this.env.SEC_USER_AGENT||SEC_AGENT},signal:AbortSignal.timeout(8000),redirect:'manual'});
   if(!r.ok)throw Error('sec_http_'+r.status);
   const text=await r.text();if(text.length>4000000)throw Error('response_too_large');
   return normalizeSubmissions(JSON.parse(text),issuer);
  }
  async pauseBetweenRequests(){await new Promise(r=>setTimeout(r,250));}
  async collect(s,now){
-  if(s.last_check&&now-Date.parse(s.last_check)<INTERVAL)return false;
-  s.last_check=stamp(now);s.issuers??={};s.events??=[];s.pending??=[];
+  if(s.collector_revision===COLLECTOR_REVISION&&s.last_check&&now-Date.parse(s.last_check)<INTERVAL)return false;
+  s.collector_revision=COLLECTOR_REVISION;s.last_check=stamp(now);s.issuers??={};s.events??=[];s.pending??=[];
   for(const issuer of ISSUERS){
    try{
     const rows=await this.loadIssuer(issuer);const update=applySnapshot(s.issuers[issuer.ticker]?.baseline_at?s.issuers[issuer.ticker]:null,rows,now);

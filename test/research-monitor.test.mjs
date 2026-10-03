@@ -102,3 +102,18 @@ test('bilingual SSR has evidence, canonical links, source times and opt-in analy
  const zh=renderResearch(data),en=renderResearch(data,true);assert.match(zh,/公司披露监控/);assert.match(en,/Company disclosure monitor/);assert.match(en,/Historical baseline/);assert.match(en,/\/en\/research/);assert.equal(/[一-龥]/.test(en.replace(/<script>[\s\S]*?<\/script>/g,'').replaceAll('中文','')),false);assert.match(zh,/G-FZXLMBB5QB/);assert.match(zh,/readChoice\(\)==='yes'/);assert.match(zh,/page_location:location.origin\+location.pathname/);
  const hostile=structuredClone(data);hostile.events[0].ticker='<script>alert(1)</script>';assert.equal(renderResearch(hostile).includes('<script>alert(1)</script>'),false);
 });
+
+test('SEC requests use runtime-compatible no-follow redirects and reject redirects without consuming content',async t=>{
+ const monitor=new ResearchMonitor({storage:{}},{});
+ let bodyRead=false;
+ t.mock.method(globalThis,'fetch',async(url,options)=>{
+  assert.equal(options.redirect,'manual');
+  assert.equal(new URL(url).hostname,'data.sec.gov');
+  return {ok:false,status:302,text:async()=>{bodyRead=true;return ''}};
+ });
+ await assert.rejects(()=>monitor.loadIssuer(ISSUERS[0]),/sec_http_302/);
+ assert.equal(bodyRead,false);
+ t.mock.restoreAll();
+ t.mock.method(globalThis,'fetch',async()=>Response.json(source()));
+ assert.equal((await monitor.loadIssuer(ISSUERS[0])).length,1);
+});
