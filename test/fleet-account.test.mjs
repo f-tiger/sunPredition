@@ -6,3 +6,5 @@ const start=await accountRoute(new Request(base+'/auth/google'));assert.equal(st
 assert.equal((await accountRoute(new Request(base+'/auth/callback?code=bad&state=bad'))).status,400);
 assert.equal((await accountRoute(new Request(base+'/auth/logout',{method:'POST',headers:{Origin:'https://evil.example'}}))).status,403);
 console.log('PASS SunWatch registration routing, browser-state binding and privacy. No external calls.');
+
+const status=await accountRoute(new Request(base+'/auth/status'),{},()=>{throw Error('Anonymous lookup must not contact hub');});assert.deepEqual(await status.json(),{ok:true,user:null});

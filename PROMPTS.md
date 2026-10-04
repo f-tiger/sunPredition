@@ -723,3 +723,7 @@ Delivery uses existing crons and the existing deployment branch. A derived verif
 三轮完善：①覆盖生产域名 invest.agiscorecard.com；②复用 BPJ 账户作为统一身份服务，保持既有研究/订阅/付费权限隔离；③交付可见入口、PKCE 单次授权码、HttpOnly 本站会话、退出和线上验收。
 边界：不发送新的通知、不变更收费、不改投研模型或定时任务；账户页 noindex/no-store，无统计。Google 真实授权需用户在其 Google 后台正确配置来源。
 实现：同步 agi-site/tools/fleet-account 的自包含边缘模块，测试与上线后读取验证；公开页面继续保留 GA4、canonical 和原发现机制。
+
+## 2026-10-04 · Fleet account header state
+
+目标：登录后头部显示用户名，退出或过期恢复登录入口。先核实真实会话，公共 HTML 不写用户身份；私密状态接口只返回显示名，匿名请求不访问账户数据库。同步舰队共享模块、修复 Workers 不支持的 redirect:error 参数，保留全部验证边界。验收：匿名/登录/过期/故障状态、手机长名字、公开页面与私密响应缓存。只发布账户变更，沿用 [account-only] 跳过会发送 Telegram 的首次连接任务，不更改日常调度或收费。

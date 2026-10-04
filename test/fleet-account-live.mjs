@@ -11,6 +11,8 @@ async function check(host){
   const script=await get(HUB+'/account-fleet.js');assert.equal(script.status,200);assert.match(await script.text(),/confirmed:true/);return;
  }
  assert(HOSTS.has(host));const base='https://'+host;
+ const status=await get(base+'/auth/status');assert.equal(status.status,200);assert.deepEqual(await status.json(),{ok:true,user:null});
+ const nav=await get(base+'/auth/nav.js');assert.equal(nav.status,200);assert((await nav.text()).includes('/auth/status'));
  const page=await get(base+'/auth/account');assert.equal(page.status,200);assert.equal(page.headers.get('X-Fleet-Account-Version'),VERSION);assert.match(page.headers.get('Cache-Control'),/no-store/);assert.match(page.headers.get('X-Robots-Tag'),/noindex/);const html=await page.text();assert(html.includes('Continue with Google'));assert(!html.includes('googletagmanager'));
  const start=await get(base+'/auth/google');assert.equal(start.status,303);const target=new URL(start.headers.get('Location'));assert.equal(target.origin,HUB);assert.equal(target.pathname,'/account');assert.equal(target.searchParams.get('fleet'),host);assert(TOKEN.test(target.searchParams.get('state')));assert(TOKEN.test(target.searchParams.get('challenge')));assert.match(start.headers.get('Set-Cookie'),/HttpOnly/);
  const reject=await get(base+'/auth/callback?code=bad&state=bad');assert.equal(reject.status,400);
