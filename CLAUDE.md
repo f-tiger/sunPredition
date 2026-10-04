@@ -82,3 +82,7 @@ Default research collection now uses `src/official-ir.js`: ten company-owned RSS
 `src/roadmap-alerts.js` consumes the public AGI roadmap through the existing serialized `PORTFOLIO_ALERTS` instance, with separate durable state. Existing 30-minute cron, no new cron or subscriber broadcasts. Five routes, nine conditional research candidates. New video metadata is review-only, capped to a daily lead summary; reviewed route revisions require a new editorial revision and a matching hash. `/roadmap`, `/roadmap_pause`, `/roadmap_resume` and `/start roadmap` require the existing private owner recipient and authenticated webhook. Local browser watchlists do not configure owner alerts.
 
 `/api/roadmap-alerts` accepts only authenticated POST run/status using a private scoped key. The existing deployment token derives that key in CI without logging either. `/api/roadmap-status` exposes enabled/health/revision/check time/acknowledgement time, never identifiers or credentials. Tests: `test/roadmap-alerts.test.mjs`, `test/roadmap-live.mjs`. First live verification sends one explicitly authorized owner briefing, later checks are read-only when a receipt exists. Failed delivery retries and a crash between Telegram acknowledgement and durable storage can duplicate; no exactly-once claim.
+
+## 2026-10-04 全舰队 Google 注册
+
+`/auth/account` 提供统一账户入口，使用 BPJ Google/邮箱身份后返回本站。共享边缘模块见 `src/fleet-account/README.md`；原订阅、付款与 Telegram 身份保持独立，不自动授予收费权限。账户页 noindex/no-store，不运行统计；普通页面仍沿用原 GA4。`[account-only]` 部署跳过可能发通知的首次连接验收，原定时任务不变。

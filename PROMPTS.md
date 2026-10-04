@@ -716,3 +716,10 @@ Self-check 1: famous speakers are interested participants, repeated opinions are
 Self-check 2: metadata-only videos never revise a reviewed thesis; historical discoveries do not replay alerts. Reuse the existing durable owner sender, retry failed delivery, keep private keys out of browsers/logs and reject unversioned/rolled-back data. Local watchlists do not configure Telegram subscriptions.
 
 Delivery uses existing crons and the existing deployment branch. A derived verification key permits only fixed-content run/status on this notifier. It never accepts text or recipients; initial connection sends once. Receipts, delivery state and recipient remain private, with only aggregate acknowledgement time exposed.
+
+## 2026-10-04 — 全舰队 Google 注册，SunWatch 接入
+
+目标：用户明确要求整个舰队支持 Google 注册，包括 SunWatch。
+三轮完善：①覆盖生产域名 invest.agiscorecard.com；②复用 BPJ 账户作为统一身份服务，保持既有研究/订阅/付费权限隔离；③交付可见入口、PKCE 单次授权码、HttpOnly 本站会话、退出和线上验收。
+边界：不发送新的通知、不变更收费、不改投研模型或定时任务；账户页 noindex/no-store，无统计。Google 真实授权需用户在其 Google 后台正确配置来源。
+实现：同步 agi-site/tools/fleet-account 的自包含边缘模块，测试与上线后读取验证；公开页面继续保留 GA4、canonical 和原发现机制。

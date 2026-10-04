@@ -1,3 +1,4 @@
+import {withFleetAccount} from './fleet-account/edge.mjs';
 import {roadmapCommand} from './roadmap-alerts.js';
 import researchBaseline from "./research-baseline.json" with {type:"json"};
 import {researchCommand, reviewOpinions} from "./research-monitor.js";
@@ -916,7 +917,7 @@ export function addShareTags(html) {
   return html.replace("</head>", tags + "</head>");
 }
 
-export default {
+const fleetAccountWorker = {
   async fetch(request, env, ctx) {
     const res = await worker.fetch(request, env, ctx);
     const ct = res.headers.get("content-type") || "";
@@ -1783,3 +1784,5 @@ function fnv1a(str) {
   return h.toString(36);
 }
 
+
+export default withFleetAccount(fleetAccountWorker);
