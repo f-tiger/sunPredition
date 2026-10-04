@@ -925,7 +925,7 @@ const fleetAccountWorker = {
     let body = addShareTags(await res.text());
     if (!new URL(request.url).pathname.includes("research")) {
       const en=/<html[^>]*lang="en/i.test(body);
-      body=body.replace("<body>",`<body><nav aria-label="${en?"Research monitor":"披露监控"}" style="padding:8px 16px;text-align:center;background:#122237;color:#fff"><a style="color:#b3d6ff" href="${en?"/en/research":"/research"}">${en?"New: company disclosures and review status":"公司披露监控 · 查看新公告与观点复核状态"}</a></nav>`);
+      body=body.replace("<body>",`<body><header class="sunwatch-site-header"><div class="sunwatch-header-inner"><a class="sunwatch-brand" href="${en?"/en":"/"}">SunWatch</a><nav aria-label="${en?"Main navigation":"主导航"}"><a href="${en?"/en/research":"/research"}">${en?"Disclosures":"公司披露"}</a><a href="${en?"/en/track-record":"/track-record"}">${en?"Track record":"公开战绩"}</a><a href="${en?"/en/faq":"/faq"}">FAQ</a></nav></div></header>`);
     }
     return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
   },
