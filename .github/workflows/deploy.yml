@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      OUTCOME_READ_ONLY_RELEASE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[outcome-readonly-release]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +42,7 @@ jobs:
         run: node --test test/roadmap-alerts.test.mjs
 
       - name: Configure scoped roadmap verification binding
+        if: env.OUTCOME_READ_ONLY_RELEASE != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/roadmap-verification-key.mjs
@@ -48,6 +51,7 @@ jobs:
         run: node --test test/ledger-audit.test.mjs
 
       - name: Migrate legacy constants into existing private Worker bindings
+        if: env.OUTCOME_READ_ONLY_RELEASE != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/migrate-private-config.mjs
@@ -61,6 +65,7 @@ jobs:
         run: node src/fleet-account/verify-live.mjs invest.agiscorecard.com
 
       - name: Read-only production smoke test
+        if: env.OUTCOME_READ_ONLY_RELEASE != 'true'
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "Deployed at: $URL"
@@ -236,22 +241,24 @@ jobs:
           curl -sf "$URL/api/feed" | head -c 400
           echo
       - name: Verify portfolio API, MCP and first owner Telegram receipt
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') }}
+        if: ${{ env.OUTCOME_READ_ONLY_RELEASE != 'true' && (!contains(github.event.head_commit.message, '[account-only]')) }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
       - name: Verify first roadmap owner delivery and deduplication
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') }}
+        if: ${{ env.OUTCOME_READ_ONLY_RELEASE != 'true' && (!contains(github.event.head_commit.message, '[account-only]')) }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node test/roadmap-live.mjs
 
       - name: Verify live official company disclosure monitor
+        if: env.OUTCOME_READ_ONLY_RELEASE != 'true'
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/research-live.mjs
       - name: Ping IndexNow (auto search-engine indexing)
+        if: env.OUTCOME_READ_ONLY_RELEASE != 'true'
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "indexnow:"

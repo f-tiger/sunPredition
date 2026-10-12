@@ -727,3 +727,9 @@ Delivery uses existing crons and the existing deployment branch. A derived verif
 ## 2026-10-04 · Fleet account header state
 
 目标：登录后头部显示用户名，退出或过期恢复登录入口。先核实真实会话，公共 HTML 不写用户身份；私密状态接口只返回显示名，匿名请求不访问账户数据库。同步舰队共享模块、修复 Workers 不支持的 redirect:error 参数，保留全部验证边界。验收：匿名/登录/过期/故障状态、手机长名字、公开页面与私密响应缓存。只发布账户变更，沿用 [account-only] 跳过会发送 Telegram 的首次连接任务，不更改日常调度或收费。
+
+## 2026-10-12：免费账户入口与任务返回
+
+目标：同步舰队账户模块，让免费注册流程保留经过校验的公开来源路径和七种白名单语言。只携带 pathname，不携带 query/hash、研究输入或账户身份。保持原有付费权限、Telegram 订阅和隐私边界。
+
+验收：共享四文件哈希一致；离线账户与回归测试通过；发布使用 [outcome-readonly-release]，跳过业务跳转计数、研究刷新、通知、密钥迁移及整站 IndexNow；线上仅 GET 账户表面与公开入口，不创建测试账户或业务事件。不把部署、注册入口或测试解释为真实用户与收入增长。
