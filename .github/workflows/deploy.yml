@@ -7,6 +7,11 @@ on:
       - claude/sun-yuchen-investment-research-yzz9mx
     paths: ["src/**", "wrangler.toml", ".github/workflows/deploy.yml"]
   workflow_dispatch:
+    inputs:
+      capital_verify:
+        description: 'Verify the requested Capital Radar owner delivery (may send its pending fixed message)'
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -39,6 +44,9 @@ jobs:
       - name: Verify roadmap provenance, owner isolation and retry behavior
         run: node --test test/roadmap-alerts.test.mjs
 
+      - name: Test Capital Radar owner delivery and per-id acknowledgement
+        run: node --test test/capital-alerts.test.mjs
+
       - name: Configure scoped roadmap verification binding
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -59,6 +67,17 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Read-only Google registration smoke test
         run: node src/fleet-account/verify-live.mjs invest.agiscorecard.com
+
+      - name: Verify Capital Radar private notification bridge
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CAPITAL_VERIFY: ${{ github.event_name == 'workflow_dispatch' && inputs.capital_verify }}
+        run: |
+          if [ "$CAPITAL_VERIFY" = 'true' ]; then
+            node test/capital-live.mjs --send
+          else
+            node test/capital-live.mjs
+          fi
 
       - name: Read-only production smoke test
         run: |
@@ -236,12 +255,12 @@ jobs:
           curl -sf "$URL/api/feed" | head -c 400
           echo
       - name: Verify portfolio API, MCP and first owner Telegram receipt
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
       - name: Verify first roadmap owner delivery and deduplication
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -86,3 +86,9 @@ Default research collection now uses `src/official-ir.js`: ten company-owned RSS
 ## 2026-10-04 全舰队 Google 注册
 
 `/auth/account` 提供统一账户入口，使用 BPJ Google/邮箱身份后返回本站。共享边缘模块见 `src/fleet-account/README.md`；原订阅、付款与 Telegram 身份保持独立，不自动授予收费权限。账户页 noindex/no-store，不运行统计；普通页面仍沿用原 GA4。`[account-only]` 部署跳过可能发通知的首次连接验收，原定时任务不变。
+
+## Capital Radar owner relay (2026-11-01)
+
+`src/capital-alerts.js` consumes only the private fixed AGI `/api/capital-radar/alerts` endpoint with existing `AGI_ALERT_KEY`. The existing serialized `PORTFOLIO_ALERTS` object and cron deliver to the existing bot/owner; no new Telegram secrets or recipient. Save the successful Telegram receipt before acknowledging that exact alert ID. Retry an ACK without resending. Ambiguous delivery remains unknown; do not call it delivered or automatically repeat it. Old pending alerts expire upstream after 72 hours without a delivered mark.
+
+Private `POST /api/capital-alerts?action=run|status` uses existing operator verification credentials (`ROADMAP_VERIFY_KEY`, otherwise `AGI_ALERT_KEY`), with no caller-specified text/recipient. Status omits message IDs and secret values. Normal deployment runs a read-only status probe. Explicit workflow_dispatch `capital_verify=true` checks the authorized pending message and repeat deduplication; `[capital-only]` and that input skip unrelated first portfolio/roadmap delivery probes. Relevant tests remain enabled. Bot credentials stay exclusively in SunWatch.

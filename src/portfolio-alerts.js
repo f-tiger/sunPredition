@@ -1,4 +1,5 @@
 import {handleRoadmap} from './roadmap-alerts.js';
+import {handleCapital} from './capital-alerts.js';
 // Public model returns only. Telegram credentials stay in the existing SunWatch env/KV.
 export const FEED='https://agiscorecard.com/api/portfolio';
 const COHORT='social-basket-2026-10-02-close';
@@ -55,11 +56,11 @@ export class PortfolioAlerts {
   const e=this.env;
   return e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_CHAT_ID?{token:e.TELEGRAM_BOT_TOKEN,chatId:e.TELEGRAM_CHAT_ID}:await e.SUNWATCH_KV.get('tg-config','json');
  }
- async send(text){
+ async send(text,{receiptDetails=false}={}){
   const cfg=await this.config();if(!cfg?.token||!cfg.chatId)return {ok:false,error:'telegram_not_configured'};
   try{
-   const r=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:cfg.chatId,text,disable_web_page_preview:true}),signal:AbortSignal.timeout(8000)});
-   const b=await r.json();return r.ok&&b.ok===true&&Number.isInteger(b.result?.message_id)?{ok:true,message_id:b.result.message_id}:{ok:false,error:'telegram_rejected'};
+   const r=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:cfg.chatId,text,disable_web_page_preview:true}),...(receiptDetails?{redirect:'manual'}:{}),signal:AbortSignal.timeout(8000)});
+   const b=await r.json();return r.ok&&b.ok===true&&Number.isInteger(b.result?.message_id)?{ok:true,message_id:b.result.message_id}:{ok:false,error:'telegram_rejected',...(receiptDetails?{definitive:b.ok===false&&!r.redirected&&(r.ok||r.status>=400&&r.status<500)}: {})};
   }catch{return {ok:false,error:'telegram_unconfirmed'};}
  }
  async load(previous){
@@ -67,6 +68,7 @@ export class PortfolioAlerts {
   if(!r.ok)throw Error('feed_unavailable');return validatePortfolio(await r.json(),previous);
  }
  async handle(action){
+  if(action.startsWith('capital/'))return handleCapital(this.ctx,this.env,this.send.bind(this),action.slice(8));
   if(action.startsWith('roadmap/'))return handleRoadmap(this.ctx,this.env,this.send.bind(this),action.slice(8));
   const store=this.ctx.storage;
   const s=await store.get('state')??{enabled:true};

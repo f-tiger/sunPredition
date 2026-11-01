@@ -727,3 +727,11 @@ Delivery uses existing crons and the existing deployment branch. A derived verif
 ## 2026-10-04 · Fleet account header state
 
 目标：登录后头部显示用户名，退出或过期恢复登录入口。先核实真实会话，公共 HTML 不写用户身份；私密状态接口只返回显示名，匿名请求不访问账户数据库。同步舰队共享模块、修复 Workers 不支持的 redirect:error 参数，保留全部验证边界。验收：匿名/登录/过期/故障状态、手机长名字、公开页面与私密响应缓存。只发布账户变更，沿用 [account-only] 跳过会发送 Telegram 的首次连接任务，不更改日常调度或收费。
+
+## 2026-11-01 — Reuse SunWatch for Capital Radar owner notifications
+
+Owner correction: “tg不是sunwatch有发送了？” Reuse the existing owner bot and recipient for the requested AI funding/startup monitoring conclusions. Three refinements: locate the actual deployed sender and existing receipts; keep bot credentials in SunWatch and authenticate only a bounded private AGI outbox; deliver through the existing serialized Durable Object and cron, then verify a genuine acknowledgement.
+
+Self-check 1: no duplicate bot, credentials, recipient, customer broadcast or public monitoring-data endpoint. Registration remains required on AGI. Self-check 2: persist successful Telegram receipts before per-id upstream acknowledgement; do not replay a successful send after acknowledgement failure. An interrupted ambiguous send cannot be called delivered and must not be automatically repeated.
+
+Deliverables: dedicated Capital Radar handler, fixed-action authenticated operations, targeted tests, CI deployment and explicit owner-authorized first connection verification. Default deployment probes remain read-only for this channel. Initial message reports the actual retained snapshot and prediction cold start; subsequent notifications require core-signal changes. No financial model or paid-subscription changes in SunWatch.

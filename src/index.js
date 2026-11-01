@@ -1,5 +1,6 @@
 import {withFleetAccount} from './fleet-account/edge.mjs';
 import {roadmapCommand} from './roadmap-alerts.js';
+import {capitalCommand} from './capital-alerts.js';
 import researchBaseline from "./research-baseline.json" with {type:"json"};
 import {researchCommand, reviewOpinions} from "./research-monitor.js";
 import {renderResearch} from "./research-page.js";
@@ -198,6 +199,12 @@ const worker = {
         const k=env.ROADMAP_VERIFY_KEY||env.AGI_ALERT_KEY||"",action=url.searchParams.get("action");
         if(!k||request.method!=="POST"||request.headers.get("authorization")!=="Bearer "+k||!["status","run"].includes(action))return new Response("forbidden",{status:403});
         return json(await roadmapCommand(env,action));
+      }
+      case "/api/capital-alerts": {
+        const key=env.ROADMAP_VERIFY_KEY||env.AGI_ALERT_KEY||"",action=url.searchParams.get("action");
+        const headers={"content-type":"application/json; charset=utf-8","cache-control":"private, no-store","x-robots-tag":"noindex, nofollow","referrer-policy":"no-referrer"};
+        if(!key||request.method!=="POST"||request.headers.get("authorization")!=="Bearer "+key||url.searchParams.getAll("action").length!==1||!["run","status"].includes(action))return new Response(JSON.stringify({ok:false,error:"forbidden"}),{status:403,headers});
+        return new Response(JSON.stringify(await capitalCommand(env,action)),{headers});
       }
       case "/api/portfolio-alerts": {
         const k = env.AGI_ALERT_KEY || "";
@@ -805,6 +812,8 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
   },
 
   async scheduled(event, env, _ctx) {
+    // Existing serialized private owner relay; feed failures cannot block it.
+    await capitalCommand(env).catch(() => {});
     // Both collectors run independently of failures in news/quote feeds.
     await ensurePrivateWebhook(env).catch(() => {});
     await researchCommand(env,"run").catch(() => {});
