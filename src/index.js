@@ -201,7 +201,7 @@ const worker = {
         return json(await roadmapCommand(env,action));
       }
       case "/api/capital-alerts": {
-        const key=env.ROADMAP_VERIFY_KEY||env.AGI_ALERT_KEY||"",action=url.searchParams.get("action");
+        const key=env.ROADMAP_VERIFY_KEY||"",action=url.searchParams.get("action");
         const headers={"content-type":"application/json; charset=utf-8","cache-control":"private, no-store","x-robots-tag":"noindex, nofollow","referrer-policy":"no-referrer"};
         if(!key||request.method!=="POST"||request.headers.get("authorization")!=="Bearer "+key||url.searchParams.getAll("action").length!==1||!["run","status"].includes(action))return new Response(JSON.stringify({ok:false,error:"forbidden"}),{status:403,headers});
         return new Response(JSON.stringify(await capitalCommand(env,action)),{headers});

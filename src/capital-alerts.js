@@ -27,7 +27,7 @@ async function readJSON(response){
 }
 
 async function feedRequest(env,receipt){
- const headers={Accept:'application/json',Authorization:'Bearer '+env.AGI_ALERT_KEY,'User-Agent':'SunWatch-CapitalRadar/1.0'};
+ const headers={Accept:'application/json',Authorization:'Bearer '+env.CAPITAL_RADAR_RELAY_KEY,'User-Agent':'SunWatch-CapitalRadar/1.0'};
  const init={method:receipt?'POST':'GET',headers,redirect:'manual',signal:AbortSignal.timeout(10000)};
  if(receipt){headers['Content-Type']='application/json';init.body=JSON.stringify({id:receipt.id,messageId:receipt.messageId,deliveredAt:receipt.deliveredAt});}
  const body=await readJSON(await fetch(CAPITAL_FEED,init));
@@ -44,10 +44,12 @@ export async function capitalCommand(env,action='run'){
 
 export async function handleCapital(ctx,env,send,action){
  const store=ctx.storage,s=await store.get(KEY)??{receipts:[],sent_count:0};
- const state=(ok=true)=>({ok,configured:!!env.AGI_ALERT_KEY,health:s.health??'not_checked',last_check:s.last_check??null,last_delivery_at:s.last_delivery_at??null,sent_count:s.sent_count??0,pending_ack:s.receipts.some(r=>r.state==='delivered'),unknown_count:s.receipts.filter(r=>['sending','unknown'].includes(r.state)).length});
+ const state=(ok=true)=>({ok,configured:!!env.CAPITAL_RADAR_RELAY_KEY,health:s.health??'not_checked',last_check:s.last_check??null,last_delivery_at:s.last_delivery_at??null,sent_count:s.sent_count??0,pending_ack:s.receipts.some(r=>r.state==='delivered'),unknown_count:s.receipts.filter(r=>['sending','unknown'].includes(r.state)).length});
  if(action==='status')return state();
  if(action!=='run')return {ok:false,error:'unknown_action'};
- if(!env.AGI_ALERT_KEY){s.health='not_configured';await store.put(KEY,s);return {...state(false),sent:0,acknowledged:0,reason:'not_configured'};}
+ // This scoped secret is independent of the legacy owner-identity database and
+ // AGI_ALERT_KEY. Never fall back to that old channel when setup is incomplete.
+ if(!env.CAPITAL_RADAR_RELAY_KEY){s.health='not_configured';await store.put(KEY,s);return {...state(false),sent:0,acknowledged:0,reason:'not_configured'};}
  s.last_check=stamp();
  // A process stopped after a persisted claim might have sent externally. Never
  // retry it automatically. This favors avoiding repeats, not exactly-once claims.

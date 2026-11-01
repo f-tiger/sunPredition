@@ -11,7 +11,7 @@ function harness(t){
  const state=new Map(),calls=[],messages=[],acks=[];
  let feed={ok:true,alert:alert()},feedStatus=200,ackOK=true,ackOverride=null,telegram='ok',clock=NOW,writeFailure=false;
  const ctx={storage:{get:async key=>structuredClone(state.get(key)),put:async(key,value)=>{if(writeFailure&&value.receipts?.some(r=>r.state==='delivered'))throw Error('synthetic_storage_failure');state.set(key,structuredClone(value));calls.push({kind:'persist',states:value.receipts.map(r=>r.state)});}}};
- const env={AGI_ALERT_KEY:'synthetic-feed-key',TELEGRAM_BOT_TOKEN:'synthetic-bot',TELEGRAM_CHAT_ID:'synthetic-owner'};
+ const env={CAPITAL_RADAR_RELAY_KEY:'synthetic-feed-key',AGI_ALERT_KEY:'unused-legacy-key',TELEGRAM_BOT_TOKEN:'synthetic-bot',TELEGRAM_CHAT_ID:'synthetic-owner'};
  let object=new PortfolioAlerts(ctx,env);
  t.mock.method(Date,'now',()=>clock);
  t.mock.method(globalThis,'fetch',async(url,options)=>{
@@ -95,8 +95,8 @@ test('explicit Telegram rejection is retryable but is never acknowledged as sent
  h.setTelegram('ok');assert.equal((await h.run()).sent,1);assert.equal(h.messages.length,2);assert.equal(h.acks.length,1);
 });
 
-test('missing key and status checks make no external request or sender call',async t=>{
- const h=harness(t);delete h.env.AGI_ALERT_KEY;
+test('missing scoped key fails closed even when the legacy key exists; status has no external effects',async t=>{
+ const h=harness(t);delete h.env.CAPITAL_RADAR_RELAY_KEY;assert.ok(h.env.AGI_ALERT_KEY);
  const status=await h.run('status');assert.equal(status.configured,false);assert.equal(h.calls.length,0);
  assert.equal((await h.run()).reason,'not_configured');assert.equal(h.messages.length,0);assert.equal(h.calls.some(x=>x.kind==='feed'),false);
 });
@@ -125,6 +125,9 @@ test('private endpoint requires POST, one allowed action and the existing operat
  const response=await worker.fetch(new Request(endpoint+'?action=status',{method:'POST',headers:{Authorization:'Bearer ops-key'}}),env,{});
  assert.equal(response.status,200);assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.equal((await response.json()).sent_count,0);assert.equal(calls,1);
  assert.equal((await capitalCommand({},'run')).ok,false);assert.equal((await capitalCommand(env,'arbitrary')).error,'unknown_action');
+ delete env.ROADMAP_VERIFY_KEY;
+ const legacy=await worker.fetch(new Request(endpoint+'?action=status',{method:'POST',headers:{Authorization:'Bearer feed-key'}}),env,{});
+ assert.equal(legacy.status,403,'old alert key cannot substitute for the operator key');assert.equal(calls,1);
 });
 
 test('capital relay runs on the existing schedule before unrelated collection',()=>{
