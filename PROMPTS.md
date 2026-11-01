@@ -749,3 +749,11 @@ issuer, host and path only. Verified the public target and all ten live feed row
 Regression tests reject other issuers, paths, hosts, credentials and ports.
 Collector revision v3 permits one immediate refresh while preserving the existing
 baseline, observed IDs and pending outbox; public refresh sends no messages.
+
+Verified result 2026-11-01: complete SunWatch Actions 41319561155 succeeded.
+Capital Radar Telegram acknowledgement at 2026-11-01T15:07:45.943Z;
+first send count 1, immediate repeat count 0, exact upstream acknowledgement
+confirmed. Message ID/recipient/credentials omitted. All twelve official issuer
+sources healthy, including NOW; public refresh sends zero. AGI release
+41318944713 and real collector 41319452253 also succeeded. The initial AGI
+Telegram-secret request was unnecessary; existing SunWatch delivery is reused.
