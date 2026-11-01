@@ -12,7 +12,9 @@ export const ISSUERS = [
 export const RELEVANT_FORMS = new Set(['8-K','8-K/A','10-Q','10-Q/A','10-K','10-K/A','20-F','20-F/A','6-K','S-1','S-1/A','S-3','S-3/A','424B2','424B5']);
 const SITE='https://invest.agiscorecard.com';
 const INTERVAL=20*60*1000;
-const COLLECTOR_REVISION='official-ir-v2';
+// Refresh once when the verified NOW Workflow link format becomes supported;
+// the official-ir prefix preserves the existing issuer baselines and outbox.
+const COLLECTOR_REVISION='official-ir-v3';
 const DAY=86400000;
 const stamp=now=>new Date(now).toISOString();
 const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&stamp(Date.parse(s)).slice(0,10)===s;

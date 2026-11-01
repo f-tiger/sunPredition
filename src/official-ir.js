@@ -27,7 +27,11 @@ function field(s,tag){return decode(s.match(new RegExp('<'+tag+'(?:\\s[^>]*)?>([
 function originalURL(value,source){
  if(typeof value!=='string'||!value.trim())throw Error('ir_invalid_link');
  const u=new URL(decode(value),source.url);
- if(!['https:','http:'].includes(u.protocol)||!(u.hostname===source.host||(source.ticker==='TSLA'&&u.hostname==='www.businesswire.com'&&u.pathname.startsWith('/news/'))||(source.ticker==='AMZN'&&u.hostname==='www.ezodproxy.com'&&u.pathname.startsWith('/amazon/')))||u.username||u.password||u.port)throw Error('ir_invalid_link');
+ // ServiceNow's own newsroom RSS also publishes company-owned Workflow news
+ // articles (verified 2026-11-01). Permit only that HTTPS host and news-file
+ // path for NOW; do not widen the feed host or other issuers' link allowlists.
+ const nowWorkflow=source.ticker==='NOW'&&u.protocol==='https:'&&u.hostname==='www.servicenow.com'&&/^\/workflow\/news\/[a-z0-9-]+\.html$/i.test(u.pathname);
+ if(!['https:','http:'].includes(u.protocol)||!(u.hostname===source.host||nowWorkflow||(source.ticker==='TSLA'&&u.hostname==='www.businesswire.com'&&u.pathname.startsWith('/news/'))||(source.ticker==='AMZN'&&u.hostname==='www.ezodproxy.com'&&u.pathname.startsWith('/amazon/')))||u.username||u.password||u.port)throw Error('ir_invalid_link');
  u.protocol='https:';u.hash='';return u.href;
 }
 function dateOnly(s){

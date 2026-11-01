@@ -10,7 +10,7 @@ for(let n=0;n<8;n++){
 assert.equal(initial?.version,'sec-disclosures-v1','Monitor deployment is unavailable');
 const fresh=await(await read('/api/research-refresh',{method:'POST'})).json();
 assert.equal(fresh.ok,true);assert.equal(fresh.webhook_secured,true,'Private webhook migration failed');assert.equal(fresh.issuers.length,12);assert.equal(fresh.sent,0,'Public refresh must never send Telegram messages');
-assert.equal(fresh.collector_revision,'official-ir-v2');
+assert.equal(fresh.collector_revision,'official-ir-v3');
 assert.equal(fresh.monitor_mode,'official_ir');
 console.log('Official IR health:',fresh.issuers.map(x=>`${x.ticker}:${x.status}${x.error?'('+x.error+')':''}`).join(' '));
 assert.equal(fresh.health,'ok','Official company sources failed; do not claim full coverage');

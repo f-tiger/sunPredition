@@ -737,3 +737,15 @@ Self-check 1: no duplicate bot, credentials, recipient, customer broadcast or pu
 Deliverables: dedicated Capital Radar handler, fixed-action authenticated operations, targeted tests, CI deployment and explicit owner-authorized first connection verification. Default deployment probes remain read-only for this channel. Initial message reports the actual retained snapshot and prediction cold start; subsequent notifications require core-signal changes. No financial model or paid-subscription changes in SunWatch.
 
 Live verification correction: the legacy AGI owner-identity lookup fails in production, so the new capital relay must not depend on it. Configure a dedicated `CAPITAL_RADAR_RELAY_KEY` on both Workers using the existing deployment credential; never read or copy existing secret values or Telegram credentials. Source reads and acknowledgements fail closed without the dedicated key even if `AGI_ALERT_KEY` exists. Operator run/status continues to use `ROADMAP_VERIFY_KEY`. Preserve the old owner-alert channel unchanged. Verify scoped-key isolation, durable send/ack ordering and a genuine delivery receipt after deployment.
+
+## 2026-11-01 — Repair the deployment failure shown by the owner
+
+Owner supplied the GitHub failure email. Investigate the actual failed step,
+repair its cause, preserve the health assertion and confirm the complete workflow.
+The failure is NOW official RSS link validation, after a successful deployment
+and private Capital Radar status check. The issuer's own feed now includes its
+HTTPS www.servicenow.com/workflow/news/<slug>.html articles. Allow that exact
+issuer, host and path only. Verified the public target and all ten live feed rows.
+Regression tests reject other issuers, paths, hosts, credentials and ports.
+Collector revision v3 permits one immediate refresh while preserving the existing
+baseline, observed IDs and pending outbox; public refresh sends no messages.
