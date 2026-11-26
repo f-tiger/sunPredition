@@ -47,25 +47,46 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const PRICING_ZH = "/?lang=zh#pricing";
 const PRICING_EN = "/en#pricing";
+const PRO_PRICING_CSS = `
+.pro-pricing{margin:12px 0;border-color:var(--accent);scroll-margin-top:76px}
+.pro-pricing-header{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
+.pro-pricing h2{font-size:16px;margin:0;padding:0;border:0}
+.pro-pricing .pro-price{font-size:18px;font-weight:700;margin:0}
+.pro-buy-link{display:inline-flex;align-items:center;min-height:44px;background:#1d4ed8;color:#fff;padding:0 14px;border-radius:8px;font-weight:700;text-decoration:none}
+.pro-pricing .pro-start{margin:6px 0}
+.pro-pricing summary{cursor:pointer;color:var(--accent)}
+.pro-pricing .pro-links{display:flex;align-items:center;flex-wrap:wrap;gap:2px 16px}
+.pro-pricing .pro-links details[open]{flex-basis:100%;min-width:0}
+.pro-pricing #activate-pro{scroll-margin-top:76px}
+`;
 const CTA = `<div class="card"><b>查看研究价位与触发提醒</b><div class="meta" style="margin-top:4px">向 <a href="/go/tg" rel="nofollow">@sunwatchBot</a> 发送 /start，免费订阅信号预告 · <a href="/track-record">查看公开记录</a> · <a href="${PRICING_ZH}">查看 Pro 定价</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
 const CTA_EN = `<div class="card"><b>Research levels and trigger alerts</b><div class="meta" style="margin-top:4px">Send /start to <a href="/go/tg" rel="nofollow">@sunwatchBot</a> for free signal previews · <a href="/en/track-record">public record</a> · <a href="${PRICING_EN}">view Pro pricing</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
 
 function renderProPricing(english) {
   const t = (en, zh) => english ? en : zh;
-  return `<div class="card" style="border-color:var(--accent)">
-<b>SunWatch Pro</b>
-<p style="font-size:18px;font-weight:700;margin:6px 0 2px">${t("¥199/month or ¥1999/year", "¥199/月或 ¥1999/年")}</p>
-<p style="margin:0 0 10px">${t("28 USDT/month or 280 USDT/year on BNB Smart Chain (BEP20).", "BNB Smart Chain（BEP20）付款为 28 USDT/月或 280 USDT/年。")}</p>
+  return `<section class="card pro-pricing" id="pricing" aria-labelledby="pro-plan-title">
+<div class="pro-pricing-header">
+<div><h2 id="pro-plan-title">SunWatch Pro</h2>
+<p class="pro-price">${t("¥199/month or ¥1999/year", "¥199/月或 ¥1999/年")}</p></div>
+<a class="pro-buy-link" href="/go/buy?lang=${t("en", "zh")}" rel="nofollow">${t("Continue in Telegram", "去 Telegram 开通")}</a>
+</div>
+<p class="meta pro-start">${t("Tap Start in Telegram to see payment instructions.", "在 Telegram 点按「开始」，查看付款说明。")}</p>
+<div class="pro-links">
+<details><summary>${t("Payment and activation steps", "付款与激活步骤")}</summary>
+<p>${t("28 USDT/month or 280 USDT/year on BNB Smart Chain (BEP20).", "BNB Smart Chain（BEP20）付款为 28 USDT/月或 280 USDT/年。")}</p>
 <p>${t("Pro includes documented entry ranges, stop levels and sizing examples, plus morning and evening research briefs and monitored-price trigger alerts via Telegram.", "Pro 提供已记录的研究入场区间、止损线和仓位示例，并通过 Telegram 提供早晚研究简报和受监测报价的触发提醒。")}</p>
-<a href="/go/buy?lang=${t("en", "zh")}" rel="nofollow" style="display:inline-block;background:#1d4ed8;color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">${t("Open Telegram for payment instructions", "打开 Telegram 查看付款说明")}</a>
 <ol style="padding-inline-start:1.4em;margin:12px 0">
-<li>${t("Tap Start in Telegram to see plan and payment instructions.", "在 Telegram 点按「开始」查看套餐与付款说明。")}</li>
 <li>${t("If paying in USDT, send the transaction hash (TxID) to the bot after transfer. The operator checks it before sending your activation code.", "使用 USDT 付款后，把交易哈希（TxID）发给机器人。站长核对转账后发送激活码。")}</li>
-<li>${t("Send <code>/start YOURCODE</code> to bind Telegram alerts, or enter the same code on the <a href=\"/?lang=zh#activate-pro\">website activation form (Chinese)</a>.", "发送 <code>/start 激活码</code> 绑定 Telegram 提醒，或在<a href=\"#activate-pro\">下方网页表单</a>输入同一个码。")}</li>
+<li>${t("Send <code>/start YOURCODE</code> to bind Telegram alerts, or use the same code to unlock the website.", "发送 <code>/start 激活码</code> 绑定 Telegram 提醒，也可用同一个码解锁网页。")}</li>
 </ol>
 <p class="meta">${t("For WeChat Pay or Alipay, send <code>/payhelp</code> in the bot chat to request payment instructions.", "如需微信支付或支付宝，在机器人对话中发送 <code>/payhelp</code> 请求付款说明。")}</p>
 <p class="meta">${t('<a href="/en/track-record">Read the public research record</a> · <a href="/faq">Payment and activation FAQ (Chinese)</a>', '<a href="/track-record">查看公开研究记录</a> · <a href="/faq">付款与激活常见问题</a>')}</p>
-</div>`;
+${english ? '' : '<p class="meta">免费版 ¥0，可查看赛道分析、新闻监控和公开研究记录。<a href="/go/tg" rel="nofollow">领取 Telegram 信号预告</a></p>'}
+</details>
+${english ? '<a href="/?lang=zh#activate-pro">Use an activation code (Chinese form)</a>' : `<details><summary>已有激活码</summary>
+<div id="activate-pro" style="margin-top:6px"><input id="proKey" aria-label="SunWatch Pro 激活码" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px;max-width:100%">
+<button onclick="activatePro()">激活</button> <span class="meta" id="proMsg" role="status"></span></div></details>`}
+</div></section>`;
 }
 
 // pSEO:单只标的页
@@ -273,7 +294,7 @@ export function renderLandingEN(forecasts) {
 <link rel="canonical" href="https://invest.agiscorecard.com/en">
 <link rel="alternate" hreflang="en" href="https://invest.agiscorecard.com/en">
 <link rel="alternate" hreflang="zh-CN" href="https://invest.agiscorecard.com/">
-<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en"><style>${PAGE_CSS}
+<link rel="alternate" hreflang="x-default" href="https://invest.agiscorecard.com/en"><style>${PAGE_CSS}${PRO_PRICING_CSS}
 .band{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
 .band .card{flex:1 1 140px;text-align:center;margin:0}
 .band b{display:block;font-size:26px}
@@ -282,6 +303,7 @@ export function renderLandingEN(forecasts) {
 .hero{margin:8px 0 4px;font-size:27px;line-height:1.25}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> › Invest · <a href="/?lang=zh">中文</a> · <b>English</b></p>
 <h1 class="hero">Market calls you can audit.<br>Triggers, not vibes.</h1>
+${renderProPricing(true)}
 <p>SunWatch turns judgments about the AI cycle — memory, robotics, space, energy, crypto — into <b>falsifiable price triggers</b> across US, Hong Kong and China A-share markets. A machine watches the lines 24/7. Calls and outcomes are retained together; publication-before-outcome evidence is assessed separately below.</p>
 <div class="band">
 <div class="card"><b>${scored.length}</b><span>scored calls</span></div>
@@ -300,8 +322,6 @@ ${auditNotice(forecasts, true)}
 <div class="card"><a href="/en/stocks">Per-ticker coverage in English</a> · cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · Telegram trigger alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
-<h2 id="pricing" style="font-size:18px">Pricing and activation</h2>
-${renderProPricing(true)}
 <h2 style="font-size:18px">FAQ</h2>
 <div class="card"><b>Is this investment advice?</b><div class="meta" style="margin-top:3px">No. It is a research framework with a public score. Nothing here is a recommendation to buy or sell any security; consult a licensed professional before acting.</div></div>
 <div class="card"><b>What does the displayed rate measure?</b><div class="meta" style="margin-top:3px">It summarizes editorial hit/miss labels, not trading profits. Check the evidence status and original record; unresolved and partial calls are excluded.</div></div>
@@ -592,7 +612,7 @@ export function renderDashboard() {
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.65 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
   .wrap{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
-  header h1{font-size:26px;margin:0 0 4px} header p{color:var(--muted);margin:0 0 20px}
+  header h1{font-size:26px;margin:0 0 4px} header > p{color:var(--muted);margin:0 0 20px}
   h2{font-size:19px;margin:36px 0 12px;border-left:4px solid var(--accent);padding-left:10px}
   .stats{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;
@@ -618,11 +638,13 @@ export function renderDashboard() {
     padding:7px 16px;font-size:14px;cursor:pointer}
   footer{margin-top:48px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:16px}
   .scroll{overflow-x:auto}
+  ${PRO_PRICING_CSS}
 </style>
 </head>
 <body><div class="wrap">
 <header>
   <h1>🔭 SunWatch Pro · AI 热点赛道投资罗盘</h1>
+  ${renderProPricing(false)}
   <p>存储 / 物理AI / 能源 / 加密五大赛道深度分析 · A股/港股/美股三市场推荐 · 实时触发线 + Telegram 信号 · <a href="/track-record">📊 公开战绩</a> · <a href="/red-team">🛡 对抗审查</a> · <a href="/method">🧭 方法论</a> · <a href="/faq">❓FAQ</a> · <a href="/go/tg" rel="nofollow">🤖 免费订阅信号预告</a> · <a href="/en">🇬🇧 English</a> · <a href="https://agiscorecard.com/cn">🏠 AGI 记分牌</a></p>
   <div id="trackNav" style="margin:10px 0 4px"></div>
   <div id="proBar" style="margin:6px 0"></div>
@@ -660,17 +682,6 @@ export function renderDashboard() {
 
 <h2>预判档案:预判 → 结果 → 他的操作</h2>
 <div id="archive"></div>
-
-<h2 id="pricing">订阅 Pro</h2>
-<div class="stocks" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))">
-  <div class="card"><b>免费版</b><div style="font-size:22px;font-weight:700;margin:4px 0">¥0</div>
-    <p>查看赛道分析、新闻监控和公开研究记录。也可以通过 Telegram 领取免费的信号预告。</p>
-    <a href="/go/tg" rel="nofollow">免费信号预告</a></div>
-  ${renderProPricing(false)}
-</div>
-<div class="card" id="activate-pro" style="margin-top:10px"><b>激活 Pro</b>
-  <div style="margin-top:6px"><input id="proKey" aria-label="SunWatch Pro 激活码" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px;max-width:100%">
-  <button onclick="activatePro()">激活</button> <span class="meta" id="proMsg"></span></div></div>
 
 <footer>
   数据信源:Google News RSS(英/中/TRON Inc. 三路)+ 可选 X API;每 30 分钟自动抓取,按关键词自动打标。

@@ -60,8 +60,10 @@ test('localized purchase flow counts a quote after Telegram acknowledges it',asy
     const page=await f.open(path,{headers:browser});
     assert.equal(page.status,200);
     const html=await page.text();
-    assert.match(html,/id="pricing"/);
-    assert.ok(html.includes(`/go/buy?lang=${match}`));
+    assert.equal((html.match(/id="pricing"/g)||[]).length,1);
+    const buy=html.indexOf(`href="/go/buy?lang=${match}"`);
+    const content=html.indexOf(match==='en'?'class="band"':'id="todayActions"');
+    assert.ok(buy>html.indexOf('id="pricing"') && content>buy,'The purchase action belongs above the research content');
   }
   assert.equal(f.kv.has('growth'),false);
   assert.equal((await f.open('/go/pro?lang=en&__ci=1',{headers:browser})).headers.get('location'),origin+'/en#pricing');
