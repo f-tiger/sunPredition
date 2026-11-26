@@ -8,6 +8,10 @@ on:
     paths: ["src/**", "wrangler.toml", ".github/workflows/deploy.yml"]
   workflow_dispatch:
     inputs:
+      checkout_only:
+        description: 'Deploy checkout changes and verify public pricing and reporting'
+        type: boolean
+        default: false
       capital_verify:
         description: 'Verify the requested Capital Radar owner delivery (may send its pending fixed message)'
         type: boolean
@@ -16,10 +20,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CHECKOUT_ONLY: ${{ contains(github.event.head_commit.message, '[checkout-only]') || inputs.checkout_only || false }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       # 先用和 wrangler 同一个解析器(esbuild/ESM)过一遍语法。
       # `node --check` 按 CommonJS 脚本解析,漏掉过一个未闭合的函数,部署才红。
       - name: Parse with the same parser wrangler uses
@@ -35,6 +44,9 @@ jobs:
       - name: Growth human-count test
         run: node test/growth.test.mjs
 
+      - name: Test checkout handoff and anonymous reporting
+        run: node --test test/checkout-flow.test.mjs test/checkout-growth.test.mjs
+
       - name: Test portfolio owner delivery and deduplication
         run: node --test test/portfolio-alerts.test.mjs
 
@@ -48,6 +60,7 @@ jobs:
         run: node --test test/capital-alerts.test.mjs
 
       - name: Configure scoped roadmap verification binding
+        if: env.CHECKOUT_ONLY != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/roadmap-verification-key.mjs
@@ -56,6 +69,7 @@ jobs:
         run: node --test test/ledger-audit.test.mjs
 
       - name: Migrate legacy constants into existing private Worker bindings
+        if: env.CHECKOUT_ONLY != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/migrate-private-config.mjs
@@ -65,10 +79,16 @@ jobs:
         with:
           wranglerVersion: "4.147.0"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Verify public checkout pricing and measurement
+        if: env.CHECKOUT_ONLY == 'true'
+        run: node test/checkout-live.mjs
+
       - name: Read-only Google registration smoke test
+        if: env.CHECKOUT_ONLY != 'true'
         run: node src/fleet-account/verify-live.mjs invest.agiscorecard.com
 
       - name: Verify Capital Radar private notification bridge
+        if: env.CHECKOUT_ONLY != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CAPITAL_VERIFY: ${{ github.event_name == 'workflow_dispatch' && inputs.capital_verify }}
@@ -80,6 +100,7 @@ jobs:
           fi
 
       - name: Read-only production smoke test
+        if: env.CHECKOUT_ONLY != 'true'
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "Deployed at: $URL"
@@ -92,16 +113,16 @@ jobs:
           # 新版本传播需要时间,首次上线时 5 秒后断言会拿到旧版本的 404——所以重试而不是一击定生死。
           buy=""
           for i in 1 2 3 4 5 6; do
-            buy=$(curl -s -o /dev/null -w "%{http_code}" "$URL/go/buy")
+            buy=$(curl -s -o /dev/null -w "%{http_code}" "$URL/go/buy?__ci=1")
             [ "$buy" = "302" ] && break
             echo "buy route not live yet (HTTP $buy), retry $i"
             sleep 5
           done
           echo "buy redirect HTTP $buy"
           test "$buy" = "302"
-          curl -s -o /dev/null -w "%{redirect_url}\n" "$URL/go/buy" | grep -q "t.me/sunwatchBot" \
+          curl -s -o /dev/null -w "%{redirect_url}\n" "$URL/go/buy?__ci=1" | grep -q "t.me/sunwatchBot" \
             && echo "buy -> telegram OK" || { echo "buy redirect target wrong"; exit 1; }
-          curl -s "$URL/" | grep -q "/go/buy" || { echo "pricing card missing buy button"; exit 1; }
+          curl -s "$URL/?__ci=1" | grep -q "/go/buy" || { echo "pricing card missing buy button"; exit 1; }
           # 收款地址只能出现在 bot 私信里。一旦被渲染进公开页面,它会被抓取归档,
           # 而链上余额与全部往来记录任何人都能查——这条断言就是防这个回归。
           for path in "/" "/faq" "/track-record"; do
@@ -255,22 +276,24 @@ jobs:
           curl -sf "$URL/api/feed" | head -c 400
           echo
       - name: Verify portfolio API, MCP and first owner Telegram receipt
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
+        if: ${{ env.CHECKOUT_ONLY != 'true' && !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/portfolio-live.mjs
       - name: Verify first roadmap owner delivery and deduplication
-        if: ${{ !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
+        if: ${{ env.CHECKOUT_ONLY != 'true' && !contains(github.event.head_commit.message, '[account-only]') && !contains(github.event.head_commit.message, '[capital-only]') && !inputs.capital_verify }}
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node test/roadmap-live.mjs
 
       - name: Verify live official company disclosure monitor
+        if: env.CHECKOUT_ONLY != 'true'
         env:
           SUNWATCH_URL: ${{ steps.wrangler.outputs.deployment-url }}
         run: node test/research-live.mjs
       - name: Ping IndexNow (auto search-engine indexing)
+        if: env.CHECKOUT_ONLY != 'true'
         run: |
           URL="${{ steps.wrangler.outputs.deployment-url }}"
           echo "indexnow:"

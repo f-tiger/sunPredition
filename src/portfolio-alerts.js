@@ -1,5 +1,6 @@
 import {handleRoadmap} from './roadmap-alerts.js';
 import {handleCapital} from './capital-alerts.js';
+import {handleCheckoutGrowth,handleCheckoutGrowthAlarm} from './checkout-growth.js';
 // Public model returns only. Telegram credentials stay in the existing SunWatch env/KV.
 export const FEED='https://agiscorecard.com/api/portfolio';
 const COHORT='social-basket-2026-10-02-close';
@@ -48,10 +49,13 @@ export async function portfolioCommand(env,action='run'){
 export class PortfolioAlerts {
  constructor(ctx,env){this.ctx=ctx;this.env=env;this.queue=Promise.resolve();}
  async fetch(request){
-  const job=this.queue.then(()=>this.handle(new URL(request.url).pathname.slice(1)));
+  const path=new URL(request.url).pathname;
+  if(path.startsWith('/checkout-growth/'))return handleCheckoutGrowth(request,this.ctx);
+  const job=this.queue.then(()=>this.handle(path.slice(1)));
   this.queue=job.catch(()=>{});
   try{return Response.json(await job);}catch{return Response.json({ok:false,error:'portfolio_alert_failed'});}
  }
+ async alarm(){await handleCheckoutGrowthAlarm(this.ctx);}
  async config(){
   const e=this.env;
   return e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_CHAT_ID?{token:e.TELEGRAM_BOT_TOKEN,chatId:e.TELEGRAM_CHAT_ID}:await e.SUNWATCH_KV.get('tg-config','json');
