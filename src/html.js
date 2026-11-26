@@ -45,8 +45,28 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system
 .wrap{max-width:820px;margin:0 auto;padding:24px 16px 64px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
 .meta{color:var(--muted);font-size:12.5px}a{color:var(--accent)}h1{font-size:23px}.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}`;
 const escS = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const CTA = `<div class="card"><b>获取具体买卖价位与实时触发报警</b><div class="meta" style="margin-top:4px">免费:向 <a href="/go/tg" rel="nofollow">@sunwatchBot</a> 发 /start 订阅每日信号预告 · <a href="/track-record">查看公开战绩</a> · <a href="/#pricing">升级 Pro</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
-const CTA_EN = `<div class="card"><b>Get specific entry/exit levels & real-time trigger alerts</b><div class="meta" style="margin-top:4px">Free: send /start to <a href="/go/tg" rel="nofollow">@sunwatchBot</a> for daily signal previews · <a href="/en/track-record">public track record</a> · <a href="/#pricing">upgrade to Pro</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
+const PRICING_ZH = "/?lang=zh#pricing";
+const PRICING_EN = "/en#pricing";
+const CTA = `<div class="card"><b>查看研究价位与触发提醒</b><div class="meta" style="margin-top:4px">向 <a href="/go/tg" rel="nofollow">@sunwatchBot</a> 发送 /start，免费订阅信号预告 · <a href="/track-record">查看公开记录</a> · <a href="${PRICING_ZH}">查看 Pro 定价</a></div><div class="meta" style="margin-top:6px">📮 或邮件订阅:<b>判断结案、信心变动、触发器响起——当天一封邮件,其余时候不写</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta" target="_blank" rel="noopener">免费订阅</a></div></div>`;
+const CTA_EN = `<div class="card"><b>Research levels and trigger alerts</b><div class="meta" style="margin-top:4px">Send /start to <a href="/go/tg" rel="nofollow">@sunwatchBot</a> for free signal previews · <a href="/en/track-record">public record</a> · <a href="${PRICING_EN}">view Pro pricing</a></div><div class="meta" style="margin-top:6px">📮 Or by email: <b>one email when a call is graded, confidence moves, or a trigger fires — and not otherwise</b> → <a href="https://agiscorecard.beehiiv.com/subscribe?utm_source=sunwatch&utm_medium=page_cta_en" target="_blank" rel="noopener">subscribe free</a></div></div>`;
+
+function renderProPricing(english) {
+  const t = (en, zh) => english ? en : zh;
+  return `<div class="card" style="border-color:var(--accent)">
+<b>SunWatch Pro</b>
+<p style="font-size:18px;font-weight:700;margin:6px 0 2px">${t("¥199/month or ¥1999/year", "¥199/月或 ¥1999/年")}</p>
+<p style="margin:0 0 10px">${t("28 USDT/month or 280 USDT/year on BNB Smart Chain (BEP20).", "BNB Smart Chain（BEP20）付款为 28 USDT/月或 280 USDT/年。")}</p>
+<p>${t("Pro includes documented entry ranges, stop levels and sizing examples, plus morning and evening research briefs and monitored-price trigger alerts via Telegram.", "Pro 提供已记录的研究入场区间、止损线和仓位示例，并通过 Telegram 提供早晚研究简报和受监测报价的触发提醒。")}</p>
+<a href="/go/buy?lang=${t("en", "zh")}" rel="nofollow" style="display:inline-block;background:#1d4ed8;color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">${t("Open Telegram for payment instructions", "打开 Telegram 查看付款说明")}</a>
+<ol style="padding-inline-start:1.4em;margin:12px 0">
+<li>${t("Tap Start in Telegram to see plan and payment instructions.", "在 Telegram 点按「开始」查看套餐与付款说明。")}</li>
+<li>${t("If paying in USDT, send the transaction hash (TxID) to the bot after transfer. The operator checks it before sending your activation code.", "使用 USDT 付款后，把交易哈希（TxID）发给机器人。站长核对转账后发送激活码。")}</li>
+<li>${t("Send <code>/start YOURCODE</code> to bind Telegram alerts, or enter the same code on the <a href=\"/?lang=zh#activate-pro\">website activation form (Chinese)</a>.", "发送 <code>/start 激活码</code> 绑定 Telegram 提醒，或在<a href=\"#activate-pro\">下方网页表单</a>输入同一个码。")}</li>
+</ol>
+<p class="meta">${t("For WeChat Pay or Alipay, send <code>/payhelp</code> in the bot chat to request payment instructions.", "如需微信支付或支付宝，在机器人对话中发送 <code>/payhelp</code> 请求付款说明。")}</p>
+<p class="meta">${t('<a href="/en/track-record">Read the public research record</a> · <a href="/faq">Payment and activation FAQ (Chinese)</a>', '<a href="/track-record">查看公开研究记录</a> · <a href="/faq">付款与激活常见问题</a>')}</p>
+</div>`;
+}
 
 // pSEO:单只标的页
 export function renderStockPage(s, quote, related, news) {
@@ -274,13 +294,14 @@ ${auditNotice(forecasts, true)}
 <p class="meta" style="margin-top:-6px"><a href="/en/stocks">Browse stock coverage in English →</a> · <a href="/en/method">the eight-layer method</a> · <a href="/en/red-team">red-team desk</a></p>
 <h2 style="font-size:18px">How it works</h2>
 <div class="card"><b>1 · Record the research claim.</b><div class="meta" style="margin-top:3px">Keep the original claim, publication evidence, resolution rule and observation date. A date printed on a page alone does not prove preregistration.</div></div>
-<div class="card"><b>2 · Watched by machine.</b><div class="meta" style="margin-top:3px">Quotes refresh every 30 minutes across three markets; crossing a trigger line fires an alert instantly.</div></div>
+<div class="card"><b>2 · Checked on a schedule.</b><div class="meta" style="margin-top:3px">Quote checks run on a 30-minute schedule. The service can alert when a check observes a monitored price crossing a trigger level.</div></div>
 <div class="card"><b>3 · Misses stay public.</b><div class="meta" style="margin-top:3px">Wrong calls are graded ❌ and keep their post-mortem. The record is the product — if it were curated, it would be worthless.</div></div>
 <h2 style="font-size:18px">What's inside</h2>
-<div class="card"><a href="/en/stocks">Per-ticker coverage in English</a> · cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · real-time Telegram alerts.</div>
+<div class="card"><a href="/en/stocks">Per-ticker coverage in English</a> · cycle-stage maps for five AI sectors · the <a href="/en/method">Project-10x method — eight layers of discipline</a> (barbell allocation, fractional Kelly sizing, pre-registered exits) · the <a href="/en/red-team">red-team desk</a> with survival odds on every open call · specific entry/exit levels and stop lines (Pro) · Telegram trigger alerts.</div>
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score your own AI basket against the eight graded AGI-2027 predictions — free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check →</a></div></div>
 ${CTA_EN}
-<div class="card"><b>Pricing</b><div class="meta" style="margin-top:3px">Free tier: daily signal previews via Telegram. Pro: ¥199/mo (≈$28, USDT accepted) unlocks specific levels, stop lines and instant trigger alerts. No account, no card on file — pay, get a code, done.</div></div>
+<h2 id="pricing" style="font-size:18px">Pricing and activation</h2>
+${renderProPricing(true)}
 <h2 style="font-size:18px">FAQ</h2>
 <div class="card"><b>Is this investment advice?</b><div class="meta" style="margin-top:3px">No. It is a research framework with a public score. Nothing here is a recommendation to buy or sell any security; consult a licensed professional before acting.</div></div>
 <div class="card"><b>What does the displayed rate measure?</b><div class="meta" style="margin-top:3px">It summarizes editorial hit/miss labels, not trading profits. Check the evidence status and original record; unresolved and partial calls are excluded.</div></div>
@@ -333,7 +354,7 @@ export function renderStockIndexEN(stocks) {
 <script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "AGI Scorecard", item: "https://agiscorecard.com/" }, { "@type": "ListItem", position: 2, name: "SunWatch", item: "https://invest.agiscorecard.com/en" }, { "@type": "ListItem", position: 3, name: "Stock coverage" }] })}</script><style>${PAGE_CSS}</style></head><body><div class="wrap">
 <p class="meta"><a href="https://agiscorecard.com">AGI Scorecard</a> \u203a <a href="/en">SunWatch</a> \u203a Coverage</p>
 <h1>Stock coverage, in English</h1>
-<p>${withEn.length} names, grouped by the part of the AI cycle they belong to. Each page carries the investment case, the size, what actually protects the business, who it competes with, and the risk that would end the thesis \u2014 plus the live quote. Entry zones, stop lines and sizing are documented research rules and are <a href="/#pricing">Pro</a> content; the <a href="/en/track-record">public record</a> shows how the calls turned out, losers included.</p>
+<p>${withEn.length} names, grouped by the part of the AI cycle they belong to. Each page covers the investment case, market size, competitive advantages, rivals, and risks that would end the thesis, alongside the latest quote available. Entry zones, stop lines and sizing examples are <a href="${PRICING_EN}">Pro research content</a>. The <a href="/en/track-record">public record</a> includes the original calls and their outcomes.</p>
 ${groups}
 ${zhList ? `<div class="card"><b>Chinese-only for now (${zhOnly.length})</b><div class="meta" style="margin-top:3px">These are tracked on the Chinese side and have no English page yet. The links work, the pages are in Chinese \u2014 said plainly rather than showing a shorter list without explanation.</div>${zhList}</div>` : ""}
 <div class="card"><b>From the AGI Scorecard network</b><div class="meta" style="margin-top:3px">Score a basket of these tickers against the eight graded AGI-2027 predictions \u2014 free, no sign-up: <a href="https://agiscorecard.com/ai-stock-exposure">AI Stock Exposure Check \u2192</a></div></div>
@@ -372,9 +393,9 @@ ${CTA_EN}
 // FAQ 页(FAQPage schema 富结果)
 export function renderFaq() {
   const QA = [
-    ["什么是触发线?", "预先设定的价格条件,如『跌破 X 则减仓』『回落到 Y 区间则分批买入』。系统每 30 分钟核对实时行情,价格穿越触发线时通过 Telegram 即时报警——把判断变成可执行的纪律,而不是预测。"],
-    ["信号多久更新一次?", "行情与触发线每 30 分钟自动核对;每日两次简报(北京 08:30 / 20:30);重要事件(如财报、上市、政策)实时推送。"],
-    ["如何订阅?", "免费版:向 Telegram 机器人 @sunwatchBot 发送 /start,每晚收到信号预告。Pro:在定价区点「立即购买」,或直接向机器人发送 /buy——机器人当场给出 USDT(BEP20)收款地址与金额,付完把交易哈希发回,站长上链核对后发激活码(也可改走微信/支付宝);拿到码后在网站底部输入解锁全部价位,并向机器人发送 /start 激活码 绑定实时信号。"],
+    ["什么是触发线?", "触发线是预先设定的价格条件。系统定期核对受监测报价，在检查发现穿越触发线时可通过 Telegram 提醒。"],
+    ["信号多久更新一次?", "行情与触发线每 30 分钟安排核对，研究简报安排在北京时间 08:30 和 20:30。"],
+    ["如何订阅?", "向 Telegram 机器人 @sunwatchBot 发送 /start 可免费订阅预告。Pro 用户从定价区打开 Telegram 后点按「开始」，查看 BNB Smart Chain（BEP20）USDT 付款说明。转账后发送 TxID，站长核对后发送激活码。需要微信支付或支付宝时，可先在对话中发送 /payhelp。收到码后发送 /start 激活码 绑定提醒，或在网页激活。"],
     ["激活码规则是什么?", "一个激活码只能绑定一个 Telegram 账号(防转卖);网页端激活后浏览器本地记住,换设备重新输入即可。"],
     ["数据来源是什么?", "行情来自 Yahoo Finance;新闻来自 Google News、Bing News、Cointelegraph 等公开信源;关键事实经多源交叉核验并标注日期。"],
     ["这和荐股有什么区别?", "本站不承诺收益、不代客理财,提供的是研究框架与触发线纪律工具;所有判断公开建档(含失误),命中率可在公开战绩页查证。所有内容不构成投资建议。"],
@@ -614,7 +635,7 @@ export function renderDashboard() {
 <div id="todayActions"></div>
 
 <h2>今日行动面板(实时行情 × 触发线)</h2>
-<p class="meta">现价来自 Yahoo Finance,每 30 分钟自动刷新;价格穿越触发线时 Telegram 实时报警。🔴=触发线已穿越(执行动作) 🟡=距触发线 3% 以内(备战) 🟢=安全距离。</p>
+<p class="meta">行情来自 Yahoo Finance，每 30 分钟安排检查。检查发现受监测报价穿越触发线时，可生成 Telegram 提醒。🔴 已穿越触发线 · 🟡 距触发线 3% 以内 · 🟢 距触发线较远。</p>
 <div id="actionboard"><div class="card meta">行情加载中…</div></div>
 
 <h2>🧭 核心信号清单(完整版)</h2>
@@ -641,16 +662,14 @@ export function renderDashboard() {
 <div id="archive"></div>
 
 <h2 id="pricing">订阅 Pro</h2>
-<div class="stocks">
+<div class="stocks" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))">
   <div class="card"><b>免费版</b><div style="font-size:22px;font-weight:700;margin:4px 0">¥0</div>
-    <div style="font-size:14px">✅ 五大赛道深度分析与周期定位<br>✅ 实时行情与新闻监控流<br>✅ 孙宇晨预判档案 + 系统预测记录<br>🔒 具体买卖价位与触发线<br>🔒 操盘纪律与仓位方案<br>🔒 Telegram 实时信号</div></div>
-  <div class="card" style="border-color:var(--accent)"><b>Pro 会员</b> <span class="tag">推荐</span><div style="font-size:22px;font-weight:700;margin:4px 0">¥199/月 <span class="meta" style="font-size:13px">或 ¥1999/年</span></div>
-    <div style="font-size:14px">✅ 免费版全部内容<br>✅ <b>全部买入区间 / 止损线 / 仓位方案</b><br>✅ <b>实时触发线报警(价格穿越秒推 TG)</b><br>✅ 每日双简报(北京 08:30 / 20:30)<br>✅ 重要信号快讯(SKHY/宇树/Optimus/合约价拐点等)</div>
-    <div style="margin-top:8px"><a href="/go/buy" rel="nofollow" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 18px;border-radius:8px;font-weight:700;text-decoration:none">立即购买 →</a></div>
-    <div class="meta" style="margin-top:6px">点击后在 Telegram 里完成:机器人当场给出 USDT(BEP20)收款地址,付完把交易哈希发回,站长上链核对后发激活码(也可走微信/支付宝)→ 向 @sunwatchBot 发送 <code>/start 激活码</code> 绑定信号,或在下方输入解锁网站价位</div></div>
+    <p>查看赛道分析、新闻监控和公开研究记录。也可以通过 Telegram 领取免费的信号预告。</p>
+    <a href="/go/tg" rel="nofollow">免费信号预告</a></div>
+  ${renderProPricing(false)}
 </div>
-<div class="card" style="margin-top:10px"><b>激活 Pro</b>
-  <div style="margin-top:6px"><input id="proKey" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px">
+<div class="card" id="activate-pro" style="margin-top:10px"><b>激活 Pro</b>
+  <div style="margin-top:6px"><input id="proKey" aria-label="SunWatch Pro 激活码" placeholder="输入激活码 SW-XXXXXX" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:220px;max-width:100%">
   <button onclick="activatePro()">激活</button> <span class="meta" id="proMsg"></span></div></div>
 
 <footer>

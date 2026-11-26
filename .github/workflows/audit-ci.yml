@@ -12,4 +12,5 @@ jobs:
       - run: node --test test/ledger-audit.test.mjs
       - run: node test/rules.test.mjs
       - run: node test/growth.test.mjs
+      - run: node --test test/checkout-flow.test.mjs test/checkout-growth.test.mjs
       - run: npx -y esbuild@0.25 src/index.js --bundle --format=esm --outfile=/dev/null

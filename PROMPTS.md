@@ -757,3 +757,13 @@ confirmed. Message ID/recipient/credentials omitted. All twelve official issuer
 sources healthy, including NOW; public refresh sends zero. AGI release
 41318944713 and real collector 41319452253 also succeeded. The initial AGI
 Telegram-secret request was unnecessary; existing SunWatch delivery is reused.
+
+## 2026-11-26 · SunWatch Pro 购买交接
+
+**目标**：修通中英文定价页到 Telegram 付款说明的路径，理解购买跳转、首次 Start、说明发送成功与站长确认到账之间的流失。
+
+**范围**：保留既有价格、权益、USDT 核对和发码规则。两种语言显示各自定价。访客主动发送 `/payhelp wechat` 或 `/payhelp alipay` 后，机器人向当前配置的私聊站长转交请求。站长直接回复该条通知并使用 `/payreply 付款说明`，机器人把说明交回请求所在的私聊。收到实际款项并核对对应询价后，站长用询价通知里的 `/paid 跟踪号` 自行记录到账，随后继续原发码流程。
+
+**统计**：购买交接按首次跳转所在 UTC 日期和语言归组，纳入最近 28 个完整 UTC 日内的新记录。每个随机标识的阶段只计一次。历史 UA 过滤请求单列。排除 QA、隐私退出、已识别的站长测试。统计库只存随机标识的哈希、日期、语言和阶段。公开健康查询只展示窗口和配置状态。实际数字在现有站长简报中查看。
+
+**验收**：分别模拟中英文、Start、Telegram 拒绝发送、付款咨询、站长核对和重复请求。两种语言提供可阅读的准确价格和流程，`pricing.md` 同步，发布后只读取价格页和健康状态。搜索引擎只提交实际更新的正式网址。实际到账来自站长核对，统计和激活码是不同记录。

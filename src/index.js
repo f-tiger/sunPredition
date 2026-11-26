@@ -6,6 +6,7 @@ import {researchCommand, reviewOpinions} from "./research-monitor.js";
 import {renderResearch} from "./research-page.js";
 export {ResearchMonitor} from "./research-monitor.js";
 import {portfolioCommand} from "./portfolio-alerts.js";
+import {checkoutGrowth, checkoutLocale, handleCheckoutSupport, isPrivateCheckoutChat, parsePurchaseStart, purchaseRedirect, skipGrowthRequest} from './checkout.js';
 export {PortfolioAlerts} from "./portfolio-alerts.js";
 import { ledgerAudit } from "./ledger-audit.js";
 import { PREDICTIONS, STOCKS, SOURCES, TAG_RULES, PLAYBOOK, CORE_SIGNALS, IMPORTANT_RULES, WATCHLIST, FORECASTS, TRACKS, ACTION_QUEUE, HOLDINGS} from "./data.js";
@@ -26,6 +27,7 @@ const USDT_CHAIN = "BNB Smart Chain (BEP20)";
 // 按 ¥199 / ¥1999 以约 7.15 折算取整,不借汇率换算悄悄涨价。改价改这里一处。
 const USDT_MONTH = 28;
 const USDT_YEAR = 280;
+const validUsdtAddress = address => /^0x[0-9a-f]{40}$/i.test(address);
 // BSC 交易哈希:0x + 64 位十六进制。买家把它发给 bot → 转给站长人工核对后发码。
 const TXID_RE = /^0x[a-fA-F0-9]{64}$/;
 const TRACK_MATCHERS = {
@@ -49,7 +51,7 @@ const MAX_ITEMS = 300;
 const worker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const USDT_ADDR = env.USDT_RECEIVE_ADDRESS || "";
+    const USDT_ADDR = (env.USDT_RECEIVE_ADDRESS || '').trim();
     // pSEO 动态路由(含 PV 计数)
     if (url.pathname === "/research" || url.pathname === "/" || url.pathname.startsWith("/stock/") || url.pathname.startsWith("/track") || url.pathname.startsWith("/forecast") || url.pathname.startsWith("/en")) {
       ctx.waitUntil(bumpGrowth(env, "pv", request));
@@ -306,38 +308,52 @@ const worker = {
           // 欧美改造(站长 2026-08-08):按 Telegram language_code 双语回复。
           // 未知语言默认中文(存量用户全是中文);站长侧通知永远中文。
           const EN_U = !!(msg.from && msg.from.language_code) && !/^zh/i.test(msg.from.language_code);
-          // 购买意向:/buy,或站点「立即购买」按钮带来的 /start buy。必须在免费订阅分支
-          // 之前拦截——否则 "/start buy" 会落进无码 /start,买家只收到一句欢迎语,意向就丢了。
-          if (/^\/buy\b/i.test(msg.text || "") || /^\/start\s+buy\b/i.test(msg.text || "")) {
-            const freeB = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
-            if (!freeB.includes(msg.chat.id)) {
-              freeB.push(msg.chat.id);
-              await env.SUNWATCH_KV.put("free-subs", JSON.stringify(freeB));
+          if (await handleCheckoutSupport({message:msg,config:cfg,env,send:tgSend,english:EN_U})) return new Response('ok');
+          const purchase = parsePurchaseStart(msg.text || '');
+          if (purchase) {
+            if (msg.chat.type !== 'private') return new Response('ok');
+            const owner = String(msg.chat.id) === String(cfg.chatId);
+            const english = purchase.locale ? purchase.locale === 'en' : EN_U;
+            const buyer = {token:cfg.token,chatId:msg.chat.id};
+            let attempt = null;
+            if (purchase.attempt) {
+              const record = await checkoutGrowth(env, 'record', {action:owner?'discard':'start', attempt:purchase.attempt});
+              if (!owner && record?.ok) attempt=purchase.attempt;
             }
-            ctx.waitUntil(bumpGrowth(env, "buyRequests"));
-            await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
+            if (!owner) ctx.waitUntil(bumpGrowth(env, 'buyRequests'));
+            if (!validUsdtAddress(USDT_ADDR)) {
+              await tgSend(buyer,english
+                ? 'USDT payment instructions are temporarily unavailable. You can request payment help with /payhelp.'
+                : 'USDT 付款说明暂不可用。如需付款咨询，请发送 /payhelp。',null).catch(()=>null);
+              return new Response('ok');
+            }
+            const quote = await tgSend(buyer, english
               ? "🧾 <b>SunWatch Pro</b> — <b>" + USDT_MONTH + " USDT / month</b> · <b>" + USDT_YEAR + " USDT / year</b>\n\n"
-                + "Includes: every entry zone / stop line / sizing plan · instant alerts when price crosses a trigger · two daily briefs · breaking-signal pushes\n\n"
+                + "Includes research entry ranges, stop levels and sizing examples, two scheduled briefs per day, and alerts when a scheduled check observes a monitored price crossing.\n\n"
                 + `<b>USDT address</b> (tap to copy):\n<code>${USDT_ADDR}</code>\n`
                 + `⚠️ <b>${USDT_CHAIN} only.</b> Funds sent on the wrong chain are <b>unrecoverable</b> — double-check the network before sending.\n\n`
                 + "After paying, send the <b>transaction hash (TxID)</b> right here; the operator verifies it on-chain and sends your activation code.\n"
-                + "Then send <code>/start YOURCODE</code> to bind real-time signals.\n\n"
+                + "Then send <code>/start YOURCODE</code> to bind real-time signals. For WeChat Pay or Alipay, send /payhelp.\n\n"
                 + "Check the record before you decide: " + SITE + "/en/track-record (hits and misses side by side)"
               : "🧾 <b>Pro 会员</b> ¥199/月 · ¥1999/年\n"
               + `USDT 付款:<b>${USDT_MONTH} USDT / 月</b> · <b>${USDT_YEAR} USDT / 年</b>\n\n`
-              + "包含:全部买入区间 / 止损线 / 仓位方案 · 价格穿越触发线秒推 · 每日双简报(北京 08:30 / 20:30) · 重要信号快讯\n\n"
+              + "包含研究入场区间、止损线和仓位示例，每日双简报（北京 08:30／20:30），以及在定时检查发现价格穿越触发线时发送的提醒。\n\n"
               + `<b>收款地址</b>(点一下即可复制):\n<code>${USDT_ADDR}</code>\n`
               + `⚠️ 只走 <b>${USDT_CHAIN}</b>。走错链的资金<b>无法找回</b>,转账前请务必核对网络。\n\n`
               + "付完把<b>交易哈希(TxID)</b>直接发到这里,站长上链核对后给你激活码。\n"
               + "拿到码后发送 <code>/start 激活码</code> 绑定实时信号。\n"
-              + "用微信 / 支付宝也可以——直接在这里说一声,站长会发收款码。\n\n"
-              + "先看战绩再决定:" + SITE + "/track-record(命中与失误同等展示)", "HTML");
+              + "如需微信支付或支付宝，发送 /payhelp 提交付款方式请求。\n\n"
+              + "先看战绩再决定:" + SITE + "/track-record(命中与失误同等展示)", "HTML").catch(()=>null);
+            if (owner) return new Response('ok');
+            const delivered = quote?.ok === true;
+            const marked = delivered && attempt && (await checkoutGrowth(env, 'record', {action:'quote', attempt}))?.ok;
             const who = [msg.chat.username ? "@" + msg.chat.username : null, msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ");
             await tgSend({ token: cfg.token, chatId: cfg.chatId },
               `💰 <b>有人要买 Pro</b>\n对方:${escHtml(who || "(无用户名)")}\nchat_id:<code>${msg.chat.id}</code>\n\n`
-              + `对方已拿到 USDT 地址(${USDT_MONTH}/月 · ${USDT_YEAR}/年);付款后他会把 TxID 发过来。\n`
+              + (delivered ? 'Telegram 已确认付款说明发送成功。\n' : '付款说明的送达未获确认。\n')
+              + (marked ? `购买跟踪号:<code>${attempt}</code>\n核对实际到账并与此次询价匹配后，可用 <code>/paid ${attempt}</code> 记入漏斗。\n` : '')
               + `核对无误后回一条 <code>/code ${msg.chat.id}</code> 即可发码。\n`
-              + `若他要走微信/支付宝,直接私信发收款码。`, "HTML").catch(() => {});
+              + '微信支付或支付宝请求会另有通知。', "HTML").catch(() => {});
             return new Response("ok");
           }
           // 站长发码:/code <chat_id> [年]。Telegram 不允许 bot 主动私信陌生人,而买家若没设
@@ -494,8 +510,8 @@ const worker = {
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, txt, null);
             } else {
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
-                ? "Commands:\n/start — free daily preview\n/buy — get Pro (payment details in reply)\n/start CODE — bind Pro signals\n/status — subscription status\n/help — this message\nSite: https://invest.agiscorecard.com/en"
-                : "可用命令:\n/start — 免费订阅每日预告\n/buy — 购买 Pro(站长私信你付款方式)\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://invest.agiscorecard.com", null);
+                ? "Commands:\n/start — free daily preview\n/buy — get Pro payment instructions\n/payhelp — request WeChat Pay or Alipay instructions\n/start CODE — bind Pro signals\n/status — subscription status\n/help — this message\nSite: https://invest.agiscorecard.com/en"
+                : "可用命令:\n/start — 免费订阅每日预告\n/buy — 查看 Pro 付款说明\n/payhelp — 咨询微信支付或支付宝\n/start 激活码 — 绑定 Pro 信号\n/status — 查询订阅状态\n/help — 本说明\n网站:https://invest.agiscorecard.com", null);
             }
             return new Response("ok");
           }
@@ -510,7 +526,7 @@ const worker = {
             } else {
               await tgSend({ token: cfg.token, chatId: msg.chat.id }, EN_U
                 ? "❌ Invalid activation code, or already bound to another account.\n\nTo buy, send /buy — you'll get payment details and a code."
-                : "❌ 激活码无效或已被他人绑定。\n\n要购买请发送 /buy,站长会私信你付款方式并发码。", null);
+                : "❌ 激活码无效或已被他人绑定。\n\n要查看付款说明，请发送 /buy。", null);
             }
           }
         }
@@ -682,7 +698,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           `- [Stock coverage in English](${SITE}/en/stocks): 18 US-listed names — investment case, moat, competition, risk`,
           `- [Eight-layer method](${SITE}/en/method): barbell allocation, fractional Kelly sizing, pre-registered exits, red-team review`,
           `- [Red-team desk](${SITE}/en/red-team): survival odds on every open call, strongest counter-case included`,
-          `- [Pricing](${SITE}/pricing.md): free tier vs Pro, machine-readable`,
+          `- [Pro pricing and checkout in English](${SITE}/en#pricing) · [中文定价与开通](${SITE}/?lang=zh#pricing) · [machine-readable terms](${SITE}/pricing.md)`,
           "",
           "## Machine-readable",
           `- [Track record JSON](${SITE}/api/track-record): the full scored ledger as data`,
@@ -703,9 +719,11 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
           "- Includes: one daily signal preview (cycle-stage map across five AI sectors + how many pre-registered trigger lines fired today); public track record, method and red-team pages, all stock coverage pages.",
           "",
           "## Pro",
-          "- Price: ¥199/month (≈ 28 USDT) or ¥1999/year (≈ 280 USDT)",
-          "- Payment: USDT (BEP-20), no account, no card on file — pay, send the transaction hash in Telegram, receive an activation code, bind with /start CODE. Details: send /buy to @sunwatchBot.",
-          "- Includes: everything in Free, plus specific entry/exit price levels, stop lines, position-sizing discipline, and real-time alerts the moment a trigger line is crossed (two daily briefs timed to US and China/HK sessions).",
+          `- Price: ¥199/month or ¥1999/year. USDT amounts: ${USDT_MONTH} per month or ${USDT_YEAR} per year.`,
+          `- Start at [English pricing](${SITE}/en#pricing) or [中文定价](${SITE}/?lang=zh#pricing), then open Telegram and press Start to request payment instructions. Existing chats can send /buy to @sunwatchBot.`,
+          "- For USDT, use BNB Smart Chain (BEP-20) and send the transaction hash in Telegram. The operator verifies payment before issuing an activation code. For WeChat Pay or Alipay, send /payhelp and choose the payment method to request instructions from the operator.",
+          "- Use the code on the site or send /start CODE in Telegram to bind alerts.",
+          "- Includes: everything in Free, plus documented research entry ranges, stop levels, sizing examples, two scheduled daily briefs, and Telegram alerts when a scheduled quote check observes a trigger crossing.",
           "",
           "## Notes for agents",
           "- The track record is public and machine-readable BEFORE any payment: " + SITE + "/api/track-record",
@@ -741,6 +759,13 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
             url: SITE + "/forecast/" + id,
           })),
         }), { headers: { "content-type": "application/json", "cache-control": "public, max-age=1800", "access-control-allow-origin": "*" } });
+      }
+      case '/api/checkout-growth': {
+        if (!['GET','HEAD'].includes(request.method)) return new Response('Method not allowed',{status:405,headers:{allow:'GET, HEAD'}});
+        const [report,cfg] = await Promise.all([checkoutGrowth(env,'report'),getTgConfig(env).catch(()=>null)]);
+        const availability = {usdt:validUsdtAddress(USDT_ADDR) && Boolean(cfg?.token),payment_help:Boolean(cfg?.token) && isPrivateCheckoutChat(cfg.chatId)};
+        const data = report?.ok ? {ok:true,schema_version:report.schema_version,window:report.window,metric:'checkout_redirect_cohorts',scope:'health_only',availability} : {ok:false,error:'checkout_metrics_unavailable',availability};
+        return new Response(request.method==='HEAD'?null:JSON.stringify(data),{status:data.ok?200:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex'}});
       }
       case "/api/growth": {
         const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
@@ -791,14 +816,15 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       // /start buy,由 bot 同时回复买家并通知站长。
       case "/go/buy": {
         ctx.waitUntil(bumpGrowth(env, "buyClicks", request));
-        return Response.redirect("https://t.me/sunwatchBot?start=buy", 302);
+        return purchaseRedirect(request,env,!skipGrowthRequest(request) && !isBotUA(request.headers.get('User-Agent')) &&
+          (!request.headers.has('Sec-Fetch-Mode') || request.headers.get('Sec-Fetch-Mode')==='navigate'));
       }
       // Pro 升级点击归因(免费预告 A/B 文案分变体计数):/go/pro?v=<变体id>
       case "/go/pro": {
         const v = (url.searchParams.get("v") || "").slice(0, 2).replace(/[^a-z0-9]/gi, "");
         ctx.waitUntil(bumpGrowth(env, "proClicks", request));
         if (v) ctx.waitUntil(bumpGrowth(env, `proClick_${v}`, request));
-        return Response.redirect(SITE + "/#pricing", 302);
+        return Response.redirect(SITE + (checkoutLocale(request)==='en' ? '/en#pricing' : '/?lang=zh#pricing'),302);
       }
       case "/favicon.ico":
       case "/favicon.svg":
@@ -869,6 +895,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
       const items = (await env.SUNWATCH_KV.get(KV_KEY, "json")) || [];
       const q = (await env.SUNWATCH_KV.get("quotes", "json")) || { quotes: [] };
       const gLine = await growthLine(env).catch(() => "");
+      const cLine = await checkoutGrowthLine(env).catch(() => '📊 <b>购买交接</b> · 统计暂不可读');
       // 趋势雷达·简报档:三源合并,20h 冷却(两场简报不重复),≤3 条
       let trendLines = [];
       try {
@@ -876,7 +903,7 @@ ${items.map((i) => `<item><title>${xmlEsc(i.title)}</title><link>${xmlEsc(i.link
         trendLines = (await pickTrends(env, cands, { limit: 3, cooldownSec: 72000, prefix: "tbrief" })).map((x) => "• " + x.text);
       } catch (e) {}
       const text = buildSummary(items, "https://invest.agiscorecard.com", DAILY[event.cron], q.quotes, trendLines);
-      await sendTelegram(cfg, text + (gLine ? `\n\n${gLine}` : "")).catch(() => {}); // 站长版含增长数据
+      await sendTelegram(cfg, [text,gLine,cLine].filter(Boolean).join('\n\n')).catch(() => {}); // 站长版含增长数据
       await broadcastPro(env, text).catch(() => {}); // 订户版不含
       // 免费订户:仅晚间发预告版(周期定位+被锁信号数,升级CTA)
       if (event.cron === "30 12 * * *") {
@@ -1379,6 +1406,7 @@ export function isBotUA(ua) {
   return !u || BOT_UA.test(u);
 }
 async function bumpGrowth(env, key, request) {
+  if (request && skipGrowthRequest(request)) return;
   const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
   g[key] = (g[key] || 0) + 1;
   if (request && !isBotUA(request.headers.get("user-agent"))) {
@@ -1388,13 +1416,21 @@ async function bumpGrowth(env, key, request) {
   await env.SUNWATCH_KV.put("growth", JSON.stringify(g));
 }
 
+async function checkoutGrowthLine(env) {
+  const report = await checkoutGrowth(env,'report');
+  if (!report?.ok) return '📊 <b>购买交接</b> · 统计暂不可读';
+  const {window,counts} = report;
+  const render = locale => [counts[locale].redirect,counts[locale].start,counts[locale].quote,counts[locale].payment].join(' → ');
+  return `📊 <b>购买交接</b> · ${window.start} 至 ${window.end_exclusive} 前（UTC）\n按购买跳转日期归组，窗口内只含新版记录。顺序为跳转、首次 Start、付款说明发送成功、站长确认到账。\n中文 ${render('zh')} · English ${render('en')}`;
+}
+
 async function growthLine(env) {
   const g = (await env.SUNWATCH_KV.get("growth", "json")) || {};
   const free = (await env.SUNWATCH_KV.get("free-subs", "json")) || [];
   const lic = (await env.SUNWATCH_KV.get("licenses", "json")) || {};
   const proBound = Object.values(lic).filter((l) => l.chatId).length;
   const idx = (await env.SUNWATCH_KV.get("indexnow-status", "json")) || null;
-  const idxTxt = idx ? (idx.ok ? ` | 收录✅${idx.status}(${idx.at.slice(5, 10)})` : ` | 收录⚠️${idx.status || "网络失败"}×${idx.attempts}`) : "";
+  const idxTxt = idx ? (idx.ok ? ` | IndexNow 已接收 ${idx.status}（${idx.at.slice(5, 10)}，收录未知）` : ` | IndexNow 提交未确认（${idx.status || "网络失败"}，尝试 ${idx.attempts} 次）`) : "";
   const ab = ["a", "b", "c"].map((v) => `${v}:${g[`proClick_${v}`] || 0}`).join("/");
   const abTxt = (g.proClicks || 0) ? ` | Pro点击 ${g.proClicks}(A/B ${ab})` : "";
   // 购买按钮 vs 实际询价要分开看:结账断掉时两者会劈叉,而"零成交"再也不能被
@@ -1403,7 +1439,7 @@ async function growthLine(env) {
     ? ` | 购买按钮 ${g.buyClicks || 0}→询价 ${g.buyRequests || 0}→付款回执 ${g.payClaims || 0}` : "";
   // 真人口径有了之后,简报只报真人数;原键含爬虫,继续报会让人把机器当读者。
   if (g.humanSince) {
-    return `📊 <b>增长(真人,自 ${g.humanSince})</b>:PV ${g.h_pv || 0} | TG按钮 ${g.h_tgClicks || 0} | 购买按钮 ${g.h_buyClicks || 0} → 询价 ${g.buyRequests || 0} → 付款回执 ${g.payClaims || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${idxTxt}`;
+    return `📊 <b>历史请求（按 UA 过滤，自 ${g.humanSince}）</b>：PV ${g.h_pv || 0} · TG按钮 ${g.h_tgClicks || 0} · 购买按钮 ${g.h_buyClicks || 0}\n机器人历史计数（含早期自测）：询价 ${g.buyRequests || 0} · TxID ${g.payClaims || 0} · 免费名单 ${free.length} · 现存码 ${Object.keys(lic).length} · Pro绑定 ${proBound}${idxTxt}`;
   }
   return `📊 <b>增长</b>:累计PV ${g.pv || 0} | CTA点击 ${g.tgClicks || 0} | 免费订户 ${free.length} | 已发码 ${Object.keys(lic).length} | Pro绑定 ${proBound}${abTxt}${buyTxt}${idxTxt}`;
 }
