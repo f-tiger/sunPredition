@@ -41,6 +41,9 @@ async function verify() {
     assert.match(html, /\bid=["']pricing["']/i, `Missing ${locale} pricing anchor`);
     const hrefs = Array.from(html.matchAll(/<a\s[^>]*\bhref=["']([^"']+)["']/gi), match => match[1]);
     assert.ok(hrefs.includes(`/go/buy?lang=${locale}`), `Missing ${locale} checkout link`);
+    const buy = html.indexOf(`href="/go/buy?lang=${locale}"`);
+    const content = html.indexOf(locale === 'en' ? 'class="band"' : 'id="todayActions"');
+    assert.ok(buy > html.indexOf('id="pricing"') && content > buy, `Purchase action below ${locale} research content`);
   }
   return report.availability;
 }
